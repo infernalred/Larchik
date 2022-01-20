@@ -10,4 +10,8 @@
       <ProjectReference Include="..\Larchik.Domain\Larchik.Domain.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.2" />
+    </ItemGroup>
+
 </Project>
