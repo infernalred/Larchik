@@ -8,6 +8,12 @@ public class StockModelConfiguration : IEntityTypeConfiguration<Stock>
 {
     public void Configure(EntityTypeBuilder<Stock> builder)
     {
-        throw new NotImplementedException();
+        builder.HasKey(x => x.Tiсker);
+
+        builder.Property(x => x.Tiсker).IsRequired().HasMaxLength(6);
+        builder.Property(x => x.CompanyName).IsRequired().HasMaxLength(50);
+        builder.Property(x => x.TypeId).IsRequired();
+        builder.Property(x => x.CurrencyId).IsRequired();
+        builder.Property(x => x.SectorId).IsRequired();
     }
 }

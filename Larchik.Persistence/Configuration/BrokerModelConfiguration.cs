@@ -10,6 +10,7 @@ public class BrokerModelConfiguration : IEntityTypeConfiguration<Broker>
     {
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.Id).ValueGeneratedOnAdd();
         builder.Property(x => x.Name).IsRequired().HasMaxLength(255);
         builder.Property(x => x.Inn).IsRequired().HasMaxLength(10);
         

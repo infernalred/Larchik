@@ -10,16 +10,18 @@ public class Seed
     {
         if (!userManager.Users.Any())
         {
-            var user = new AppUser {DisplayName = "Admin", UserName = "admin", Email = "admin@admin.com"};
+            var admin = new AppUser {DisplayName = "Admin", UserName = "admin", Email = "admin@admin.com"};
+            var user1 = new AppUser {DisplayName = "User1", UserName = "user1", Email = "user1@user.com"};
 
-            await userManager.CreateAsync(user, "Pa$$w0rd");
+            await userManager.CreateAsync(admin, "Pa$$w0rd");
+            await userManager.CreateAsync(user1, "Pa$$w0rd");
         }
 
         if (!context.Brokers.Any())
         {
-            var broker1 = new Broker { Id = Guid.Parse("de4ecef8-14d9-4a32-8dfd-0ea9e5777269"), Name = "Акционерное общество \"Тинькофф Банк\"", Inn = "7710140679" };
-            var broker2 = new Broker { Id = Guid.Parse("dd357ed2-cadf-43ff-8d01-ed25a97b5026"), Name = "Акционерное общество ВТБ Капитал", Inn = "7703585780" };
-            var broker3 = new Broker { Id = Guid.Parse("99c2a5c6-e038-46c5-96fd-1b156d316d70"), Name = "Публичное акционерное общество Банк \"Финансовая Корпорация Открытие\"", Inn = "7706092528" };
+            var broker1 = new Broker { Name = "Акционерное общество \"Тинькофф Банк\"", Inn = "7710140679" };
+            var broker2 = new Broker { Name = "Акционерное общество ВТБ Капитал", Inn = "7703585780" };
+            var broker3 = new Broker { Name = "Публичное акционерное общество Банк \"Финансовая Корпорация Открытие\"", Inn = "7706092528" };
             
             var brokers = new List<Broker>
             {
@@ -27,6 +29,75 @@ public class Seed
             };
 
             await context.AddRangeAsync(brokers);
+            await context.SaveChangesAsync();
+        }
+
+        if (!context.Currencies.Any())
+        {
+            var rub = new Currency { Code = "RUB" };
+            var usd = new Currency { Code = "USD" };
+            var eur = new Currency { Code = "EUR" };
+
+            var currencies = new List<Currency>
+            {
+                rub, usd, eur
+            };
+            
+            await context.AddRangeAsync(currencies);
+            await context.SaveChangesAsync();
+        }
+        
+        if (!context.StockTypes.Any())
+        {
+            var type1 = new StockType { Code = "SHARE" };
+            var type2 = new StockType { Code = "BOND" };
+            var type3 = new StockType { Code = "ETF" };
+
+            var stockTypes = new List<StockType>
+            {
+                type1, type2, type3
+            };
+            
+            await context.AddRangeAsync(stockTypes);
+            await context.SaveChangesAsync();
+        }
+        
+        if (!context.Sectors.Any())
+        {
+            var sector1 = new Sector { Code = "Energy" };
+            var sector2 = new Sector { Code = "Materials" };
+            var sector3 = new Sector { Code = "Industrials" };
+            var sector4 = new Sector { Code = "Utilities" };
+            var sector5 = new Sector { Code = "Healthcare" };
+            var sector6 = new Sector { Code = "Financials" };
+            var sector7 = new Sector { Code = "Consumer Discretionary" };
+            var sector8 = new Sector { Code = "Consumer Staples" };
+            var sector9 = new Sector { Code = "Information Technology" };
+            var sector10 = new Sector { Code = "Communication Services" };
+            var sector11 = new Sector { Code = "Real Estate" };
+
+            var sectors = new List<Sector>
+            {
+                sector1, sector2, sector3, sector4, sector5, sector6, sector7, sector8, sector9, sector10, sector11
+            };
+            
+            await context.AddRangeAsync(sectors);
+            await context.SaveChangesAsync();
+        }
+
+        if (!context.Stocks.Any())
+        {
+            var stock1 = new Stock { Tiсker = "AAPL", CompanyName = "Apple", CurrencyId = "USD", TypeId = "SHARE", SectorId = "Information Technology"};
+            var stock2 = new Stock { Tiсker = "MSFT", CompanyName = "Microsoft", CurrencyId = "USD", TypeId = "SHARE", SectorId = "Information Technology"};
+            var stock3 = new Stock { Tiсker = "SBER", CompanyName = "Sberbank", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Financials"};
+            var stock4 = new Stock { Tiсker = "MTSS", CompanyName = "MTS", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Communication Services"};
+
+            var stocks = new List<Stock>
+            {
+                stock1, stock2, stock3, stock4
+            };
+            
+            await context.AddRangeAsync(stocks);
             await context.SaveChangesAsync();
         }
     }

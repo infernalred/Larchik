@@ -8,6 +8,8 @@ public class SectorModelConfiguration : IEntityTypeConfiguration<Sector>
 {
     public void Configure(EntityTypeBuilder<Sector> builder)
     {
-        throw new NotImplementedException();
+        builder.HasKey(x => x.Code);
+
+        builder.Property(x => x.Code).IsRequired().HasMaxLength(25);
     }
 }

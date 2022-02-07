@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Larchik.API.Services;
 using Larchik.Domain;
 using Larchik.Persistence.Context;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -45,7 +46,7 @@ public static class ConfigurationSecurityExtensions
         //         policy.Requirements.Add(new IsOwnerAdvRequirement());
         //     });
         // });
-        // services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<ITokenService, TokenService>();
         
         return services;
     }

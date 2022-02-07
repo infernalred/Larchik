@@ -1,4 +1,5 @@
 ﻿using FluentValidation.AspNetCore;
+using Larchik.Application.Brokers;
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Infrastructure.Security;
@@ -20,7 +21,7 @@ public static class ConfigurationBaseExtensions
             });
 
             services.AddAutoMapper(typeof(MappingProfiles).Assembly);
-            //services.AddMediatR(typeof(Create).Assembly);
+            services.AddMediatR(typeof(Create).Assembly);
             services.AddControllers(opt =>
             {
                 var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
@@ -28,7 +29,7 @@ public static class ConfigurationBaseExtensions
             })
             .AddFluentValidation(cfg => 
             {
-                //cfg.RegisterValidatorsFromAssemblyContaining<Create>();
+                cfg.RegisterValidatorsFromAssemblyContaining<Create>();
             });
 
             services.AddScoped<IUserAccessor, UserAccessor>();

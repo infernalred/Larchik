@@ -21,8 +21,4 @@
     <ProjectReference Include="..\Larchik.Infrastructure\Larchik.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Controllers" />
-  </ItemGroup>
-
 </Project>

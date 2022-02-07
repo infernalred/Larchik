@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Larchik.Persistence.Configuration;
 
-public class StockTypeModelConfiguration : IEntityTypeConfiguration<StockType>
+public class OperationModelConfiguration : IEntityTypeConfiguration<Operation>
 {
-    public void Configure(EntityTypeBuilder<StockType> builder)
+    public void Configure(EntityTypeBuilder<Operation> builder)
     {
         builder.HasKey(x => x.Code);
 
