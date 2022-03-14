@@ -9,20 +9,20 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Larchik.Application.BrokerAccounts;
+namespace Larchik.Application.Accounts;
 
 public class Create
 {
     public class Command : IRequest<OperationResult<Unit>>
     {
-        public BrokerAccountCreateDto Account { get; set; }
+        public AccountCreateDto Account { get; set; }
     }
     
     public class CommandValidator : AbstractValidator<Command>
     {
         public CommandValidator()
         {
-            RuleFor(x => x.Account).SetValidator(new BrokerAccountValidator());
+            RuleFor(x => x.Account).SetValidator(new AccountValidator());
         }
     }
 
@@ -44,13 +44,16 @@ public class Create
         public async Task<OperationResult<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
             var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == _userAccessor.GetUsername(), cancellationToken);
+            
+            var broker = await _context.Brokers.FirstOrDefaultAsync(x => x.Id == request.Account.BrokerId, cancellationToken);
+            
+            if (broker == null) return OperationResult<Unit>.Failure("Broker doesn't exist");
 
             var account = new Account
             {
                 Id = request.Account.Id,
-                User = user,
-                BrokerId = request.Account.BrokerId,
-
+                User = user!,
+                Broker = broker
             };
 
             _context.Accounts.Add(account);

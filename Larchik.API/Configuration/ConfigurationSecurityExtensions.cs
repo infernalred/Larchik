@@ -1,8 +1,10 @@
 ﻿using System.Text;
 using Larchik.API.Services;
 using Larchik.Domain;
+using Larchik.Infrastructure.Security;
 using Larchik.Persistence.Context;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 
@@ -39,13 +41,14 @@ public static class ConfigurationSecurityExtensions
                     ValidateLifetime = true
                 };
             });
-        // services.AddAuthorization(opt =>
-        // {
-        //     opt.AddPolicy("IsOwnerAdv", policy =>
-        //     {
-        //         policy.Requirements.Add(new IsOwnerAdvRequirement());
-        //     });
-        // });
+        services.AddAuthorization(opt =>
+        {
+            opt.AddPolicy("IsAccountOwner", policy =>
+            {
+                policy.Requirements.Add(new IsAccountOwnerRequirement());
+            });
+        });
+        services.AddTransient<IAuthorizationHandler, IsAccountOwnerRequirementHandler>();
         services.AddScoped<ITokenService, TokenService>();
         
         return services;

@@ -19,9 +19,9 @@ public class Seed
 
         if (!context.Brokers.Any())
         {
-            var broker1 = new Broker { Name = "Акционерное общество \"Тинькофф Банк\"", Inn = "7710140679" };
-            var broker2 = new Broker { Name = "Акционерное общество ВТБ Капитал", Inn = "7703585780" };
-            var broker3 = new Broker { Name = "Публичное акционерное общество Банк \"Финансовая Корпорация Открытие\"", Inn = "7706092528" };
+            var broker1 = new Broker { Id = 1, Name = "Акционерное общество \"Тинькофф Банк\"", Inn = "7710140679" };
+            var broker2 = new Broker { Id = 2, Name = "Акционерное общество ВТБ Капитал", Inn = "7703585780" };
+            var broker3 = new Broker { Id = 3, Name = "Публичное акционерное общество Банк \"Финансовая Корпорация Открытие\"", Inn = "7706092528" };
             
             var brokers = new List<Broker>
             {
@@ -52,10 +52,11 @@ public class Seed
             var type1 = new StockType { Code = "SHARE" };
             var type2 = new StockType { Code = "BOND" };
             var type3 = new StockType { Code = "ETF" };
+            var type4 = new StockType { Code = "MONEY" };
 
             var stockTypes = new List<StockType>
             {
-                type1, type2, type3
+                type1, type2, type3, type4
             };
             
             await context.AddRangeAsync(stockTypes);
@@ -75,10 +76,11 @@ public class Seed
             var sector9 = new Sector { Code = "Information Technology" };
             var sector10 = new Sector { Code = "Communication Services" };
             var sector11 = new Sector { Code = "Real Estate" };
+            var sector12 = new Sector { Code = "Валюта" };
 
             var sectors = new List<Sector>
             {
-                sector1, sector2, sector3, sector4, sector5, sector6, sector7, sector8, sector9, sector10, sector11
+                sector1, sector2, sector3, sector4, sector5, sector6, sector7, sector8, sector9, sector10, sector11, sector12
             };
             
             await context.AddRangeAsync(sectors);
@@ -92,12 +94,52 @@ public class Seed
             var stock3 = new Stock { Tiсker = "SBER", CompanyName = "Sberbank", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Financials"};
             var stock4 = new Stock { Tiсker = "MTSS", CompanyName = "MTS", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Communication Services"};
 
+            var money1 = new Stock { Tiсker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта" };
+            var money2 = new Stock { Tiсker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта" };
+            var money3 = new Stock { Tiсker = "EUR", CompanyName = "", CurrencyId = "EUR", TypeId = "MONEY", SectorId = "Валюта" };
+            
             var stocks = new List<Stock>
             {
-                stock1, stock2, stock3, stock4
+                stock1, stock2, stock3, stock4, money1, money2, money3
             };
             
             await context.AddRangeAsync(stocks);
+            await context.SaveChangesAsync();
+        }
+
+        if (!context.Operations.Any())
+        {
+            var operation1 = new Operation { Code = "Пополнение" };
+            var operation2 = new Operation { Code = "Вывод" };
+            var operation3 = new Operation { Code = "Покупка" };
+            var operation4 = new Operation { Code = "Продажа" };
+            var operation5 = new Operation { Code = "Комиссия" };
+            var operation6 = new Operation { Code = "Налог" };
+            var operation7 = new Operation { Code = "Дивиденды" };
+            
+            var operations = new List<Operation>
+            {
+                operation1, operation2, operation3, operation4, operation5, operation6, operation7
+            };
+            
+            await context.AddRangeAsync(operations);
+            await context.SaveChangesAsync();
+        }
+
+        if (!context.Accounts.Any())
+        {
+            var admin = context.Users.First(x => x.UserName == "admin");
+            var user1 = context.Users.First(x => x.UserName == "user1");
+            
+            var account1 = new Account{Id = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), User = admin, BrokerId = 1};
+            var account2 = new Account{Id = Guid.Parse("a4c15931-70ca-4a55-9fac-0715c4a56264"), User = user1, BrokerId = 1};
+
+            var accounts = new List<Account>
+            {
+                account1, account2
+            };
+            
+            await context.AddRangeAsync(accounts);
             await context.SaveChangesAsync();
         }
     }

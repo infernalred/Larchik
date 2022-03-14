@@ -2,6 +2,7 @@
 using Larchik.Application.Brokers;
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
+using Larchik.Application.Services;
 using Larchik.Infrastructure.Security;
 using Larchik.Persistence.Context;
 using MediatR;
@@ -33,6 +34,7 @@ public static class ConfigurationBaseExtensions
             });
 
             services.AddScoped<IUserAccessor, UserAccessor>();
+            services.AddScoped<IDealService, DealService>();
             services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
             
         return services;

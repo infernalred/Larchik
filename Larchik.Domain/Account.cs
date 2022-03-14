@@ -8,5 +8,5 @@ public class Account
     public Broker Broker { get; set; }
     public int BrokerId { get; set; }
     public ICollection<Asset> Assets { get; set; } = new List<Asset>();
-    public ICollection<Cash> Cash { get; set; } = new List<Cash>();
+    public ICollection<Deal> Deals { get; set; } = new List<Deal>();
 }

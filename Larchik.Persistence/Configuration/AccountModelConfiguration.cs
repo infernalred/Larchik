@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Larchik.Persistence.Configuration;
 
-public class BrokerAccountModelConfiguration : IEntityTypeConfiguration<Account>
+public class AccountModelConfiguration : IEntityTypeConfiguration<Account>
 {
     public void Configure(EntityTypeBuilder<Account> builder)
     {
