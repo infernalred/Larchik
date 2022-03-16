@@ -28,8 +28,27 @@ public class CurrencyOperationsReport
         
         public async Task<OperationResult<CurrencyOperationsReportModel>> Handle(Query request, CancellationToken cancellationToken)
         {
-            var account = await _context.Assets.Where(x => x.AccountId == request.AccountId)
-            throw new NotImplementedException();
+            var deals = await _context.Deals
+                .Include(x => x.Stock)
+                .Where(x => x.AccountId == request.AccountId && x.CreatedAt >= request.FromDate.ToUniversalTime() && x.CreatedAt <= request.ToDate.ToUniversalTime() && x.Stock.TypeId == "MONEY")
+                .GroupBy(x => new { x.StockId, x.OperationId }, (key, group) => new CurrencyDealsReport
+                {
+                    Currency = key.StockId,
+                    Operation = key.OperationId,
+                    Amount = group.Sum(x => x.Amount)
+                })
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            
+            var result = new CurrencyOperationsReportModel
+            {
+                FromDate = request.FromDate,
+                ToDate = request.ToDate,
+                Operations = deals
+            };
+
+            return OperationResult<CurrencyOperationsReportModel>.Success(result);
         }
     }
 }
