@@ -243,7 +243,7 @@ namespace Larchik.Persistence.Migrations
                 name: "Stocks",
                 columns: table => new
                 {
-                    Tiсker = table.Column<string>(type: "character varying(6)", maxLength: 6, nullable: false),
+                    Ticker = table.Column<string>(type: "character varying(6)", maxLength: 6, nullable: false),
                     CompanyName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     TypeId = table.Column<string>(type: "character varying(25)", nullable: false),
                     CurrencyId = table.Column<string>(type: "character varying(5)", nullable: false),
@@ -251,7 +251,7 @@ namespace Larchik.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Stocks", x => x.Tiсker);
+                    table.PrimaryKey("PK_Stocks", x => x.Ticker);
                     table.ForeignKey(
                         name: "FK_Stocks_Currencies_CurrencyId",
                         column: x => x.CurrencyId,
@@ -294,7 +294,7 @@ namespace Larchik.Persistence.Migrations
                         name: "FK_Assets_Stocks_StockId",
                         column: x => x.StockId,
                         principalTable: "Stocks",
-                        principalColumn: "Tiсker",
+                        principalColumn: "Ticker",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -331,7 +331,7 @@ namespace Larchik.Persistence.Migrations
                         name: "FK_Deals_Stocks_StockId",
                         column: x => x.StockId,
                         principalTable: "Stocks",
-                        principalColumn: "Tiсker",
+                        principalColumn: "Ticker",
                         onDelete: ReferentialAction.Cascade);
                 });
 

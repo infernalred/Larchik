@@ -89,14 +89,14 @@ public class Seed
 
         if (!context.Stocks.Any())
         {
-            var stock1 = new Stock { Tiсker = "AAPL", CompanyName = "Apple", CurrencyId = "USD", TypeId = "SHARE", SectorId = "Information Technology"};
-            var stock2 = new Stock { Tiсker = "MSFT", CompanyName = "Microsoft", CurrencyId = "USD", TypeId = "SHARE", SectorId = "Information Technology"};
-            var stock3 = new Stock { Tiсker = "SBER", CompanyName = "Sberbank", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Financials"};
-            var stock4 = new Stock { Tiсker = "MTSS", CompanyName = "MTS", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Communication Services"};
+            var stock1 = new Stock { Ticker = "AAPL", CompanyName = "Apple", CurrencyId = "USD", TypeId = "SHARE", SectorId = "Information Technology"};
+            var stock2 = new Stock { Ticker = "MSFT", CompanyName = "Microsoft", CurrencyId = "USD", TypeId = "SHARE", SectorId = "Information Technology"};
+            var stock3 = new Stock { Ticker = "SBER", CompanyName = "Sberbank", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Financials"};
+            var stock4 = new Stock { Ticker = "MTSS", CompanyName = "MTS", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Communication Services"};
 
-            var money1 = new Stock { Tiсker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта" };
-            var money2 = new Stock { Tiсker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта" };
-            var money3 = new Stock { Tiсker = "EUR", CompanyName = "", CurrencyId = "EUR", TypeId = "MONEY", SectorId = "Валюта" };
+            var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта" };
+            var money2 = new Stock { Ticker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта" };
+            var money3 = new Stock { Ticker = "EUR", CompanyName = "", CurrencyId = "EUR", TypeId = "MONEY", SectorId = "Валюта" };
             
             var stocks = new List<Stock>
             {

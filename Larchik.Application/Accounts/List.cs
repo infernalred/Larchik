@@ -34,6 +34,7 @@ public class List
                 .Where(x => x.User.UserName == _userAccessor.GetUsername())
                 .Include(x => x.Broker)
                 .Include(x => x.Assets.Where(a => a.Quantity != 0))
+                .ThenInclude(s => s.Stock)
                 .ToListAsync(cancellationToken);
             
             return OperationResult<List<AccountDto>>.Success(_mapper.Map<List<AccountDto>>(accounts));

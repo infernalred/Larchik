@@ -2,7 +2,7 @@
 
 public class Stock
 {
-    public string Tiсker { get; set; }
+    public string Ticker { get; set; }
     public string CompanyName { get; set; }
     public StockType Type { get; set; }
     public string TypeId { get; set; }

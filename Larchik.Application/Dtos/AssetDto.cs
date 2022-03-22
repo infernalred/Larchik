@@ -3,6 +3,6 @@
 public class AssetDto
 {
     public Guid Id { get; set; }
-    public string StockId { get; set; }
+    public StockDto Stock { get; set; }
     public decimal Quantity { get; set; }
 }

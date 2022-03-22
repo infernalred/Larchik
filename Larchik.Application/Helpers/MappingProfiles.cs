@@ -11,9 +11,9 @@ public class MappingProfiles : AutoMapper.Profile
         CreateMap<AccountDto, Account>().ReverseMap();
         CreateMap<AssetDto, Asset>().ReverseMap();
         CreateMap<Stock, StockDto>()
-            .ForMember(d => d.Currency, o => o.MapFrom(s => s.Currency.Code))
-            .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.Code))
-            .ForMember(d => d.Sector, o => o.MapFrom(s => s.Sector.Code));
+            .ForMember(d => d.Currency, o => o.MapFrom(s => s.CurrencyId))
+            .ForMember(d => d.Type, o => o.MapFrom(s => s.TypeId))
+            .ForMember(d => d.Sector, o => o.MapFrom(s => s.SectorId));
         CreateMap<DealDto, Deal>()
             .ForMember(d => d.AccountId, o => o.MapFrom((_, _, _, context) => context.Options.Items["AccountId"]))
             .ForMember(d => d.Amount, o => o.MapFrom((_, _, _, context) => context.Options.Items["Amount"]))

@@ -241,7 +241,7 @@ namespace Larchik.Persistence.Migrations
 
             modelBuilder.Entity("Larchik.Domain.Stock", b =>
                 {
-                    b.Property<string>("Tiсker")
+                    b.Property<string>("Ticker")
                         .HasMaxLength(6)
                         .HasColumnType("character varying(6)");
 
@@ -262,7 +262,7 @@ namespace Larchik.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("character varying(25)");
 
-                    b.HasKey("Tiсker");
+                    b.HasKey("Ticker");
 
                     b.HasIndex("CurrencyId");
 

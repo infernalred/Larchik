@@ -24,7 +24,7 @@ public class DealService : IDealService
 
     public async Task<OperationResult<Unit>> CreateDeal(Guid accountId, DealDto dealDto, CancellationToken cancellationToken)
     {
-        var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Tiсker == dealDto.Stock, cancellationToken);
+        var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Ticker == dealDto.Stock, cancellationToken);
         
         if (stock == null) return OperationResult<Unit>.Failure("Тикер не найден");
         
@@ -97,7 +97,7 @@ public class DealService : IDealService
         var assetOldMoney = await _context.Assets.FirstAsync(x => x.StockId == deal.Stock.CurrencyId, cancellationToken);
         assetOldMoney.Quantity += -deal.Amount;
         
-        var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Tiсker == dealDto.Stock, cancellationToken);
+        var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Ticker == dealDto.Stock, cancellationToken);
         
         if (stock == null) return OperationResult<Unit>.Failure("Тикер не найден");
         

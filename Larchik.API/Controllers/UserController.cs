@@ -1,4 +1,5 @@
-﻿using Larchik.API.Dtos;
+﻿using System.Security.Claims;
+using Larchik.API.Dtos;
 using Larchik.API.Services;
 using Larchik.Domain;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.API.Controllers;
 
-[AllowAnonymous]
 [ApiController]
 [Route("api/v1/[controller]")]
 public class UserController : ControllerBase
@@ -24,6 +24,7 @@ public class UserController : ControllerBase
         _tokenService = tokenService;
     }
     
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
     {
@@ -38,7 +39,17 @@ public class UserController : ControllerBase
 
         return Unauthorized();
     }
+    
+    [HttpGet]
+    public async Task<ActionResult<UserDto>> GetCurrentUser()
+    {
+        var user = await _userManager.Users
+            .FirstOrDefaultAsync(x => x.Email == User.FindFirstValue(ClaimTypes.Email));
 
+        return CreateUserDto(user);
+    }
+
+    [AllowAnonymous]
     [HttpPost("register")]
     public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
     {
