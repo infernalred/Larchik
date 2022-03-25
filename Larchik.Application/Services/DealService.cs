@@ -52,8 +52,6 @@ public class DealService : IDealService
             {
                 asset.Quantity += quantity;
             }
-
-            dealDto.Quantity = quantity;
         }
         
         var assetMoney = await _context.Assets.FirstOrDefaultAsync(x => x.StockId == stock.CurrencyId, cancellationToken);
@@ -90,8 +88,9 @@ public class DealService : IDealService
         
         if (deal.Stock.TypeId != "MONEY")
         {
+            var quantity = AssetOperation.CreateAssetDeal(deal.OperationId, deal.Quantity);
             var assetOld = await _context.Assets.FirstAsync(x => x.StockId == deal.StockId, cancellationToken);
-            assetOld.Quantity += -deal.Quantity;
+            assetOld.Quantity += -quantity;
         }
 
         var assetOldMoney = await _context.Assets.FirstAsync(x => x.StockId == deal.Stock.CurrencyId, cancellationToken);
@@ -125,8 +124,6 @@ public class DealService : IDealService
             {
                 asset.Quantity += quantity;
             }
-
-            dealDto.Quantity = quantity;
         }
         
         var assetMoney = await _context.Assets.FirstOrDefaultAsync(x => x.StockId == stock.CurrencyId, cancellationToken);
@@ -162,8 +159,9 @@ public class DealService : IDealService
         
         if (deal.Stock.TypeId != "MONEY")
         {
+            var quantity = AssetOperation.CreateAssetDeal(deal.OperationId, deal.Quantity);
             var asset = await _context.Assets.FirstAsync(x => x.StockId == deal.StockId, cancellationToken);
-            asset.Quantity += -deal.Quantity;
+            asset.Quantity += -quantity;
         }
 
         var assetMoney = await _context.Assets.FirstAsync(x => x.StockId == deal.Stock.CurrencyId, cancellationToken);

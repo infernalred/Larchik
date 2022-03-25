@@ -44,16 +44,12 @@ public class Create
         public async Task<OperationResult<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
             var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == _userAccessor.GetUsername(), cancellationToken);
-            
-            var broker = await _context.Brokers.FirstOrDefaultAsync(x => x.Id == request.Account.BrokerId, cancellationToken);
-            
-            if (broker == null) return OperationResult<Unit>.Failure("Broker doesn't exist");
 
             var account = new Account
             {
                 Id = request.Account.Id,
                 User = user!,
-                Broker = broker
+                Name = request.Account.Name
             };
 
             _context.Accounts.Add(account);

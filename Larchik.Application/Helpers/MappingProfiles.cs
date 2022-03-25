@@ -7,7 +7,6 @@ public class MappingProfiles : AutoMapper.Profile
 {
     public MappingProfiles()
     {
-        CreateMap<BrokerDto, Broker>().ReverseMap();
         CreateMap<AccountDto, Account>().ReverseMap();
         CreateMap<AssetDto, Asset>().ReverseMap();
         CreateMap<Stock, StockDto>()
@@ -22,5 +21,8 @@ public class MappingProfiles : AutoMapper.Profile
             .ForMember(d => d.StockId, o => o.MapFrom(s => s.Stock))
             .ForMember(d => d.Stock, o => o.Ignore())
             .ForMember(d => d.Operation, o => o.Ignore());
+        CreateMap<Deal, DealDto>()
+            .ForMember(d => d.Operation, o => o.MapFrom(s => s.OperationId))
+            .ForMember(d => d.Stock, o => o.MapFrom(s => s.StockId));
     }
 }

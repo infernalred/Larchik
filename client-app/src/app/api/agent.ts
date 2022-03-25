@@ -5,6 +5,7 @@ import { history } from '../..';
 import { toast } from 'react-toastify';
 import { OperationResult } from '../models/operationResult';
 import { Account } from '../models/account';
+import { Deal } from '../models/deal';
 
 axios.defaults.baseURL = process.env.REACT_APP_API_URL!;
 
@@ -62,13 +63,19 @@ const Users = {
 }
 
 const Accounts = {
-    list: () => requests.get<OperationResult<Account[]>>('/accounts')
+    list: () => requests.get<OperationResult<Account[]>>('/accounts'),
+    details: (id: string) => requests.get<OperationResult<Account>>(`/accounts/${id}`)
 
+}
+
+const Deals = {
+    list: (id: string) => requests.get<OperationResult<Deal[]>>(`/deals/${id}`)
 }
 
 const agent = {
     Users,
-    Accounts
+    Accounts,
+    Deals
 }
 
 export default agent;

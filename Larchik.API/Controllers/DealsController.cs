@@ -45,4 +45,16 @@ public class DealsController : BaseApiController
 
         return Ok(result);
     }
+    
+    [Authorize(Policy = "IsAccountOwner")]
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(OperationResult<List<DealDto>>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    [ProducesResponseType((int)HttpStatusCode.Forbidden)]
+    public async Task<ActionResult<OperationResult<Unit>>> AccountDeals(Guid id)
+    {
+        var result = await Mediator.Send(new List.Query { Id = id});
+
+        return Ok(result);
+    }
 }

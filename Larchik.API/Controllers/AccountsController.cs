@@ -19,8 +19,8 @@ public class AccountsController : BaseApiController
     }
     
     [HttpGet("{id:guid}", Name = nameof(GetAccount))]
-    [ProducesResponseType(typeof(OperationResult<BrokerDto>), (int)HttpStatusCode.OK)]
-    [ProducesResponseType(typeof(OperationResult<BrokerDto>), (int)HttpStatusCode.NotFound)]
+    [ProducesResponseType(typeof(OperationResult<AccountDto>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(OperationResult<AccountDto>), (int)HttpStatusCode.NotFound)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     public async Task<ActionResult<OperationResult<Account>>> GetAccount(Guid id)
     {

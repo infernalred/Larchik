@@ -7,6 +7,6 @@ public class AccountValidator : AbstractValidator<AccountCreateDto>
 {
     public AccountValidator()
     {
-        RuleFor(x => x.BrokerId).NotEmpty();
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(15);
     }
 }

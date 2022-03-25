@@ -3,5 +3,5 @@
 public class AccountCreateDto
 {
     public Guid Id { get; set; }
-    public int BrokerId { get; set; }
+    public string Name { get; set; }
 }

@@ -1,6 +1,6 @@
 ﻿using FluentValidation.AspNetCore;
-using Larchik.Application.Brokers;
 using Larchik.Application.Contracts;
+using Larchik.Application.Deals;
 using Larchik.Application.Helpers;
 using Larchik.Application.Services;
 using Larchik.Infrastructure.Security;

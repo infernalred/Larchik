@@ -11,7 +11,9 @@ public class Deal
     public Stock Stock { get; set; }
     public string StockId { get; set; }
     public decimal Commission { get; set; }
-    public DateTime CreatedAt { get; set; }
+
+    public DateTime CreatedAt{ get; set; }
+
     public Account Account { get; set; }
     public Guid AccountId { get; set; }
 }

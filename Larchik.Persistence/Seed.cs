@@ -17,21 +17,6 @@ public class Seed
             await userManager.CreateAsync(user1, "Pa$$w0rd");
         }
 
-        if (!context.Brokers.Any())
-        {
-            var broker1 = new Broker { Id = 1, Name = "Акционерное общество \"Тинькофф Банк\"", Inn = "7710140679" };
-            var broker2 = new Broker { Id = 2, Name = "Акционерное общество ВТБ Капитал", Inn = "7703585780" };
-            var broker3 = new Broker { Id = 3, Name = "Публичное акционерное общество Банк \"Финансовая Корпорация Открытие\"", Inn = "7706092528" };
-            
-            var brokers = new List<Broker>
-            {
-                broker1, broker2, broker3
-            };
-
-            await context.AddRangeAsync(brokers);
-            await context.SaveChangesAsync();
-        }
-
         if (!context.Currencies.Any())
         {
             var rub = new Currency { Code = "RUB" };
@@ -131,8 +116,8 @@ public class Seed
             var admin = context.Users.First(x => x.UserName == "admin");
             var user1 = context.Users.First(x => x.UserName == "user1");
             
-            var account1 = new Account{Id = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), User = admin, BrokerId = 1};
-            var account2 = new Account{Id = Guid.Parse("a4c15931-70ca-4a55-9fac-0715c4a56264"), User = user1, BrokerId = 1};
+            var account1 = new Account{Id = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), User = admin, Name = "Счет1"};
+            var account2 = new Account{Id = Guid.Parse("a4c15931-70ca-4a55-9fac-0715c4a56264"), User = user1, Name = "Счет1"};
 
             var accounts = new List<Account>
             {

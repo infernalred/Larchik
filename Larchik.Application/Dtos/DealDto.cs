@@ -8,4 +8,5 @@ public class DealDto
     public string Operation { get; set; }
     public string Stock { get; set; }
     public decimal Commission { get; set; }
+    public DateTime CreatedAt { get; set; }
 }

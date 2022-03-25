@@ -11,6 +11,6 @@ public class AccountModelConfiguration : IEntityTypeConfiguration<Account>
         builder.HasKey(x => x.Id);
         
         builder.Property(x => x.UserId).IsRequired();
-        builder.Property(x => x.BrokerId).IsRequired();
+        builder.Property(x => x.Name).IsRequired().HasMaxLength(15);
     }
 }

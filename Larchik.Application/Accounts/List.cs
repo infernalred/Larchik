@@ -32,7 +32,7 @@ public class List
         {
             var accounts = await _context.Accounts
                 .Where(x => x.User.UserName == _userAccessor.GetUsername())
-                .Include(x => x.Broker)
+                .Include(x => x.Deals)
                 .Include(x => x.Assets.Where(a => a.Quantity != 0))
                 .ThenInclude(s => s.Stock)
                 .ToListAsync(cancellationToken);

@@ -3,7 +3,9 @@ import React, { useEffect } from 'react';
 import { Route, Switch } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { Container } from 'semantic-ui-react';
+import AccountDetails from '../../features/accounts/AccountDetails';
 import AccountList from '../../features/accounts/AccountList';
+import DealList from '../../features/deals/DealList';
 import NotFound from '../../features/errors/NotFound';
 import ServerError from '../../features/errors/ServerError';
 import HomePage from '../../features/home/HomePage';
@@ -38,6 +40,9 @@ function App() {
             <Container style={{ marginTop: '7em' }}>
               <Switch>
                 <Route exact path='/accounts' component={AccountList} />
+                <Route path='/accounts/:id/deals' component={DealList} />
+                <Route path='/accounts/:id' component={AccountDetails} />
+                
                 <Route path='/server-error' component={ServerError} />
                 <Route component={NotFound} />
               </Switch>

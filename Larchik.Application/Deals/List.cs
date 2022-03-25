@@ -7,13 +7,16 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Larchik.Application.Brokers;
+namespace Larchik.Application.Deals;
 
 public class List
 {
-    public class Query : IRequest<OperationResult<List<BrokerDto>>>{}
+    public class Query : IRequest<OperationResult<List<DealDto>>>
+    {
+        public Guid Id { get; set; }
+    }
     
-    public class Handler : IRequestHandler<Query, OperationResult<List<BrokerDto>>>
+    public class Handler : IRequestHandler<Query, OperationResult<List<DealDto>>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -26,13 +29,16 @@ public class List
             _mapper = mapper;
         }
         
-        public async Task<OperationResult<List<BrokerDto>>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<OperationResult<List<DealDto>>> Handle(Query request, CancellationToken cancellationToken)
         {
-            var brokers = await _context.Brokers
-                .ProjectTo<BrokerDto>(_mapper.ConfigurationProvider).AsNoTracking()
+            var deals = await _context.Deals
+                .AsNoTracking()
+                .Where(x => x.AccountId == request.Id)
+                .OrderBy(x => x.CreatedAt)
+                .ProjectTo<DealDto>(_mapper.ConfigurationProvider)
                 .ToListAsync(cancellationToken);
-
-            return OperationResult<List<BrokerDto>>.Success(brokers);
+            
+            return OperationResult<List<DealDto>>.Success(deals);
         }
     }
 }

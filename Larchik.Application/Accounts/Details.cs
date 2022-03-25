@@ -34,8 +34,9 @@ public class Details
         public async Task<OperationResult<AccountDto>> Handle(Query request, CancellationToken cancellationToken)
         {
             var account = await _context.Accounts
-                .Include(x => x.Broker)
                 .Include(x => x.Assets.Where(a => a.Quantity != 0))
+                .Include(x => x.Deals)
+                .ThenInclude(s => s.Stock)
                 .SingleOrDefaultAsync(x => x.Id == request.Id && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
             
             return OperationResult<AccountDto>.Success(_mapper.Map<AccountDto>(account));
