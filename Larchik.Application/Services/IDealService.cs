@@ -8,5 +8,5 @@ public interface IDealService
 {
     Task<OperationResult<Unit>> CreateDeal(Guid accountId, DealDto deal, CancellationToken cancellationToken);
     Task<OperationResult<Unit>> EditDeal(Guid accountId, DealDto deal, CancellationToken cancellationToken);
-    Task<OperationResult<Unit>> DeleteDeal(Guid accountId, Guid dealId, CancellationToken cancellationToken);
+    Task<OperationResult<Unit>> DeleteDeal(Guid id, CancellationToken cancellationToken);
 }

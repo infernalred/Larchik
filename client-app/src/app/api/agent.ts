@@ -69,7 +69,8 @@ const Accounts = {
 }
 
 const Deals = {
-    list: (id: string) => requests.get<OperationResult<Deal[]>>(`/deals/${id}`)
+    list: (id: string) => requests.get<OperationResult<Deal[]>>(`/deals/${id}`),
+    delete: (id: string) => requests.del<void>(`/deals/${id}`)
 }
 
 const agent = {

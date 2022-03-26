@@ -9,8 +9,7 @@ public class Delete
 {
     public class Command : IRequest<OperationResult<Unit>>
     {
-        public Guid AccountId { get; set; }
-        public Guid DealId { get; set; }
+        public Guid Id { get; set; }
     }
     
     public class Handler : IRequestHandler<Command, OperationResult<Unit>>
@@ -26,7 +25,7 @@ public class Delete
         
         public async Task<OperationResult<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
-            return await _dealService.DeleteDeal(request.AccountId, request.DealId, cancellationToken);
+            return await _dealService.DeleteDeal(request.Id, cancellationToken);
         }
     }
 }

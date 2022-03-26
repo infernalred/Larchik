@@ -47,6 +47,10 @@ public static class ConfigurationSecurityExtensions
             {
                 policy.Requirements.Add(new IsAccountOwnerRequirement());
             });
+            opt.AddPolicy("IsDealOwner", policy =>
+            {
+                policy.Requirements.Add(new IsDealOwnerRequirement());
+            });
         });
         services.AddTransient<IAuthorizationHandler, IsAccountOwnerRequirementHandler>();
         services.AddScoped<ITokenService, TokenService>();

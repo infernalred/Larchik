@@ -11,7 +11,7 @@ namespace Larchik.API.Controllers;
 public class DealsController : BaseApiController
 {
     [Authorize(Policy = "IsAccountOwner")]
-    [HttpPost("[action]/{id:guid}")]
+    [HttpPost("{id:guid}")]
     [ProducesResponseType(typeof(OperationResult<Unit>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
@@ -23,7 +23,7 @@ public class DealsController : BaseApiController
     }
     
     [Authorize(Policy = "IsAccountOwner")]
-    [HttpPost("[action]/{id:guid}")]
+    [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(OperationResult<Unit>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
@@ -34,14 +34,14 @@ public class DealsController : BaseApiController
         return Ok(result);
     }
     
-    [Authorize(Policy = "IsAccountOwner")]
-    [HttpDelete("[action]/{id:guid}/{dealId:guid}")]
+    [Authorize(Policy = "IsDealOwner")]
+    [HttpDelete("{id:guid}")]
     [ProducesResponseType(typeof(OperationResult<Unit>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<Unit>>> Delete(Guid id, Guid dealId)
+    public async Task<ActionResult<OperationResult<Unit>>> Delete(Guid id)
     {
-        var result = await Mediator.Send(new Delete.Command { AccountId = id, DealId = dealId});
+        var result = await Mediator.Send(new Delete.Command { Id = id});
 
         return Ok(result);
     }

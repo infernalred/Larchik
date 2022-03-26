@@ -7,7 +7,7 @@ import { useStore } from "../../app/store/store";
 
 export default observer(function AccountList() {
     const { dealStore } = useStore();
-    const { loadDeals, deals } = dealStore;
+    const { loadDeals, deals, loading, deleteDeal } = dealStore;
     const { id } = useParams<{ id: string }>();
 
     useEffect(() => {
@@ -41,7 +41,12 @@ export default observer(function AccountList() {
                         <Table.Cell>{deal.commission}</Table.Cell>
                         <Table.Cell>{deal.operation}</Table.Cell>
                         <Table.Cell>
-                            {/* <Button as={NavLink} to={`/accounts/${account.id}/deals`} primary inverted><Icon name='list' />Сделки</Button> */}
+                            <Button
+                                color="red"
+                                content="Удалить"
+                                onClick={() => deleteDeal(deal.id)}
+                                loading={loading}
+                            />
                         </Table.Cell>
                     </Table.Row>
                 ))}

@@ -151,9 +151,9 @@ public class DealService : IDealService
         return OperationResult<Unit>.Success(Unit.Value);
     }
 
-    public async Task<OperationResult<Unit>> DeleteDeal(Guid accountId, Guid dealId, CancellationToken cancellationToken)
+    public async Task<OperationResult<Unit>> DeleteDeal(Guid id, CancellationToken cancellationToken)
     {
-        var deal = await _context.Deals.Include(x => x.Stock).FirstOrDefaultAsync(x => x.Id == dealId, cancellationToken);
+        var deal = await _context.Deals.Include(x => x.Stock).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         
         if (deal == null) return OperationResult<Unit>.Failure("Сделка не найдена");
         

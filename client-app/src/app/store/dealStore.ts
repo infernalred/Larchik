@@ -5,6 +5,7 @@ import { Deal } from "../models/deal";
 export default class DealStore {
     dealsRegistry = new Map<string, Deal>();
     loadingInitial = false;
+    loading = false;
     selectedDeal: Deal | undefined = undefined;
 
     constructor() {
@@ -33,6 +34,23 @@ export default class DealStore {
         }
         finally {
             this.setLoadingInitial(false);
+        }
+    }
+
+    deleteDeal = async (id: string) => {
+        this.loading = true;
+        try {
+            await agent.Deals.delete(id);
+            runInAction(() => {
+                this.dealsRegistry.delete(id);
+            })
+        } catch (error) {
+            console.log(error);
+        }
+        finally {
+            runInAction(() => {
+                this.loading = false;
+            })
         }
     }
 
