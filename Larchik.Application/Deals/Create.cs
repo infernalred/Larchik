@@ -11,7 +11,6 @@ public class Create
 {
     public class Command : IRequest<OperationResult<Unit>>
     {
-        public Guid AccountId { get; set; }
         public DealDto Deal { get; set; }
     }
     
@@ -36,7 +35,7 @@ public class Create
         
         public async Task<OperationResult<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
-            return await _dealService.CreateDeal(request.AccountId, request.Deal, cancellationToken);
+            return await _dealService.CreateDeal(request.Deal, cancellationToken);
         }
     }
 }

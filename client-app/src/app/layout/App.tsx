@@ -1,10 +1,11 @@
 import { observer } from 'mobx-react-lite';
 import React, { useEffect } from 'react';
-import { Route, Switch } from 'react-router-dom';
+import { Route, Switch, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { Container } from 'semantic-ui-react';
 import AccountDetails from '../../features/accounts/AccountDetails';
 import AccountList from '../../features/accounts/AccountList';
+import DealForm from '../../features/deals/DealForm';
 import DealList from '../../features/deals/DealList';
 import NotFound from '../../features/errors/NotFound';
 import ServerError from '../../features/errors/ServerError';
@@ -15,6 +16,7 @@ import LoadingComponent from './LoadingComponent';
 import Navbar from './Navbar';
 
 function App() {
+  const location = useLocation();
   const { commonStore, userStore } = useStore();
 
   useEffect(() => {
@@ -42,6 +44,7 @@ function App() {
                 <Route exact path='/accounts' component={AccountList} />
                 <Route path='/accounts/:id/deals' component={DealList} />
                 <Route path='/accounts/:id' component={AccountDetails} />
+                <Route key={location.key} path={['/deal/:id', '/deal']} component={DealForm}/>
                 
                 <Route path='/server-error' component={ServerError} />
                 <Route component={NotFound} />

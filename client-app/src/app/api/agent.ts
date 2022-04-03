@@ -4,8 +4,10 @@ import { store } from '../store/store';
 import { history } from '../..';
 import { toast } from 'react-toastify';
 import { OperationResult } from '../models/operationResult';
-import { Account } from '../models/account';
-import { Deal } from '../models/deal';
+import { Account, AccountFormValues } from '../models/account';
+import { Deal, DealFormValues } from '../models/deal';
+import { Operation } from '../models/operation';
+import { Stock } from '../models/stock';
 
 axios.defaults.baseURL = process.env.REACT_APP_API_URL!;
 
@@ -18,13 +20,13 @@ axios.interceptors.request.use(config => {
 axios.interceptors.response.use(async response => {
     return response;
 }, (error: AxiosError) => {
-    const {data, status} = error.response!;
+    const {data, status, config, headers} = error.response!;
     switch (status) {
         case 400:
             if (data.errors) {
                 const modalStateErrors = [];
-                for (const key in data.error) {
-                    if (data.error[key]) {
+                for (const key in data.errors) {
+                    if (data.errors[key]) {
                         modalStateErrors.push(data.errors[key])
                     }
                 }
@@ -34,7 +36,10 @@ axios.interceptors.response.use(async response => {
             }
             break;
         case 401:
-            toast.error('Unauthorised');
+            if (status === 401 && headers['www-authenticate']?.startsWith('Bearer error="invalid_token"')) {
+                store.userStore.logout();
+                toast.error('Session expired - please login again');
+            }
             break;
         case 404:
             history.push('/not-found');
@@ -64,19 +69,33 @@ const Users = {
 
 const Accounts = {
     list: () => requests.get<OperationResult<Account[]>>('/accounts'),
-    details: (id: string) => requests.get<OperationResult<Account>>(`/accounts/${id}`)
-
+    details: (id: string) => requests.get<OperationResult<Account>>(`/accounts/${id}`),
+    create: (account: AccountFormValues) => requests.post<void>('/accounts', account),
+    update: (account: AccountFormValues) => requests.put<void>(`/accounts/${account.id}`, account)
 }
 
 const Deals = {
-    list: (id: string) => requests.get<OperationResult<Deal[]>>(`/deals/${id}`),
-    delete: (id: string) => requests.del<void>(`/deals/${id}`)
+    list: (id: string) => requests.get<OperationResult<Deal[]>>(`/deals/accounts/${id}`),
+    delete: (id: string) => requests.del<void>(`/deals/${id}`),
+    create: (deal: DealFormValues) => requests.post<void>('/deals', deal),
+    update: (deal: DealFormValues) => requests.put<void>(`/deals/${deal.id}`, deal),
+    details: (id: string) => requests.get<OperationResult<Deal>>(`/deals/${id}`)
+}
+
+const Operations = {
+    list: () => requests.get<OperationResult<Operation[]>>('/operations')
+}
+
+const Stocks = {
+    list: () => requests.get<OperationResult<Stock[]>>('/stocks')
 }
 
 const agent = {
     Users,
     Accounts,
-    Deals
+    Deals,
+    Operations,
+    Stocks
 }
 
 export default agent;

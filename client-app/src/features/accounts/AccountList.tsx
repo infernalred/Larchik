@@ -4,9 +4,10 @@ import { NavLink } from "react-router-dom";
 import { Button, Icon, Table } from "semantic-ui-react"
 import LoadingComponent from "../../app/layout/LoadingComponent";
 import { useStore } from "../../app/store/store";
+import AccountForm from "./AccountForm";
 
 export default observer(function AccountList() {
-    const { accountStore } = useStore();
+    const { accountStore, modalStore } = useStore();
     const { loadAccounts, accounts, accountsRegistry } = accountStore;
 
     useEffect(() => {
@@ -16,7 +17,11 @@ export default observer(function AccountList() {
     if (accountStore.loadingInitial) return <LoadingComponent content='Loading accounts...' />
 
     return (
-        <Table celled inverted>
+        <>
+        <Button onClick={() => modalStore.openModal(<AccountForm id={''} />)} size="mini" positive>
+                            +
+                        </Button>
+                        <Table celled inverted>
             <Table.Header>
                 <Table.Row>
                     <Table.HeaderCell>Название</Table.HeaderCell>
@@ -34,10 +39,13 @@ export default observer(function AccountList() {
                         <Table.Cell>
                             <Button as={NavLink} to={`/accounts/${account.id}`} primary inverted><Icon name='info circle' />Детали</Button>
                             <Button as={NavLink} to={`/accounts/${account.id}/deals`} primary inverted><Icon name='list' />Сделки</Button>
+                            <Button onClick={() => modalStore.openModal(<AccountForm id={account.id} />)} primary inverted>Изменить</Button>
                         </Table.Cell>
                     </Table.Row>
                 ))}
             </Table.Body>
         </Table>
+        </>
+        
     )
 })

@@ -32,7 +32,9 @@ public class List
         public async Task<OperationResult<List<StockDto>>> Handle(Query request, CancellationToken cancellationToken)
         {
             var stock = await _context.Stocks
-                .ProjectTo<StockDto>(_mapper.ConfigurationProvider).AsNoTracking()
+                .AsNoTracking()
+                .OrderBy(x => x.TypeId)
+                .ProjectTo<StockDto>(_mapper.ConfigurationProvider)
                 .ToListAsync(cancellationToken);
             
             return OperationResult<List<StockDto>>.Success(stock);

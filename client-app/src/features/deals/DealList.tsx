@@ -1,7 +1,7 @@
 import { observer } from "mobx-react-lite"
 import React, { useEffect } from "react"
-import { NavLink, useParams } from "react-router-dom";
-import { Button, Icon, Table } from "semantic-ui-react"
+import { Link, useParams } from "react-router-dom";
+import { Button, Table } from "semantic-ui-react"
 import LoadingComponent from "../../app/layout/LoadingComponent";
 import { useStore } from "../../app/store/store";
 
@@ -14,7 +14,7 @@ export default observer(function AccountList() {
         if (id) loadDeals(id);
     }, [id, loadDeals])
 
-    if (dealStore.loadingInitial) return <LoadingComponent content='Loading accounts...' />
+    if (dealStore.loadingDeals) return <LoadingComponent content='Loading accounts...' />
 
     return (
         <Table celled inverted>
@@ -42,6 +42,12 @@ export default observer(function AccountList() {
                         <Table.Cell>{deal.operation}</Table.Cell>
                         <Table.Cell>
                             <Button
+                                as={Link}
+                                to={`/deal/${deal.id}`}
+                                color="teal"
+                                content="Изменить"
+                            />
+                            <Button
                                 color="red"
                                 content="Удалить"
                                 onClick={() => deleteDeal(deal.id)}
@@ -51,6 +57,13 @@ export default observer(function AccountList() {
                     </Table.Row>
                 ))}
             </Table.Body>
+
+            <Table.Footer>
+                <Table.Row>
+                    <Table.HeaderCell>Всего сделок</Table.HeaderCell>
+                    <Table.HeaderCell>{deals.length}</Table.HeaderCell>
+                </Table.Row>
+            </Table.Footer>
         </Table>
     )
 })

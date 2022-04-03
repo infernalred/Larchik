@@ -9,4 +9,5 @@ public class DealDto
     public string Stock { get; set; }
     public decimal Commission { get; set; }
     public DateTime CreatedAt { get; set; }
+    public Guid AccountId { get; set; }
 }

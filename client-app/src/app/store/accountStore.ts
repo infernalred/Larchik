@@ -1,6 +1,7 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import agent from "../api/agent";
-import { Account } from "../models/account";
+import { Account, AccountFormValues } from "../models/account";
+import { store } from "./store";
 
 export default class AccountStore {
     accountsRegistry = new Map<string, Account>();
@@ -59,6 +60,41 @@ export default class AccountStore {
             }
         }
     }
+
+    createAccount = async (account: AccountFormValues) => {
+        try {
+            await agent.Accounts.create(account);
+            const newAccount = new Account(account);
+            newAccount.assets = [];
+            this.setAccount(newAccount);
+            store.modalStore.closeModal();
+        } catch (error) {
+            throw (error);
+        }
+    }
+
+    updateAccount = async (account: AccountFormValues) => {
+        console.log('обновляем')
+        console.log(account);
+        try {
+            await agent.Accounts.update(account);
+            runInAction(() => {
+                if (account.id) {
+                    let updateAccount = {...this.getAccount(account.id), ...account}
+                    this.accountsRegistry.set(account.id, updateAccount as Account)
+                    store.modalStore.closeModal();
+                }
+            })
+        } catch (error) {
+            throw (error);
+        }
+    }
+
+    get accountSet() {
+        return this.accounts.map(x => {
+            return {key: x.id, value: x.id, text: x.name}
+        })
+    };
 
     private setAccount = (account: Account) => {
         this.accountsRegistry.set(account.id, account);

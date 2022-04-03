@@ -38,6 +38,12 @@ export default observer(function AccountDetails() {
                     </Table.Row>
                 ))}
             </Table.Body>
+            <Table.Footer>
+                <Table.Row>
+                    <Table.HeaderCell>Всего активов</Table.HeaderCell>
+                    <Table.HeaderCell>{account.assets.length}</Table.HeaderCell>
+                </Table.Row>
+            </Table.Footer>
         </Table>
     )
 })

@@ -53,6 +53,7 @@ public static class ConfigurationSecurityExtensions
             });
         });
         services.AddTransient<IAuthorizationHandler, IsAccountOwnerRequirementHandler>();
+        services.AddTransient<IAuthorizationHandler, IsDealOwnerRequirementRequirementHandler>();
         services.AddScoped<ITokenService, TokenService>();
         
         return services;

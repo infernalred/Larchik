@@ -10,26 +10,26 @@ namespace Larchik.API.Controllers;
 
 public class DealsController : BaseApiController
 {
-    [Authorize(Policy = "IsAccountOwner")]
-    [HttpPost("{id:guid}")]
+    [HttpPost]
     [ProducesResponseType(typeof(OperationResult<Unit>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<Unit>>> Create(Guid id, DealDto deal)
+    public async Task<ActionResult<OperationResult<Unit>>> Create(DealDto deal)
     {
-        var result = await Mediator.Send(new Create.Command { AccountId = id, Deal = deal});
+        var result = await Mediator.Send(new Create.Command { Deal = deal});
 
         return Ok(result);
     }
     
-    [Authorize(Policy = "IsAccountOwner")]
+    [Authorize(Policy = "IsDealOwner")]
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(OperationResult<Unit>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
     public async Task<ActionResult<OperationResult<Unit>>> Edit(Guid id, DealDto deal)
     {
-        var result = await Mediator.Send(new Edit.Command { AccountId = id, Deal = deal});
+        deal.Id = id;
+        var result = await Mediator.Send(new Edit.Command { Deal = deal});
 
         return Ok(result);
     }
@@ -47,13 +47,25 @@ public class DealsController : BaseApiController
     }
     
     [Authorize(Policy = "IsAccountOwner")]
-    [HttpGet("{id:guid}")]
+    [HttpGet("accounts/{id:guid}")]
     [ProducesResponseType(typeof(OperationResult<List<DealDto>>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
     public async Task<ActionResult<OperationResult<Unit>>> AccountDeals(Guid id)
     {
         var result = await Mediator.Send(new List.Query { Id = id});
+
+        return Ok(result);
+    }
+    
+    [Authorize(Policy = "IsDealOwner")]
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(OperationResult<DealDto>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    [ProducesResponseType((int)HttpStatusCode.Forbidden)]
+    public async Task<ActionResult<OperationResult<Unit>>> GetDeal(Guid id)
+    {
+        var result = await Mediator.Send(new Details.Query { Id = id});
 
         return Ok(result);
     }

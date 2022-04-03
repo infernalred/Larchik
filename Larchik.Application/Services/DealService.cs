@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Larchik.Application.Contracts;
 using Larchik.Application.Dtos;
 using Larchik.Application.Helpers;
 using Larchik.Domain;
@@ -14,16 +15,23 @@ public class DealService : IDealService
     private readonly ILogger<DealService> _logger;
     private readonly DataContext _context;
     private readonly IMapper _mapper;
+    private readonly IUserAccessor _userAccessor;
 
-    public DealService(ILogger<DealService> logger, DataContext context, IMapper mapper)
+    public DealService(ILogger<DealService> logger, DataContext context, IMapper mapper, IUserAccessor userAccessor)
     {
         _logger = logger;
         _context = context;
         _mapper = mapper;
+        _userAccessor = userAccessor;
     }
 
-    public async Task<OperationResult<Unit>> CreateDeal(Guid accountId, DealDto dealDto, CancellationToken cancellationToken)
+    public async Task<OperationResult<Unit>> CreateDeal(DealDto dealDto, CancellationToken cancellationToken)
     {
+        var account = await _context.Accounts
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
+        if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
+        
         var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Ticker == dealDto.Stock, cancellationToken);
         
         if (stock == null) return OperationResult<Unit>.Failure("Тикер не найден");
@@ -32,7 +40,7 @@ public class DealService : IDealService
 
         if (stock.TypeId != "MONEY")
         {
-            var asset = await _context.Assets.FirstOrDefaultAsync(x => x.StockId == dealDto.Stock, cancellationToken);
+            var asset = await _context.Assets.FirstOrDefaultAsync(x => x.AccountId == account.Id && x.StockId == dealDto.Stock, cancellationToken);
             
             var quantity = AssetOperation.CreateAssetDeal(dealDto.Operation, dealDto.Quantity);
             
@@ -41,7 +49,7 @@ public class DealService : IDealService
                 asset = new Asset
                 {
                     Id = Guid.NewGuid(),
-                    AccountId = accountId,
+                    AccountId = account.Id,
                     Stock = stock,
                     Quantity = quantity
                 };
@@ -54,14 +62,14 @@ public class DealService : IDealService
             }
         }
         
-        var assetMoney = await _context.Assets.FirstOrDefaultAsync(x => x.StockId == stock.CurrencyId, cancellationToken);
+        var assetMoney = await _context.Assets.FirstOrDefaultAsync(x => x.AccountId == account.Id && x.StockId == stock.CurrencyId, cancellationToken);
         
         if (assetMoney == null)
         {
             assetMoney = new Asset
             {
                 Id = Guid.NewGuid(),
-                AccountId = accountId,
+                AccountId = account.Id,
                 StockId = stock.CurrencyId,
                 Quantity = amount
             };
@@ -72,7 +80,7 @@ public class DealService : IDealService
             assetMoney.Quantity += amount;
         }
 
-        var deal = _mapper.Map<Deal>(dealDto, opt => { opt.Items["AccountId"] = accountId; opt.Items["Amount"] = amount; });
+        var deal = _mapper.Map<Deal>(dealDto, opt => { opt.Items["Amount"] = amount; });
         
         _context.Deals.Add(deal);
         await _context.SaveChangesAsync(cancellationToken);
@@ -80,7 +88,7 @@ public class DealService : IDealService
         return OperationResult<Unit>.Success(Unit.Value);
     }
 
-    public async Task<OperationResult<Unit>> EditDeal(Guid accountId, DealDto dealDto, CancellationToken cancellationToken)
+    public async Task<OperationResult<Unit>> EditDeal(DealDto dealDto, CancellationToken cancellationToken)
     {
         var deal = await _context.Deals.Include(x => x.Stock).FirstOrDefaultAsync(x => x.Id == dealDto.Id, cancellationToken);
         
@@ -89,12 +97,17 @@ public class DealService : IDealService
         if (deal.Stock.TypeId != "MONEY")
         {
             var quantity = AssetOperation.CreateAssetDeal(deal.OperationId, deal.Quantity);
-            var assetOld = await _context.Assets.FirstAsync(x => x.StockId == deal.StockId, cancellationToken);
+            var assetOld = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.StockId, cancellationToken);
             assetOld.Quantity += -quantity;
         }
 
-        var assetOldMoney = await _context.Assets.FirstAsync(x => x.StockId == deal.Stock.CurrencyId, cancellationToken);
+        var assetOldMoney = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.Stock.CurrencyId, cancellationToken);
         assetOldMoney.Quantity += -deal.Amount;
+        
+        var account = await _context.Accounts
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
+        if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
         
         var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Ticker == dealDto.Stock, cancellationToken);
         
@@ -104,7 +117,7 @@ public class DealService : IDealService
 
         if (stock.TypeId != "MONEY")
         {
-            var asset = await _context.Assets.FirstOrDefaultAsync(x => x.StockId == dealDto.Stock, cancellationToken);
+            var asset = await _context.Assets.FirstOrDefaultAsync(x => x.AccountId == account.Id && x.StockId == dealDto.Stock, cancellationToken);
             
             var quantity = AssetOperation.CreateAssetDeal(dealDto.Operation, dealDto.Quantity);
             
@@ -113,7 +126,7 @@ public class DealService : IDealService
                 asset = new Asset
                 {
                     Id = Guid.NewGuid(),
-                    AccountId = accountId,
+                    AccountId = account.Id,
                     Stock = stock,
                     Quantity = quantity
                 };
@@ -126,14 +139,14 @@ public class DealService : IDealService
             }
         }
         
-        var assetMoney = await _context.Assets.FirstOrDefaultAsync(x => x.StockId == stock.CurrencyId, cancellationToken);
+        var assetMoney = await _context.Assets.FirstOrDefaultAsync(x => x.AccountId == account.Id && x.StockId == stock.CurrencyId, cancellationToken);
         
         if (assetMoney == null)
         {
             assetMoney = new Asset
             {
                 Id = Guid.NewGuid(),
-                AccountId = accountId,
+                AccountId = account.Id,
                 StockId = stock.CurrencyId,
                 Quantity = amount
             };
@@ -144,7 +157,7 @@ public class DealService : IDealService
             assetMoney.Quantity += amount;
         }
 
-        _mapper.Map(dealDto, deal, opt => { opt.Items["AccountId"] = accountId; opt.Items["Amount"] = amount; });
+        _mapper.Map(dealDto, deal, opt => { opt.Items["Amount"] = amount; });
         
         await _context.SaveChangesAsync(cancellationToken);
         
@@ -160,11 +173,11 @@ public class DealService : IDealService
         if (deal.Stock.TypeId != "MONEY")
         {
             var quantity = AssetOperation.CreateAssetDeal(deal.OperationId, deal.Quantity);
-            var asset = await _context.Assets.FirstAsync(x => x.StockId == deal.StockId, cancellationToken);
+            var asset = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.StockId, cancellationToken);
             asset.Quantity += -quantity;
         }
 
-        var assetMoney = await _context.Assets.FirstAsync(x => x.StockId == deal.Stock.CurrencyId, cancellationToken);
+        var assetMoney = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.Stock.CurrencyId, cancellationToken);
         assetMoney.Quantity += -deal.Amount;
 
         _context.Remove(deal);
