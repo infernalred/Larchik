@@ -77,7 +77,7 @@ export default observer(function DealForm() {
                             disabled={isSubmitting || !isValid}
                             loading={isSubmitting} floated='right' 
                             positive type='submit' content='Submit' />
-                        <Button as={Link} to={`/accounts/${deal.accountId}/deals`} floated='right' type='button' content='Cancel' />
+                        <Button as={Link} to={deal.id ? `/accounts/${deal.accountId}/deals` : '/accounts/'} floated='right' type='button' content='Cancel' />
                     </Form>
                 )}
             </Formik>

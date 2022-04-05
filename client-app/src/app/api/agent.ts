@@ -8,6 +8,7 @@ import { Account, AccountFormValues } from '../models/account';
 import { Deal, DealFormValues } from '../models/deal';
 import { Operation } from '../models/operation';
 import { Stock } from '../models/stock';
+import { CurrencyOperationsReport } from '../models/reports/currencyOperationsReport';
 
 axios.defaults.baseURL = process.env.REACT_APP_API_URL!;
 
@@ -20,7 +21,7 @@ axios.interceptors.request.use(config => {
 axios.interceptors.response.use(async response => {
     return response;
 }, (error: AxiosError) => {
-    const {data, status, config, headers} = error.response!;
+    const { data, status, config, headers } = error.response!;
     switch (status) {
         case 400:
             if (data.errors) {
@@ -55,10 +56,10 @@ axios.interceptors.response.use(async response => {
 const responseBody = <T>(response: AxiosResponse<T>) => response.data;
 
 const requests = {
-    get: <T> (url: string) => axios.get<T>(url).then(responseBody),
-    post: <T> (url: string, body: {}) => axios.post<T>(url, body).then(responseBody),
-    put: <T> (url: string, body: {}) => axios.put<T>(url, body).then(responseBody),
-    del: <T> (url: string) => axios.delete<T>(url).then(responseBody)
+    get: <T>(url: string) => axios.get<T>(url).then(responseBody),
+    post: <T>(url: string, body: {}) => axios.post<T>(url, body).then(responseBody),
+    put: <T>(url: string, body: {}) => axios.put<T>(url, body).then(responseBody),
+    del: <T>(url: string) => axios.delete<T>(url).then(responseBody)
 }
 
 const Users = {
@@ -88,6 +89,11 @@ const Operations = {
 
 const Stocks = {
     list: () => requests.get<OperationResult<Stock[]>>('/stocks')
+}
+
+const Reports = {
+    currency: (id: string, params: ReportParams) => axios.get<OperationResult<CurrencyOperationsReport>>(`/reports/${id}`, { params })
+        .then(responseBody)
 }
 
 const agent = {

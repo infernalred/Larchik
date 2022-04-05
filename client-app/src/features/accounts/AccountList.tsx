@@ -18,34 +18,40 @@ export default observer(function AccountList() {
 
     return (
         <>
-        <Button onClick={() => modalStore.openModal(<AccountForm id={''} />)} size="mini" positive>
-                            +
-                        </Button>
-                        <Table celled inverted>
-            <Table.Header>
-                <Table.Row>
-                    <Table.HeaderCell>Название</Table.HeaderCell>
-                    <Table.HeaderCell>Активов</Table.HeaderCell>
-                    <Table.HeaderCell>Действия</Table.HeaderCell>
-                </Table.Row>
-            </Table.Header>
-
-
-            <Table.Body>
-                {accounts.map(account => (
-                    <Table.Row key={account.id}>
-                        <Table.Cell>{account.name}</Table.Cell>
-                        <Table.Cell>{account.assets.length}</Table.Cell>
-                        <Table.Cell>
-                            <Button as={NavLink} to={`/accounts/${account.id}`} primary inverted><Icon name='info circle' />Детали</Button>
-                            <Button as={NavLink} to={`/accounts/${account.id}/deals`} primary inverted><Icon name='list' />Сделки</Button>
-                            <Button onClick={() => modalStore.openModal(<AccountForm id={account.id} />)} primary inverted>Изменить</Button>
-                        </Table.Cell>
+            <Table celled inverted>
+                <Table.Header>
+                    <Table.Row>
+                        <Table.HeaderCell>Название</Table.HeaderCell>
+                        <Table.HeaderCell>Активов</Table.HeaderCell>
+                        <Table.HeaderCell>Действия</Table.HeaderCell>
                     </Table.Row>
-                ))}
-            </Table.Body>
-        </Table>
+                </Table.Header>
+
+                <Table.Body>
+                    {accounts.map(account => (
+                        <Table.Row key={account.id}>
+                            <Table.Cell>{account.name}</Table.Cell>
+                            <Table.Cell>{account.assets.length}</Table.Cell>
+                            <Table.Cell>
+                                <Button as={NavLink} to={`/accounts/${account.id}`} primary inverted><Icon name='info circle' />Детали</Button>
+                                <Button as={NavLink} to={`/accounts/${account.id}/deals`} primary inverted><Icon name='list' />Сделки</Button>
+                                <Button onClick={() => modalStore.openModal(<AccountForm id={account.id} />)} primary inverted>Изменить</Button>
+                            </Table.Cell>
+                        </Table.Row>
+                    ))}
+                </Table.Body>
+
+                <Table.Footer>
+                    <Table.Row>
+                        <Table.HeaderCell>Всего счетов</Table.HeaderCell>
+                        <Table.HeaderCell>{accounts.length}</Table.HeaderCell>
+                        <Table.HeaderCell>
+                            <Button onClick={() => modalStore.openModal(<AccountForm id={''} />)} size="mini" positive>+</Button>
+                        </Table.HeaderCell>
+                    </Table.Row>
+                </Table.Footer>
+            </Table>
         </>
-        
+
     )
 })

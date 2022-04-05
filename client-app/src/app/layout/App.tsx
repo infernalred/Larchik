@@ -10,6 +10,7 @@ import DealList from '../../features/deals/DealList';
 import NotFound from '../../features/errors/NotFound';
 import ServerError from '../../features/errors/ServerError';
 import HomePage from '../../features/home/HomePage';
+import CurrencyReport from '../../features/reports/CurrencyReport';
 import ModalContainer from '../common/modal/ModalContainer';
 import { useStore } from '../store/store';
 import LoadingComponent from './LoadingComponent';
@@ -45,7 +46,7 @@ function App() {
                 <Route path='/accounts/:id/deals' component={DealList} />
                 <Route path='/accounts/:id' component={AccountDetails} />
                 <Route key={location.key} path={['/deal/:id', '/deal']} component={DealForm}/>
-                
+                <Route path='/reports/currency/:id' component={CurrencyReport} />
                 <Route path='/server-error' component={ServerError} />
                 <Route component={NotFound} />
               </Switch>

@@ -2,8 +2,8 @@
 
 public class CurrencyOperationsReportModel
 {
-    public DateTime FromDate { get; set; }
-    public DateTime ToDate { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
     public List<CurrencyDealsReport> Operations { get; set; }
 }
 

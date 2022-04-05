@@ -49,14 +49,13 @@ export default observer(function AccountForm({ id }: Props) {
                 <Form className='ui form' onSubmit={handleSubmit} autoComplete='off'>
                     <Header as='h2' content='Создать счет' color='teal' textAlign='center' />
                     <MyTextInput name='name' placeholder='Название' />
-                    <Button onClick={() => modalStore.closeModal()} floated='right' content='Отмена' />
+                    <Button type="button" onClick={() => modalStore.closeModal()} floated='right' content='Отмена' />
                     <Button
                         style={{ marginBottom: 10 }}
                         disabled={isSubmitting || !dirty || !isValid}
                         loading={isSubmitting}
                         floated='right'
                         positive type='submit' content='Создать'></Button>
-
                 </Form>
             )}
         </Formik>
