@@ -66,12 +66,19 @@ export default observer(function DealForm() {
                 onSubmit={values => handleFormSubmit(values)}>
                 {({ handleSubmit, isValid, isSubmitting }) => (
                     <Form className="ui form" onSubmit={handleSubmit} autoComplete="off">
+                        <label>Кол-во</label>
                         <MyTextInput placeholder="Кол-во" name="quantity" type="number" />
+                        <label>Цена</label>
                         <MyTextInput placeholder="Цена" name="price" type="number" />
+                        <label>Операция</label>
                         <MySelectOptions placeholder="Операция" name="operation" options={operationsSet} loading={loadingOperations} />
+                        <label>Тикер</label>
                         <MySelectOptions placeholder="Тикер" name="stock" options={stocksSet} loading={loadingStocks} />
+                        <label>Комиссия</label>
                         <MyTextInput placeholder="Комиссия" name="commission" type="number" />
+                        <label>Дата сделки</label>
                         <MyDateInput placeholderText="Дата" name="createdAt" />
+                        <label>Счет сделки</label>
                         <MySelectOptions placeholder="Счет" name="accountId" options={accountSet} loading={loadingInitial} />
                         <Button 
                             disabled={isSubmitting || !isValid}

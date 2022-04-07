@@ -8,7 +8,6 @@ import { Account, AccountFormValues } from '../models/account';
 import { Deal, DealFormValues } from '../models/deal';
 import { Operation } from '../models/operation';
 import { Stock } from '../models/stock';
-import { CurrencyOperationsReport } from '../models/reports/currencyOperationsReport';
 
 axios.defaults.baseURL = process.env.REACT_APP_API_URL!;
 
@@ -89,11 +88,6 @@ const Operations = {
 
 const Stocks = {
     list: () => requests.get<OperationResult<Stock[]>>('/stocks')
-}
-
-const Reports = {
-    currency: (id: string, params: ReportParams) => axios.get<OperationResult<CurrencyOperationsReport>>(`/reports/${id}`, { params })
-        .then(responseBody)
 }
 
 const agent = {

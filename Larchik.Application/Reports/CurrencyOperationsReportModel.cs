@@ -9,6 +9,7 @@ public class CurrencyOperationsReportModel
 
 public class CurrencyDealsReport
 {
+    public string Account { get; set; }
     public string Currency { get; set; }
     public string Operation { get; set; }
     public decimal Amount { get; set; }

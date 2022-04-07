@@ -15,7 +15,6 @@ public class CurrencyOperationsReport
 {
     public class Query : IRequest<OperationResult<ReportResult>>
     {
-        public Guid AccountId { get; set; }
         public ReportParams Params { get; set; }
     }
 
@@ -33,10 +32,12 @@ public class CurrencyOperationsReport
         public async Task<OperationResult<ReportResult>> Handle(Query request, CancellationToken cancellationToken)
         {
             var deals = await _context.Deals
+                .Include(x => x.Account)
                 .Include(x => x.Stock)
-                .Where(x => x.AccountId == request.AccountId && x.CreatedAt >= request.Params.StartDate && x.CreatedAt <= request.Params.EndDate && x.Stock.TypeId == "MONEY")
-                .GroupBy(x => new { x.StockId, x.OperationId }, (key, group) => new CurrencyDealsReport
+                .Where(x => x.CreatedAt >= request.Params.StartDate && x.CreatedAt <= request.Params.EndDate && x.Stock.TypeId == "MONEY")
+                .GroupBy(x => new { x.Account.Name, x.StockId, x.OperationId }, (key, group) => new CurrencyDealsReport
                 {
+                    Account = key.Name,
                     Currency = key.StockId,
                     Operation = key.OperationId,
                     Amount = group.Sum(x => x.Amount)
@@ -61,11 +62,12 @@ public class CurrencyOperationsReport
             lstColumns.Append(new Column { Min = 1, Max = 10, Width = 20, CustomWidth = true });
             lstColumns.Append(new Column { Min = 2, Max = 10, Width = 20, CustomWidth = true });
             lstColumns.Append(new Column { Min = 3, Max = 10, Width = 20, CustomWidth = true });
+            lstColumns.Append(new Column { Min = 4, Max = 10, Width = 20, CustomWidth = true });
             if (needToInsertColumns)
                 wsp.Worksheet.InsertAt(lstColumns, 0);
             
             var sheets = wbp.Workbook.AppendChild(new Sheets());
-            var sheet = new Sheet() { Id = wbp.GetIdOfPart(wsp), SheetId = 1, Name = "Отчет по денежным операциям" };
+            var sheet = new Sheet{ Id = wbp.GetIdOfPart(wsp), SheetId = 1, Name = "Отчет по денежным операциям" };
             sheets.Append(sheet);
 
             var sheetData = wsp.Worksheet.GetFirstChild<SheetData>();
@@ -73,20 +75,22 @@ public class CurrencyOperationsReport
 
             uint rowIndex = 1;
             
-            var row = new Row() { RowIndex = rowIndex };
+            var row = new Row{ RowIndex = rowIndex };
             sheetData?.Append(row);
             
-            InsertCell(row, 1, "Валюта", CellValues.String);
-            InsertCell(row, 2, "Операция", CellValues.String);
-            InsertCell(row, 3, "Сумма", CellValues.String);
+            InsertCell(row, 1, "Счет", CellValues.String);
+            InsertCell(row, 2, "Валюта", CellValues.String);
+            InsertCell(row, 3, "Операция", CellValues.String);
+            InsertCell(row, 4, "Сумма", CellValues.String);
 
             foreach (var deal in deals)
             {
-                row = new Row() { RowIndex = ++rowIndex };
+                row = new Row{ RowIndex = ++rowIndex };
                 sheetData?.Append(row);
-                InsertCell(row, 1, ReplaceHexadecimalSymbols(deal.Currency), CellValues.String);
-                InsertCell(row, 2, ReplaceHexadecimalSymbols(deal.Operation), CellValues.String);
-                InsertCell(row, 3, deal.Amount.ToString(CultureInfo.InvariantCulture), CellValues.Number);
+                InsertCell(row, 1, ReplaceHexadecimalSymbols(deal.Account), CellValues.String);
+                InsertCell(row, 2, ReplaceHexadecimalSymbols(deal.Currency), CellValues.String);
+                InsertCell(row, 3, ReplaceHexadecimalSymbols(deal.Operation), CellValues.String);
+                InsertCell(row, 4, deal.Amount.ToString(CultureInfo.InvariantCulture), CellValues.Number);
             }
             
             wbp.Workbook.Save();
@@ -109,7 +113,6 @@ public class CurrencyOperationsReport
             
             newCell.CellValue = new CellValue(val);
             newCell.DataType = new EnumValue<CellValues>(type);
-
         }
 
         private static string ReplaceHexadecimalSymbols(string txt)
