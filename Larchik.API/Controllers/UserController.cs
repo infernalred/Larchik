@@ -46,7 +46,7 @@ public class UserController : ControllerBase
         var user = await _userManager.Users
             .FirstOrDefaultAsync(x => x.Email == User.FindFirstValue(ClaimTypes.Email));
 
-        return CreateUserDto(user);
+        return CreateUserDto(user!);
     }
 
     [AllowAnonymous]

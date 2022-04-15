@@ -2,9 +2,9 @@
 
 public class StockDto
 {
-    public string Ticker { get; set; }
-    public string CompanyName { get; set; }
-    public string Type { get; set; }
-    public string Currency { get; set; }
-    public string Sector { get; set; }
+    public string Ticker { get; set; } = null!;
+    public string CompanyName { get; set; } = null!;
+    public string Type { get; set; } = null!;
+    public string Currency { get; set; } = null!;
+    public string Sector { get; set; } = null!;
 }

@@ -15,7 +15,7 @@ public class CurrencyOperationsReport
 {
     public class Query : IRequest<OperationResult<ReportResult>>
     {
-        public ReportParams Params { get; set; }
+        public ReportParams Params { get; set; } = null!;
     }
 
     public class Handler : IRequestHandler<Query, OperationResult<ReportResult>>

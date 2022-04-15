@@ -1,7 +1,5 @@
 ﻿using System.Net;
-using Larchik.Application.Helpers;
 using Larchik.Application.Reports;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Larchik.API.Controllers;
