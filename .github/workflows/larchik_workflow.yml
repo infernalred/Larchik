@@ -13,7 +13,7 @@ jobs:
       steps:
         - uses: actions/checkout@v2
         - name: Push to Docker Hub
-          run: docker-compose -f .\docker-compose.yml -f .\docker-compose.override.yml up -d
+          run: docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
 
   deploy:
     name: Build
