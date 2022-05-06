@@ -36,7 +36,6 @@ services:
     environment:
       - REACT_APP_API_URL=http://localhost:8001/api/v1
     depends_on:
-      - larchikdb
       - larchik.api
     ports:
       - "3000:3000"
