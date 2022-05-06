@@ -3,15 +3,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.API", "Larchik.API\Larchik.API.csproj", "{D14B0358-4C0A-4C88-A311-8440ED6A903D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.API", "Larchik.API\Larchik.API.csproj", "{D14B0358-4C0A-4C88-A311-8440ED6A903D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.Application", "Larchik.Application\Larchik.Application.csproj", "{3F396E24-EFB2-4DD8-BE8F-D39D28BF61A9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.Application", "Larchik.Application\Larchik.Application.csproj", "{3F396E24-EFB2-4DD8-BE8F-D39D28BF61A9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.Domain", "Larchik.Domain\Larchik.Domain.csproj", "{CD3736AB-5265-4CC6-A2D2-C9FF51F2E5CD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.Domain", "Larchik.Domain\Larchik.Domain.csproj", "{CD3736AB-5265-4CC6-A2D2-C9FF51F2E5CD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.Persistence", "Larchik.Persistence\Larchik.Persistence.csproj", "{5EF80251-3C79-4D33-9215-87FFDA0CA6F2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.Persistence", "Larchik.Persistence\Larchik.Persistence.csproj", "{5EF80251-3C79-4D33-9215-87FFDA0CA6F2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.Infrastructure", "Larchik.Infrastructure\Larchik.Infrastructure.csproj", "{F93FF001-AA14-46F7-9974-77657E482C59}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.Infrastructure", "Larchik.Infrastructure\Larchik.Infrastructure.csproj", "{F93FF001-AA14-46F7-9974-77657E482C59}"
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{50D54204-9FA3-47C9-A65A-5E3CACF8D0A5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{F93FF001-AA14-46F7-9974-77657E482C59}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F93FF001-AA14-46F7-9974-77657E482C59}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F93FF001-AA14-46F7-9974-77657E482C59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50D54204-9FA3-47C9-A65A-5E3CACF8D0A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50D54204-9FA3-47C9-A65A-5E3CACF8D0A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50D54204-9FA3-47C9-A65A-5E3CACF8D0A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50D54204-9FA3-47C9-A65A-5E3CACF8D0A5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

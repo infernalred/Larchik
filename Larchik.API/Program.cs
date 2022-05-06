@@ -35,7 +35,7 @@ try
 catch (Exception e)
 {
     var logger = services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(e, "An error occured during migration or seed");
+    logger.LogError(e, "An error occurred during migration or seed");
 }
 
 app.UseMiddleware<ExceptionMiddleware>();

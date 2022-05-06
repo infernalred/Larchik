@@ -12,7 +12,7 @@ public class Edit
 {
     public class Command : IRequest<OperationResult<Unit>>
     {
-        public AccountCreateDto Account { get; set; }
+        public AccountCreateDto Account { get; set; } = null!;
     }
     
     public class CommandValidator : AbstractValidator<Command>

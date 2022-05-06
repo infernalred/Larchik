@@ -2,5 +2,5 @@
 
 public class Portfolio
 {
-    public List<PortfolioAsset> Assets { get; set; }
+    public List<PortfolioAsset> Assets { get; set; } = new();
 }

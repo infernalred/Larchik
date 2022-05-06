@@ -2,7 +2,7 @@
 
 public class ReportResult
 {
-    public string FileName { get; set; }
-    public string MimeType { get; set; }
-    public byte[] FileData { get; set; }
+    public string FileName { get; set; } = null!;
+    public string MimeType { get; set; } = null!;
+    public byte[] FileData { get; set; } = null!;
 }

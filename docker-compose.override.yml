@@ -1,0 +1,46 @@
+version: '3.4'
+
+services:
+  larchikdb:
+    container_name: larchikdb
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=larchik
+    restart: always
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+
+  larchik.api:
+    container_name: larchik.api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - TokenKey=${TokenKey}
+      - "ConnectionStrings__DefaultConnection=Server=larchikdb;Port=5432;UserId=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Database=larchik;"
+    restart: on-failure
+    depends_on:
+      - larchikdb
+    ports:
+      - "8001:80"
+    volumes:
+    - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+
+  larchik.app:
+    image: larchik.react
+    container_name: app_container
+    build:
+      dockerfile: client-app/Dockerfile
+      context: .
+    environment:
+      - REACT_APP_API_URL=http://localhost:8001/api/v1
+    depends_on:
+      - larchikdb
+      - larchik.api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/larchik.app
+    command: npm start
+    

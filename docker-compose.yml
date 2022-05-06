@@ -1,0 +1,26 @@
+version: '3.4'
+
+services:
+  larchikdb:
+    image: postgres
+
+  larchik.api:
+    image: ${DOCKER_REGISTRY-}larchikapi
+    build:
+      context: .
+      dockerfile: Larchik.API/Dockerfile
+  
+  larchik.app:
+    image: larchik.react
+    container_name: app_container
+    build:
+      dockerfile: client-app/Dockerfile
+      context: .
+    # ports:
+    #   - "3000:3000"
+    # volumes:
+    #   - ./:/larchik.app
+    # command: npm start
+
+volumes:
+  postgres_data:

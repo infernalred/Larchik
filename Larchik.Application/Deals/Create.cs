@@ -11,7 +11,7 @@ public class Create
 {
     public class Command : IRequest<OperationResult<Unit>>
     {
-        public DealDto Deal { get; set; }
+        public DealDto Deal { get; set; } = null!;
     }
     
     public class CommandValidator : AbstractValidator<Command>
