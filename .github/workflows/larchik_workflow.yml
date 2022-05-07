@@ -19,7 +19,8 @@ jobs:
             username: ${{ secrets.DOCKER_USERNAME }}
             password: ${{ secrets.DOCKER_PASSWORD }}
         - name: Build the Docker image
-          run: docker-compose docker-compose.yml -f docker-compose.override.yml build
+          run: |
+          docker-compose -f docker-compose.yml -f docker-compose.override.yml build
 
   deploy:
     runs-on: ubuntu-latest
