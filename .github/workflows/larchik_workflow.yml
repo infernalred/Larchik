@@ -22,7 +22,7 @@ jobs:
           run: |
             docker-compose -f docker-compose.yml -f docker-compose.override.yml build
         - name: Push images
-          run: docker push infernalred/larchikapp:latest
+          run: "docker push infernalred/larchikapp:latest"
 
   deploy:
     runs-on: ubuntu-latest
