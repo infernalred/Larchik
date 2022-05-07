@@ -24,7 +24,7 @@ jobs:
             context: .
             file: client-app/Dockerfile
             push: true
-            tags: ${{ secrets.DOCKER_DOCKER_FRONT_REPO }}:latest
+            tags: ${{ secrets.DOCKER_FRONT_REPO }}:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -38,7 +38,7 @@ jobs:
         password: ${{ secrets.SSH_PASSWORD }}
         port: ${{ secrets.SSH_PORT }}
         script: |
-         sudo docker pull ${{ secrets.DOCKER_DOCKER_FRONT_REPO }}
+         sudo docker pull ${{ secrets.DOCKER_FRONT_REPO }}
          sudo docker-compose stop
          sudo docker-compose rm larchik.react
          sudo docker-compose up -d
