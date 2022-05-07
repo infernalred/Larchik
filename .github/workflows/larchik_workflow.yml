@@ -23,7 +23,7 @@ jobs:
             docker-compose -f docker-compose.yml -f docker-compose.override.yml build
         - name: Push images
           run: |
-            docker push ${{ secrets.DOCKER_FRONT_REPO }}:latest
+            docker push ${{ secrets.DOCKER_USERNAME }}:latest
 
   deploy:
     runs-on: ubuntu-latest
