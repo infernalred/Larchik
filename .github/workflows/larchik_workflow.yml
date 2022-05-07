@@ -23,7 +23,7 @@ jobs:
             docker-compose -f docker-compose.yml -f docker-compose.override.yml build
         - name: Push images
           run: |
-            docker tag larchikapi[:latest]infernalred/larchikapi[:tag]
+            docker tag larchikapi[:latest] infernalred/larchikapi[:latest]
             "docker push infernalred/larchikapi:latest"
 
   deploy:
