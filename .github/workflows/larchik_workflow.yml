@@ -23,7 +23,7 @@ jobs:
             docker pull ${{ secrets.FRONT_IMAGE }} || true
         - name: Build the Docker image
           run: |
-            docker build /usr/src/app -t ${{ secrets.DOCKER_FRONT_REPO }}
+            docker build ./client-app -t ${{ secrets.DOCKER_FRONT_REPO }}
         - name: Push images
           run: |
             docker push ${{ secrets.DOCKER_FRONT_REPO }}
