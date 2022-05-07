@@ -20,7 +20,7 @@ jobs:
             password: ${{ secrets.DOCKER_PASSWORD }}
         - name: Build the Docker image
           run: |
-          docker-compose -f docker-compose.yml -f docker-compose.override.yml build
+            docker-compose -f docker-compose.yml -f docker-compose.override.yml build
 
   deploy:
     runs-on: ubuntu-latest
