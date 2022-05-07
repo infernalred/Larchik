@@ -23,10 +23,9 @@ jobs:
             docker pull ${{ secrets.FRONT_IMAGE }} || true
         - name: Build the Docker image
           run: |
-            docker build .
+            docker-compose -f docker-compose.yml -f docker-compose.override.yml build
         - name: Push images
-          run: |
-            docker push ${{ secrets.DOCKER_FRONT_REPO }}
+          run: docker push "infernalred/larchik.react"
 
   deploy:
     runs-on: ubuntu-latest
