@@ -23,7 +23,6 @@ jobs:
           with:
             context: .
             file: client-app/Dockerfile
-            repository: ${{ secrets.DOCKER_FRONT_REPO }}
             push: true
             tags: ${{ secrets.DOCKER_DOCKER_FRONT_REPO }}:latest
 
