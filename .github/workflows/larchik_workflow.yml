@@ -24,6 +24,7 @@ jobs:
         - name: Push images
           run: |
             docker tag larchikapi:latest infernalred/larchikapi:latest
+            docker push infernalred/larchikapi:latest
 
   deploy:
     runs-on: ubuntu-latest
