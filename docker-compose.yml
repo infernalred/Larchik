@@ -11,8 +11,7 @@ services:
       dockerfile: Larchik.API/Dockerfile
   
   larchik.app:
-    image: larchik.react
-    container_name: app_container
+    image: larchikapp
     build:
       dockerfile: client-app/Dockerfile
       context: .

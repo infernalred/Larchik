@@ -28,11 +28,7 @@ services:
     - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
 
   larchik.app:
-    image: larchik.react
-    container_name: app_container
-    build:
-      dockerfile: client-app/Dockerfile
-      context: .
+    container_name: larchik.app
     environment:
       - REACT_APP_API_URL=http://localhost:8001/api/v1
     depends_on:
