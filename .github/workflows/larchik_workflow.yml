@@ -24,7 +24,7 @@ jobs:
             context: .
             file: client-app/Dockerfile
             push: true
-            tags: ${{ secrets.DOCKER_FRONT_REPO }}
+            tags: ${{ secrets.DOCKER_FRONT_REPO }}:latest
 
   deploy:
     runs-on: ubuntu-latest
