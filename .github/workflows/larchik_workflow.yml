@@ -23,7 +23,7 @@ jobs:
             docker-compose -f docker-compose.yml -f docker-compose.override.yml build
         - name: Push images
           run: |
-            docker push larchik.react:latest
+            docker push infernalred/larchik.react:latest
 
   deploy:
     runs-on: ubuntu-latest
