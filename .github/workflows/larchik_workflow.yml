@@ -25,7 +25,7 @@ jobs:
             file: client-app/Dockerfile
             repository: ${{ secrets.DOCKER_REPO }}
             push: true
-            tags: user/app:latest
+            tags: ${{ secrets.DOCKER_REPO }}:latest
 
   deploy:
     name: Build
