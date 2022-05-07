@@ -22,7 +22,7 @@ jobs:
             password: ${{ secrets.DOCKER_PASSWORD }}
             repository: ${{ secrets.DOCKER_REPO }}
             push: true
-            tag_with_ref: true
+            tags: ${{ steps.meta_pytorch.outputs.tags }}
 
   deploy:
     name: Build
