@@ -21,6 +21,9 @@ jobs:
         - name: Build the Docker image
           run: |
             docker-compose -f docker-compose.yml -f docker-compose.override.yml build
+        - name: Push images
+          run: |
+            docker push ${{ secrets.DOCKER_FRONT_REPO }}
 
   deploy:
     runs-on: ubuntu-latest
