@@ -15,7 +15,7 @@ services:
       - postgres_data:/var/lib/postgresql/data/
 
   larchik.api:
-    image: infernalred/larchikapi
+    image: ${{ secrets.DOCKER_API_REPO }}
     build: .
     container_name: larchik.api
     environment:
@@ -27,6 +27,20 @@ services:
       - larchikdb
     ports:
       - "8001:80"
+  
+  larchik.app:
+    image: ${{ secrets.DOCKER_FRONT_REPO }}
+    build: .
+    container_name: larchik.app
+    environment:
+      - REACT_APP_API_URL=/api/v1
+    depends_on:
+      - larchik.api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/larchik.app
+    command: npm start
   
 
 volumes:

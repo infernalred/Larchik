@@ -25,6 +25,13 @@ jobs:
             file: Larchik.API/Dockerfile
             push: true
             tags: ${{ secrets.DOCKER_API_REPO }}:latest
+        - name: Push APP to Docker Hub
+          uses: docker/build-push-action@v3
+          with:
+            context: .
+            file: client-app/Dockerfile
+            push: true
+            tags: ${{ secrets.DOCKER_FRONT_REPO }}:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -45,4 +52,5 @@ jobs:
          echo POSTGRES_USER=${{ secrets.POSTGRES_USER }} >> .env
          sudo docker-compose -f ./docker-compose_prod.yml stop
          sudo docker-compose -f ./docker-compose_prod.yml rm larchik.api
+         sudo docker-compose -f ./docker-compose_prod.yml rm larchik.app
          sudo docker-compose -f ./docker-compose_prod.yml up -d
