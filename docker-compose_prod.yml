@@ -1,0 +1,33 @@
+version: '3.4'
+
+services:
+  larchikdb:
+    image: postgres
+    container_name: larchikdb
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=larchik
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+
+  larchik.api:
+    image: infernalred/larchikapi
+    build: .
+    container_name: larchik.api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - TokenKey=${TokenKey}
+      - "ConnectionStrings__DefaultConnection=Server=larchikdb;Port=5432;UserId=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Database=larchik;"
+    restart: on-failure
+    depends_on:
+      - larchikdb
+    ports:
+      - "8001:80"
+  
+
+volumes:
+  postgres_data:
