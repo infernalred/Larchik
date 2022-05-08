@@ -15,11 +15,6 @@ services:
     build:
       dockerfile: client-app/Dockerfile
       context: .
-    # ports:
-    #   - "3000:3000"
-    # volumes:
-    #   - ./:/larchik.app
-    # command: npm start
 
 volumes:
   postgres_data:
