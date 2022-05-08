@@ -15,7 +15,7 @@ services:
       - postgres_data:/var/lib/postgresql/data/
 
   larchik.api:
-    image: ${{ secrets.DOCKER_API_REPO }}
+    image: infernalred/larchikapi
     build: .
     container_name: larchik.api
     environment:
@@ -29,7 +29,7 @@ services:
       - "8001:80"
   
   larchik.app:
-    image: ${{ secrets.DOCKER_FRONT_REPO }}
+    image: infernalred/larchikapp
     build: .
     container_name: larchik.app
     environment:
