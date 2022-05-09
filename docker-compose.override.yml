@@ -19,7 +19,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - TokenKey=${TokenKey}
       - "ConnectionStrings__DefaultConnection=Server=larchikdb;Port=5432;UserId=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Database=larchik;"
-    restart: on-failure
+    restart: always
     depends_on:
       - larchikdb
     ports:
@@ -30,7 +30,8 @@ services:
   larchik.app:
     container_name: larchik.app
     environment:
-      - REACT_APP_API_URL=http://localhost:8001/api/v1
+      - REACT_APP_API_URL=/api/v1
+    restart: always
     depends_on:
       - larchik.api
     ports:
@@ -38,4 +39,15 @@ services:
     volumes:
       - ./:/larchik.app
     command: npm start
+  
+  proxy:
+    image: nginx
+    restart: always
+    depends_on:
+      - larchik.app
+      - larchik.api
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
     

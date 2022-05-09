@@ -15,6 +15,9 @@ services:
     build:
       dockerfile: client-app/Dockerfile
       context: .
+  
+  proxy:
+    image: nginx
 
 volumes:
   postgres_data:
