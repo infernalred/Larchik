@@ -1,4 +1,3 @@
-![example workflow name](https://github.com/infernalred/Larchik/workflows/larchik_workflow/badge.svg)
 ![example workflow](https://github.com/infernalred/Larchik/actions/workflows/larchik_workflow.yml/badge.svg)
 
 # Larchik
