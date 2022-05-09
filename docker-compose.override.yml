@@ -40,8 +40,8 @@ services:
       - ./:/larchik.app
     command: npm start
   
-  proxy:
-    image: nginx
+  larchik.proxy:
+    container_name: larchik.proxy
     restart: always
     depends_on:
       - larchik.app

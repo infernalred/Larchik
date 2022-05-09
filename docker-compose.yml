@@ -16,7 +16,7 @@ services:
       dockerfile: client-app/Dockerfile
       context: .
   
-  proxy:
+  larchik.proxy:
     image: nginx
 
 volumes:

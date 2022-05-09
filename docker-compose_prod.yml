@@ -10,7 +10,7 @@ services:
       - POSTGRES_DB=larchik
     restart: always
     ports:
-      - "5432:5432"
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data/
 
@@ -26,7 +26,7 @@ services:
     depends_on:
       - larchikdb
     ports:
-      - "8001:80"
+      - "80"
   
   larchik.app:
     image: infernalred/larchikapp
@@ -37,13 +37,14 @@ services:
     depends_on:
       - larchik.api
     ports:
-      - "3000:3000"
+      - "3000"
     volumes:
       - ./:/larchik.app
     command: npm start
   
   proxy:
     image: nginx
+    container_name: larchik.proxy
     restart: always
     depends_on:
       - larchik.app
