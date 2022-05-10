@@ -24,7 +24,6 @@ export default function ReportForm() {
   }
 
   const handleDownload = async (params: ReportParams) => {
-    console.log(params)
     setLoading(true);
 
     let res = null;
