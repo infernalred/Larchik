@@ -55,17 +55,23 @@ public class Seed
             var sector3 = new Sector { Code = "Industrials" };
             var sector4 = new Sector { Code = "Utilities" };
             var sector5 = new Sector { Code = "Healthcare" };
-            var sector6 = new Sector { Code = "Financials" };
-            var sector7 = new Sector { Code = "Consumer Discretionary" };
-            var sector8 = new Sector { Code = "Consumer Staples" };
+            var sector6 = new Sector { Code = "Financial" };
+            var sector7 = new Sector { Code = "Consumer" };
+            var sector8 = new Sector { Code = "Other" };
             var sector9 = new Sector { Code = "Information Technology" };
             var sector10 = new Sector { Code = "Communication Services" };
             var sector11 = new Sector { Code = "Real Estate" };
-            var sector12 = new Sector { Code = "Валюта" };
+            var sector12 = new Sector { Code = "IT" };
+            var sector13 = new Sector { Code = "Валюта" };
+            var sector14 = new Sector { Code = "Telecom" };
+            var sector15 = new Sector { Code = "Ecomaterials" };
+            var sector16 = new Sector { Code = "Green Buildings" };
+            var sector17 = new Sector { Code = "Green Energy" };
+            var sector18 = new Sector { Code = "Electrocars" };
 
             var sectors = new List<Sector>
             {
-                sector1, sector2, sector3, sector4, sector5, sector6, sector7, sector8, sector9, sector10, sector11, sector12
+                sector1, sector2, sector3, sector4, sector5, sector6, sector7, sector8, sector9, sector10, sector11, sector12, sector13, sector14, sector15, sector16, sector17, sector18
             };
             
             await context.AddRangeAsync(sectors);
@@ -74,18 +80,13 @@ public class Seed
 
         if (!context.Stocks.Any())
         {
-            var stock1 = new Stock { Ticker = "AAPL", CompanyName = "Apple", CurrencyId = "USD", TypeId = "SHARE", SectorId = "Information Technology"};
-            var stock2 = new Stock { Ticker = "MSFT", CompanyName = "Microsoft", CurrencyId = "USD", TypeId = "SHARE", SectorId = "Information Technology"};
-            var stock3 = new Stock { Ticker = "SBER", CompanyName = "Sberbank", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Financials"};
-            var stock4 = new Stock { Ticker = "MTSS", CompanyName = "MTS", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Communication Services"};
-
-            var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта" };
+	        var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта" };
             var money2 = new Stock { Ticker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта" };
             var money3 = new Stock { Ticker = "EUR", CompanyName = "", CurrencyId = "EUR", TypeId = "MONEY", SectorId = "Валюта" };
-            
+
             var stocks = new List<Stock>
             {
-                stock1, stock2, stock3, stock4, money1, money2, money3
+                money1, money2, money3
             };
             
             await context.AddRangeAsync(stocks);

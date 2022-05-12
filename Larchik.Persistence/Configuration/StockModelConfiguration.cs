@@ -10,8 +10,8 @@ public class StockModelConfiguration : IEntityTypeConfiguration<Stock>
     {
         builder.HasKey(x => x.Ticker);
 
-        builder.Property(x => x.Ticker).IsRequired().HasMaxLength(6);
-        builder.Property(x => x.CompanyName).IsRequired().HasMaxLength(50);
+        builder.Property(x => x.Ticker).IsRequired().HasMaxLength(8);
+        builder.Property(x => x.CompanyName).IsRequired().HasMaxLength(60);
         builder.Property(x => x.TypeId).IsRequired();
         builder.Property(x => x.CurrencyId).IsRequired();
         builder.Property(x => x.SectorId).IsRequired();
