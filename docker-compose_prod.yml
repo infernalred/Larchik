@@ -57,6 +57,19 @@ services:
       - ./fullchain.pem:/etc/nginx/fullchain.pem
       - ./privkey.pem:/etc/nginx/privkey.pem
   
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: larchik.pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    restart: always
+    ports:
+      - "80"
+    volumes:
+      - pgadmin_data:/root/.pgadmin
+  
 
 volumes:
   postgres_data:
+  pgadmin_data:

@@ -3,6 +3,9 @@ version: '3.4'
 services:
   larchikdb:
     image: postgres
+  
+  pgadmin:
+    image: dpage/pgadmin4
 
   larchik.api:
     image: ${DOCKER_REGISTRY-}larchikapi
@@ -21,3 +24,4 @@ services:
 
 volumes:
   postgres_data:
+  pgadmin_data:
