@@ -65,7 +65,7 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
     restart: always
     ports:
-      - "80"
+      - "5050:80"
     volumes:
       - pgadmin_data:/root/.pgadmin
   
