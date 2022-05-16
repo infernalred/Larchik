@@ -1,7 +1,7 @@
 import { Form, Formik } from 'formik'
 import { observer } from 'mobx-react-lite';
 import React, { useEffect, useState } from 'react'
-import { Header, Button } from 'semantic-ui-react';
+import { Button, Header } from 'semantic-ui-react';
 import MyTextInput from '../../app/common/form/MyTextInput';
 import { useStore } from '../../app/store/store';
 import * as Yup from 'yup';
@@ -47,7 +47,7 @@ export default observer(function AccountForm({ id }: Props) {
             onSubmit={values => handleFormSubmit(values)}>
             {({ handleSubmit, isValid, isSubmitting, dirty }) => (
                 <Form className='ui form' onSubmit={handleSubmit} autoComplete='off'>
-                    <Header as='h2' content='Создать счет' color='teal' textAlign='center' />
+                    <Header as='h2' content='Создать счет' color='teal' textAlign='center' ></Header>
                     <MyTextInput name='name' placeholder='Название' />
                     <Button type="button" onClick={() => modalStore.closeModal()} floated='right' content='Отмена' />
                     <Button
