@@ -1,8 +1,11 @@
-﻿using FluentValidation.AspNetCore;
+﻿using System.Net.Http.Headers;
+using FluentValidation.AspNetCore;
+using Larchik.API.Configuration.Models;
 using Larchik.Application.Contracts;
 using Larchik.Application.Deals;
 using Larchik.Application.Helpers;
 using Larchik.Application.Services;
+using Larchik.Infrastructure.Market;
 using Larchik.Infrastructure.Security;
 using Larchik.Persistence.Context;
 using MediatR;
@@ -33,8 +36,20 @@ public static class ConfigurationBaseExtensions
                 cfg.RegisterValidatorsFromAssemblyContaining<Create>();
             });
 
+            var marketConfig = configuration.GetSection(nameof(MarketSettings)).Get<MarketSettings>();
+            
+            services.AddHttpClient("Market", client =>
+            {
+                client.BaseAddress = new Uri(marketConfig.BaseAddress);
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", marketConfig.Token);
+            });
+
             services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddScoped<IDealService, DealService>();
+            services.AddSingleton<IMarketAccessor, MarketAccessor>();
+            services.AddScoped<LastPriceUpdater>();
+            services.AddHostedService<LastPriceWorker>();
             services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
             
         return services;

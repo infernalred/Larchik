@@ -2,5 +2,5 @@
 
 public class StockType
 {
-    public string Code { get; set; }
+    public string Code { get; set; } = string.Empty;
 }
