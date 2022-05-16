@@ -18,4 +18,9 @@
       <Folder Include="Migrations" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Remove="Migrations\20220513172914_AddStockPrices.cs" />
+      <Compile Remove="Migrations\20220513172914_AddStockPrices.Designer.cs" />
+    </ItemGroup>
+
 </Project>

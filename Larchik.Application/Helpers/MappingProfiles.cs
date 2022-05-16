@@ -1,4 +1,5 @@
 ﻿using Larchik.Application.Dtos;
+using Larchik.Application.Models.Market;
 using Larchik.Domain;
 
 namespace Larchik.Application.Helpers;
@@ -22,5 +23,6 @@ public class MappingProfiles : AutoMapper.Profile
         CreateMap<Deal, DealDto>()
             .ForMember(d => d.Operation, o => o.MapFrom(s => s.OperationId))
             .ForMember(d => d.Stock, o => o.MapFrom(s => s.StockId));
+        CreateMap<StockPrice, Stock>();
     }
 }

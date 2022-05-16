@@ -22,7 +22,9 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - TokenKey=${TokenKey}
       - "ConnectionStrings__DefaultConnection=Server=larchikdb;Port=5432;UserId=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Database=larchik;"
-    restart: on-failure
+      - "MarketSettings:Token=${MARKET_TOKEN}"
+      - "MarketSettings:BaseAddress=${MARKET_BASE_ADDRESS}"
+    restart: always
     depends_on:
       - larchikdb
     ports:
@@ -35,6 +37,7 @@ services:
     environment:
       - REACT_APP_API_URL=/api/v1
       - WDS_SOCKET_PORT=443
+    restart: always
     depends_on:
       - larchik.api
     ports:
