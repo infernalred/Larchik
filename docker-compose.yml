@@ -4,7 +4,7 @@ services:
   larchikdb:
     image: postgres
   
-  pgadmin:
+  larchik.pgadmin:
     image: dpage/pgadmin4
 
   larchik.api:

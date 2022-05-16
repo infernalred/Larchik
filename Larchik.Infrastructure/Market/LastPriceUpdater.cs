@@ -25,18 +25,18 @@ public class LastPriceUpdater
         
         var stocks = await _context.Stocks.Where(x => tickers.Contains(x.Ticker) && !string.IsNullOrEmpty(x.Figi)).ToListAsync(cancellationToken);
 
-        // if (stocks.Count > 0)
-        // {
-        //     var figis = stocks.Select(x => x.Figi);
-        //
-        //     var stockPrices = (await _marketAccessor.GetLastPrice(figis, cancellationToken)).ToDictionary(x => x.Figi);
-        //
-        //     foreach (var stock in stocks)
-        //     {
-        //         stock.LastPrice = stockPrices[stock.Figi].LastPrice;
-        //     }
-        //
-        //     await _context.SaveChangesAsync(cancellationToken);
-        // }
+        if (stocks.Count > 0)
+        {
+            var figis = stocks.Select(x => x.Figi);
+        
+            var stockPrices = (await _marketAccessor.GetLastPrice(figis, cancellationToken)).ToDictionary(x => x.Figi);
+        
+            foreach (var stock in stocks)
+            {
+                stock.LastPrice = stockPrices[stock.Figi].LastPrice;
+            }
+        
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 }
