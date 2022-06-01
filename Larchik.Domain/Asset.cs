@@ -3,9 +3,9 @@
 public class Asset
 {
     public Guid Id { get; set; }
-    public Account? Account { get; set; }
+    public Account Account { get; set; } = null!;
     public Guid AccountId { get; set; }
-    public Stock? Stock { get; set; }
-    public string StockId { get; set; } = string.Empty;
-    public decimal Quantity { get; set; }
+    public Stock Stock { get; set; } = null!;
+    public string StockId { get; set; } = null!;
+    public double Quantity { get; set; }
 }

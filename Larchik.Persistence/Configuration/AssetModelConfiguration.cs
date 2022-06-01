@@ -12,5 +12,7 @@ public class AssetModelConfiguration : IEntityTypeConfiguration<Asset>
 
         builder.Property(x => x.StockId).IsRequired();
         builder.Property(x => x.Quantity).IsRequired();
+
+        builder.HasIndex(x => new {x.AccountId, x.StockId}).IsUnique();
     }
 }

@@ -4,7 +4,7 @@ namespace Larchik.Application.Services;
 
 public static class CurrencyOperation
 {
-    private static readonly Dictionary<string, Func<int, decimal, decimal, decimal>> MakeCurrencyOperations = new()
+    private static readonly Dictionary<string, Func<int, double, double, double>> MakeCurrencyOperations = new()
     {
         { ListOperations.Add, (count, price, commission) => count * price + commission },
         { ListOperations.Withdrawal, (count, price, commission) => -(count * price + commission) },
@@ -14,5 +14,5 @@ public static class CurrencyOperation
         { ListOperations.Sale, (count, price, commission) => count * price + commission },
     };
 
-    public static decimal CreateCurrencyDeal(string operation, int count, decimal price, decimal commission) => MakeCurrencyOperations[operation](count, price, commission);
+    public static double CreateCurrencyDeal(string operation, int count, double price, double commission) => MakeCurrencyOperations[operation](count, price, commission);
 }

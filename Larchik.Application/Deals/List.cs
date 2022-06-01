@@ -34,8 +34,8 @@ public class List
             var deals = await _context.Deals
                 .AsNoTracking()
                 .Where(x => x.AccountId == request.Id)
-                .OrderBy(x => x.CreatedAt)
                 .ProjectTo<DealDto>(_mapper.ConfigurationProvider)
+                .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync(cancellationToken);
             
             return OperationResult<List<DealDto>>.Success(deals);

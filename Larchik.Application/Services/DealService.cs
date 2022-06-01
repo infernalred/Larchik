@@ -94,6 +94,15 @@ public class DealService : IDealService
         
         if (deal == null) return OperationResult<Unit>.Failure("Сделка не найдена");
         
+        var account = await _context.Accounts
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
+        if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
+        
+        var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Ticker == dealDto.Stock, cancellationToken);
+        
+        if (stock == null) return OperationResult<Unit>.Failure("Тикер не найден");
+        
         if (deal.Stock.TypeId != "MONEY")
         {
             var quantity = AssetOperation.CreateAssetDeal(deal.OperationId, deal.Quantity);
@@ -104,14 +113,7 @@ public class DealService : IDealService
         var assetOldMoney = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.Stock.CurrencyId, cancellationToken);
         assetOldMoney.Quantity += -deal.Amount;
         
-        var account = await _context.Accounts
-            .Include(x => x.User)
-            .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
-        if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
         
-        var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Ticker == dealDto.Stock, cancellationToken);
-        
-        if (stock == null) return OperationResult<Unit>.Failure("Тикер не найден");
         
         var amount = CurrencyOperation.CreateCurrencyDeal(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
 
