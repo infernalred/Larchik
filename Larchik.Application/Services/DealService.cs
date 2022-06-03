@@ -36,7 +36,7 @@ public class DealService : IDealService
         
         if (stock == null) return OperationResult<Unit>.Failure("Тикер не найден");
         
-        var amount = CurrencyOperation.CreateCurrencyDeal(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
+        var amount = CurrencyOperation.GetAmount(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
 
         if (stock.TypeId != "MONEY")
         {
@@ -115,7 +115,7 @@ public class DealService : IDealService
         
         
         
-        var amount = CurrencyOperation.CreateCurrencyDeal(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
+        var amount = CurrencyOperation.GetAmount(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
 
         if (stock.TypeId != "MONEY")
         {

@@ -86,7 +86,7 @@ public class Details
                 }
             }
             
-            var average = 1.00;
+            var average = 1.00m;
 
             if (queueData.Any())
             {
@@ -101,7 +101,7 @@ public class Details
                 CompanyName = asset.Stock.CompanyName,
                 AveragePrice = average,
                 Type = asset.Stock.TypeId,
-                Price = asset.Stock.LastPrice,
+                Price = new decimal(asset.Stock.LastPrice),
                 Quantity = asset.Quantity,
                 Sector = asset.Stock.SectorId
             };

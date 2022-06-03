@@ -7,5 +7,5 @@ public class Asset
     public Guid AccountId { get; set; }
     public Stock Stock { get; set; } = null!;
     public string StockId { get; set; } = null!;
-    public double Quantity { get; set; }
+    public decimal Quantity { get; set; }
 }

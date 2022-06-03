@@ -97,7 +97,7 @@ public class CreateDealTests
     [InlineData(ListOperations.Tax, 898.78, 1.22, -900.00)]
     [InlineData(ListOperations.Dividends, 898.99, 5.56, 893.43)]
     [InlineData(ListOperations.Add, 898.99, 5.56, 893.43)]
-    public async Task CreateDeal_Success_Money(string operation, double price, double commission, double quantity)
+    public async Task CreateDeal_Success_Money(string operation, decimal price, decimal commission, decimal quantity)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();
@@ -131,13 +131,13 @@ public class CreateDealTests
         Assert.Equal(Unit.Value, actual.Result);
         Assert.Null(actual.Error);
         Assert.Single(deals);
-        Assert.Equal(quantity, assetActual1.Quantity);
+        Assert.Equal(quantity, Math.Round(assetActual1.Quantity, 2));
         Assert.Equal(operation, actualDeal.OperationId);
         Assert.Equal(price, actualDeal.Price);
         Assert.Equal(1, actualDeal.Quantity);
         Assert.Equal(commission, actualDeal.Commission);
         Assert.Equal(stock1.Ticker, actualDeal.StockId);
-        Assert.Equal(quantity, actualDeal.Amount);
+        Assert.Equal(quantity, Math.Round(actualDeal.Amount, 2));
         mockUserAccessor.Verify(x => x.GetUsername());
         mockUserAccessor.VerifyNoOtherCalls();
         mockUserAccessor.VerifyAll();
@@ -147,8 +147,8 @@ public class CreateDealTests
     
     [Theory]
     [InlineData(ListOperations.Purchase, 236.54, 11, 56.98, 37341.08, 51.00, -2658.92)]
-    [InlineData(ListOperations.Sale, 236.54, 11, 43.71, 42558.23, 29.00, 22558.23)]
-    public async Task CreateDeal_Success_Stock(string operation, double price, int quantity, double commission, double assetQuantity1, double assetQuantity2, double amount)
+    [InlineData(ListOperations.Sale, 236.54, 11, 43.71, 42558.23, 29.00, 2558.23)]
+    public async Task CreateDeal_Success_Stock(string operation, decimal price, int quantity, decimal commission, decimal assetQuantity1, decimal assetQuantity2, decimal amount)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();

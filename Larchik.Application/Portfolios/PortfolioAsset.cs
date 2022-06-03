@@ -6,7 +6,7 @@ public class PortfolioAsset
     public string CompanyName { get; set; } = null!;
     public string Sector { get; set; } = null!;
     public string Type { get; set; } = null!;
-    public double Quantity { get; set; }
-    public double Price { get; set; }
-    public double AveragePrice { get; set; }
+    public decimal Quantity { get; set; }
+    public decimal Price { get; set; }
+    public decimal AveragePrice { get; set; }
 }

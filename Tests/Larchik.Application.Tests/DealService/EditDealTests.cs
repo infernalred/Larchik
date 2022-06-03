@@ -223,7 +223,7 @@ public class EditDealTests
     [InlineData(ListOperations.Withdrawal, 269.33, 0.87, -270.20, 130.35)]
     [InlineData(ListOperations.Tax, 125.78, 0.93, -126.71, 273.84)]
     [InlineData(ListOperations.Dividends, 898.99, 0.23, 898.76, 1299.31)]
-    public async Task EditDeal_Success_Money(string operation, double price, double commission, double amount, double quantity)
+    public async Task EditDeal_Success_Money(string operation, decimal price, decimal commission, decimal amount, decimal quantity)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();
@@ -231,15 +231,15 @@ public class EditDealTests
         var mapper = new Mapper(_mapperConfiguration);
 
         var stock = context.Stocks.First(x => x.Ticker == "RUB");
-        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 1400.54, StockId = stock.Ticker};
+        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 1400.54m, StockId = stock.Ticker};
         var deal1 = new Deal
         {
             AccountId = asset1.AccountId,
             CreatedAt = new DateTime(2022, 05, 01), 
             Id = Guid.NewGuid(), 
             Quantity = 1, 
-            Price = 400.55,
-            Amount = 400.55,
+            Price = 400.55m,
+            Amount = 400.55m,
             OperationId = ListOperations.Add, 
             StockId = stock.Ticker
         };
@@ -249,8 +249,8 @@ public class EditDealTests
             CreatedAt = new DateTime(2022, 05, 01), 
             Id = Guid.NewGuid(), 
             Quantity = 1, 
-            Price = 999.99,
-            Amount = 999.99,
+            Price = 999.99m,
+            Amount = 999.99m,
             OperationId = ListOperations.Add, 
             StockId = stock.Ticker
         };
@@ -284,7 +284,7 @@ public class EditDealTests
         Assert.Equal(Unit.Value, actual.Result);
         Assert.Null(actual.Error);
         Assert.Equal(2, deals.Count);
-        Assert.Equal(quantity, Math.Round(assetActual1.Quantity, 2));
+        Assert.Equal(quantity, assetActual1.Quantity);
         Assert.Equal(deal.CreatedAt, dealActual.CreatedAt);
         Assert.Equal(deal.Operation, dealActual.OperationId);
         Assert.Equal(deal.Price, dealActual.Price);
@@ -299,8 +299,8 @@ public class EditDealTests
     
     [Theory]
     [InlineData(ListOperations.Purchase, "SBER", 236.54, 11, 56.98, 41560.88, 20.00, -2658.92, 11.00)]
-    [InlineData(ListOperations.Sale, "MTSS", 236.54, 11, 43.71, 46778.03, 20.00, 2558.23, 0.00)]
-    public async Task EditDeal_Success_Stock(string operation, string ticker, double price, int quantity, double commission, double assetQuantity1, double assetQuantity2, double amount, double assetQuantity3)
+    [InlineData(ListOperations.Sale, "MTSS", 236.54, 11, 43.71, 46778.03, 9.00, 2558.23, 0.00)]
+    public async Task EditDeal_Success_Stock(string operation, string ticker, decimal price, int quantity, decimal commission, decimal assetQuantity1, decimal assetQuantity2, decimal amount, decimal assetQuantity3)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();
@@ -319,8 +319,8 @@ public class EditDealTests
             CreatedAt = new DateTime(2022, 05, 01), 
             Id = Guid.NewGuid(), 
             Quantity = 20, 
-            Price = 230.55,
-            Amount = -4611.00,
+            Price = 230.55m,
+            Amount = -4611.00m,
             OperationId = ListOperations.Purchase, 
             StockId = stock2.Ticker
         };
@@ -330,8 +330,8 @@ public class EditDealTests
             CreatedAt = new DateTime(2022, 05, 01), 
             Id = Guid.NewGuid(), 
             Quantity = 20, 
-            Price = 210.99,
-            Amount = -4219.80,
+            Price = 210.99m,
+            Amount = -4219.80m,
             OperationId = ListOperations.Purchase, 
             StockId = stock2.Ticker
         };
@@ -369,9 +369,9 @@ public class EditDealTests
         Assert.Equal(Unit.Value, actual.Result);
         Assert.Null(actual.Error);
         Assert.Equal(2, deals.Count);
-        Assert.Equal(assetQuantity1, Math.Round(assetActual1.Quantity, 2));
-        Assert.Equal(assetQuantity2, Math.Round(assetActual2.Quantity, 2));
-        Assert.Equal(assetQuantity3, Math.Round(assetActual3.Quantity, 2));
+        Assert.Equal(assetQuantity1, assetActual1.Quantity);
+        Assert.Equal(assetQuantity2, assetActual2.Quantity);
+        Assert.Equal(assetQuantity3, assetActual3.Quantity, 2);
         Assert.Equal(deal.CreatedAt, actualDeal.CreatedAt);
         Assert.Equal(deal.Operation, actualDeal.OperationId);
         Assert.Equal(deal.Price, actualDeal.Price);

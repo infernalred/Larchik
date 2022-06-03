@@ -98,8 +98,8 @@ public class DetailsTests
     
         Assert.True(actual.IsSuccess);
         Assert.Single(actual.Result.Assets);
-        Assert.Equal(196.64, Math.Round(actual.Result.Assets[0].AveragePrice, 2));
-        Assert.Equal(stock.LastPrice, actual.Result.Assets[0].Price);
+        Assert.Equal(196.64m, Math.Round(actual.Result.Assets[0].AveragePrice, 2));
+        Assert.Equal(new decimal(stock.LastPrice), actual.Result.Assets[0].Price);
         Assert.Equal(stock.TypeId, actual.Result.Assets[0].Type);
         Assert.Equal(stock.SectorId, actual.Result.Assets[0].Sector);
         Assert.Equal(stock.Ticker, actual.Result.Assets[0].Ticker);
@@ -116,12 +116,12 @@ public class DetailsTests
     [MemberData(nameof(Data))]
     public async Task Details_Success(
         string ticker, 
-        double quantity, 
-        double averagePrice, 
-        Tuple<int, double, string> data1, 
-        Tuple<int, double, string> data2, 
-        Tuple<int, double, string> data3, 
-        Tuple<int, double, string> data4)
+        decimal quantity, 
+        decimal averagePrice, 
+        Tuple<int, decimal, string> data1, 
+        Tuple<int, decimal, string> data2, 
+        Tuple<int, decimal, string> data3, 
+        Tuple<int, decimal, string> data4)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Details.Handler>>();
@@ -182,7 +182,7 @@ public class DetailsTests
         Assert.True(actual.IsSuccess);
         Assert.Single(actual.Result.Assets);
         Assert.Equal(averagePrice, Math.Round(actual.Result.Assets[0].AveragePrice, 2));
-        Assert.Equal(stock.LastPrice, actual.Result.Assets[0].Price);
+        Assert.Equal((decimal)stock.LastPrice, actual.Result.Assets[0].Price);
         Assert.Equal(stock.TypeId, actual.Result.Assets[0].Type);
         Assert.Equal(stock.SectorId, actual.Result.Assets[0].Sector);
         Assert.Equal(stock.Ticker, actual.Result.Assets[0].Ticker);
@@ -196,10 +196,10 @@ public class DetailsTests
     }
     
     public static IEnumerable<object[]> Data(){
-        yield return new object[] { "USD", 556.32, 75.00, Tuple.Create(1, 356.32, ListOperations.Add), Tuple.Create(445, 75.00, ListOperations.Purchase), Tuple.Create(345, 56.89, ListOperations.Sale), Tuple.Create(1, 300.00, ListOperations.Withdrawal)};
-        yield return new object[] { "RUB", 16389.01, 1.00, Tuple.Create(1, 6300.56, ListOperations.Add), Tuple.Create(1, 8579.06, ListOperations.Add), Tuple.Create(1, 7369.00, ListOperations.Add), Tuple.Create(1, 5859.61, ListOperations.Add)};
-        yield return new object[] { "MTSS", 40, 190.00, Tuple.Create(3, 243.00, ListOperations.Purchase), Tuple.Create(3, 179.00, ListOperations.Sale), Tuple.Create(41, 190.00, ListOperations.Purchase), Tuple.Create(1, 163.00, ListOperations.Sale)};
-        yield return new object[] { "MTSS", 8, 177.62, Tuple.Create(3, 250.00, ListOperations.Purchase), Tuple.Create(3, 210.00, ListOperations.Purchase), Tuple.Create(5, 220.00, ListOperations.Sale), Tuple.Create(7, 173.00, ListOperations.Purchase)};
-        yield return new object[] { "MTSS", 12, 196.67, Tuple.Create(3, 250.00, ListOperations.Purchase), Tuple.Create(3, 210.00, ListOperations.Sale), Tuple.Create(5, 220.00, ListOperations.Purchase), Tuple.Create(7, 180.00, ListOperations.Purchase)};
+        yield return new object[] { "USD", 556.32m, 75.00m, Tuple.Create(1, 356.32m, ListOperations.Add), Tuple.Create(445, 75.00m, ListOperations.Purchase), Tuple.Create(345, 56.89m, ListOperations.Sale), Tuple.Create(1, 300.00m, ListOperations.Withdrawal)};
+        yield return new object[] { "RUB", 16389.01m, 1.00m, Tuple.Create(1, 6300.56m, ListOperations.Add), Tuple.Create(1, 8579.06m, ListOperations.Add), Tuple.Create(1, 7369.00m, ListOperations.Add), Tuple.Create(1, 5859.61m, ListOperations.Add)};
+        yield return new object[] { "MTSS", 40m, 190.00m, Tuple.Create(3, 243.00m, ListOperations.Purchase), Tuple.Create(3, 179.00m, ListOperations.Sale), Tuple.Create(41, 190.00m, ListOperations.Purchase), Tuple.Create(1, 163.00m, ListOperations.Sale)};
+        yield return new object[] { "MTSS", 8m, 177.62m, Tuple.Create(3, 250.00m, ListOperations.Purchase), Tuple.Create(3, 210.00m, ListOperations.Purchase), Tuple.Create(5, 220.00m, ListOperations.Sale), Tuple.Create(7, 173.00m, ListOperations.Purchase)};
+        yield return new object[] { "MTSS", 12m, 196.67m, Tuple.Create(3, 250.00m, ListOperations.Purchase), Tuple.Create(3, 210.00m, ListOperations.Sale), Tuple.Create(5, 220.00m, ListOperations.Purchase), Tuple.Create(7, 180.00m, ListOperations.Purchase)};
     }
 }
