@@ -2,7 +2,7 @@
 
 namespace Larchik.Application.Services;
 
-public static class CurrencyOperation
+public static class OperationHelper
 {
     private static readonly Dictionary<string, Func<int, decimal, decimal, decimal>> CurrencyOperations = new()
     {
@@ -13,6 +13,14 @@ public static class CurrencyOperation
         { ListOperations.Purchase, (count, price, commission) => -(count * price + commission) },
         { ListOperations.Sale, (count, price, commission) => count * price - commission },
     };
+    
+    private static readonly Dictionary<string, Func<int, int>> MakeAssetOperations = new()
+    {
+        { ListOperations.Purchase, quantity => quantity },
+        { ListOperations.Sale, quantity => -quantity }
+    };
 
     public static decimal GetAmount(string operation, int count, decimal price, decimal commission) => CurrencyOperations[operation](count, price, commission);
+    
+    public static int GetAssetQuantity(string operation, int quantity) => MakeAssetOperations[operation](quantity);
 }

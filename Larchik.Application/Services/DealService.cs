@@ -16,6 +16,7 @@ public class DealService : IDealService
     private readonly DataContext _context;
     private readonly IMapper _mapper;
     private readonly IUserAccessor _userAccessor;
+    private readonly Dictionary<string, Func<Stock, decimal, DealDto, CancellationToken, Task>> _operations;
 
     public DealService(ILogger<DealService> logger, DataContext context, IMapper mapper, IUserAccessor userAccessor)
     {
@@ -23,6 +24,16 @@ public class DealService : IDealService
         _context = context;
         _mapper = mapper;
         _userAccessor = userAccessor;
+        _operations = new Dictionary<string, Func<Stock, decimal, DealDto, CancellationToken, Task>>
+        {
+            {ListOperations.Add, OperationAddAsync},
+            {ListOperations.Commission, OperationAddAsync},
+            {ListOperations.Dividends, OperationAddAsync},
+            {ListOperations.Tax, OperationAddAsync},
+            {ListOperations.Withdrawal, OperationAddAsync},
+            {ListOperations.Purchase, OperationPurchaseAsync},
+            {ListOperations.Sale, OperationPurchaseAsync}
+        };
     }
 
     public async Task<OperationResult<Unit>> CreateDeal(DealDto dealDto, CancellationToken cancellationToken)
@@ -30,55 +41,16 @@ public class DealService : IDealService
         var account = await _context.Accounts
             .Include(x => x.User)
             .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
+        
         if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
         
         var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Ticker == dealDto.Stock, cancellationToken);
         
         if (stock == null) return OperationResult<Unit>.Failure("Тикер не найден");
         
-        var amount = CurrencyOperation.GetAmount(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
-
-        if (stock.TypeId != "MONEY")
-        {
-            var asset = await _context.Assets.FirstOrDefaultAsync(x => x.AccountId == account.Id && x.StockId == dealDto.Stock, cancellationToken);
-            
-            var quantity = AssetOperation.CreateAssetDeal(dealDto.Operation, dealDto.Quantity);
-            
-            if (asset == null)
-            {
-                asset = new Asset
-                {
-                    Id = Guid.NewGuid(),
-                    AccountId = account.Id,
-                    Stock = stock,
-                    Quantity = quantity
-                };
-
-                _context.Assets.Add(asset);
-            }
-            else
-            {
-                asset.Quantity += quantity;
-            }
-        }
+        var amount = OperationHelper.GetAmount(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
         
-        var assetMoney = await _context.Assets.FirstOrDefaultAsync(x => x.AccountId == account.Id && x.StockId == stock.CurrencyId, cancellationToken);
-        
-        if (assetMoney == null)
-        {
-            assetMoney = new Asset
-            {
-                Id = Guid.NewGuid(),
-                AccountId = account.Id,
-                StockId = stock.CurrencyId,
-                Quantity = amount
-            };
-            _context.Assets.Add(assetMoney);
-        }
-        else
-        {
-            assetMoney.Quantity += amount;
-        }
+        await _operations[dealDto.Operation](stock, amount, dealDto, cancellationToken);
 
         var deal = _mapper.Map<Deal>(dealDto, opt => { opt.Items["Amount"] = amount; });
         
@@ -97,67 +69,18 @@ public class DealService : IDealService
         var account = await _context.Accounts
             .Include(x => x.User)
             .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
+        
         if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
         
         var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Ticker == dealDto.Stock, cancellationToken);
         
         if (stock == null) return OperationResult<Unit>.Failure("Тикер не найден");
         
-        if (deal.Stock.TypeId != "MONEY")
-        {
-            var quantity = AssetOperation.CreateAssetDeal(deal.OperationId, deal.Quantity);
-            var assetOld = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.StockId, cancellationToken);
-            assetOld.Quantity += -quantity;
-        }
+        await RollbackAssetAsync(deal, cancellationToken);
+        
+        var amount = OperationHelper.GetAmount(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
 
-        var assetOldMoney = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.Stock.CurrencyId, cancellationToken);
-        assetOldMoney.Quantity += -deal.Amount;
-        
-        
-        
-        var amount = CurrencyOperation.GetAmount(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
-
-        if (stock.TypeId != "MONEY")
-        {
-            var asset = await _context.Assets.FirstOrDefaultAsync(x => x.AccountId == account.Id && x.StockId == dealDto.Stock, cancellationToken);
-            
-            var quantity = AssetOperation.CreateAssetDeal(dealDto.Operation, dealDto.Quantity);
-            
-            if (asset == null)
-            {
-                asset = new Asset
-                {
-                    Id = Guid.NewGuid(),
-                    AccountId = account.Id,
-                    Stock = stock,
-                    Quantity = quantity
-                };
-
-                _context.Assets.Add(asset);
-            }
-            else
-            {
-                asset.Quantity += quantity;
-            }
-        }
-        
-        var assetMoney = await _context.Assets.FirstOrDefaultAsync(x => x.AccountId == account.Id && x.StockId == stock.CurrencyId, cancellationToken);
-        
-        if (assetMoney == null)
-        {
-            assetMoney = new Asset
-            {
-                Id = Guid.NewGuid(),
-                AccountId = account.Id,
-                StockId = stock.CurrencyId,
-                Quantity = amount
-            };
-            _context.Assets.Add(assetMoney);
-        }
-        else
-        {
-            assetMoney.Quantity += amount;
-        }
+        await _operations[dealDto.Operation](stock, amount, dealDto, cancellationToken);
 
         _mapper.Map(dealDto, deal, opt => { opt.Items["Amount"] = amount; });
         
@@ -172,20 +95,59 @@ public class DealService : IDealService
         
         if (deal == null) return OperationResult<Unit>.Failure("Сделка не найдена");
         
-        if (deal.Stock.TypeId != "MONEY")
-        {
-            var quantity = AssetOperation.CreateAssetDeal(deal.OperationId, deal.Quantity);
-            var asset = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.StockId, cancellationToken);
-            asset.Quantity += -quantity;
-        }
-
-        var assetMoney = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.Stock.CurrencyId, cancellationToken);
-        assetMoney.Quantity += -deal.Amount;
+        await RollbackAssetAsync(deal, cancellationToken);
 
         _context.Remove(deal);
 
         await _context.SaveChangesAsync(cancellationToken);
         
         return OperationResult<Unit>.Success(Unit.Value);
+    }
+
+    private async Task OperationAddAsync(Stock stock, decimal amount, DealDto dealDto, CancellationToken cancellationToken)
+    {
+        await AddOrUpdateAssetAsync(stock.CurrencyId, amount, dealDto.AccountId, cancellationToken);
+    }
+
+    private async Task OperationPurchaseAsync(Stock stock, decimal amount, DealDto dealDto, CancellationToken cancellationToken)
+    {
+        await AddOrUpdateAssetAsync(stock.CurrencyId, amount, dealDto.AccountId, cancellationToken);
+        var quantity = OperationHelper.GetAssetQuantity(dealDto.Operation, dealDto.Quantity);
+        await AddOrUpdateAssetAsync(stock.Ticker, quantity, dealDto.AccountId, cancellationToken);
+    }
+
+    private async Task AddOrUpdateAssetAsync(string ticker, decimal quantity, Guid accountId, CancellationToken cancellationToken)
+    {
+        var asset = await _context.Assets.FirstOrDefaultAsync(x => x.AccountId == accountId && x.StockId == ticker, cancellationToken);
+        
+        if (asset == null)
+        {
+            asset = new Asset
+            {
+                Id = Guid.NewGuid(),
+                AccountId = accountId,
+                StockId = ticker,
+                Quantity = quantity
+            };
+
+            _context.Assets.Add(asset);
+        }
+        else
+        {
+            asset.Quantity += quantity;
+        }
+    }
+
+    private async Task RollbackAssetAsync(Deal deal, CancellationToken cancellationToken)
+    {
+        if (deal.Stock.TypeId != "MONEY")
+        {
+            var quantity = OperationHelper.GetAssetQuantity(deal.OperationId, deal.Quantity);
+            var asset = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.StockId, cancellationToken);
+            asset.Quantity += -quantity;
+        }
+
+        var assetMoney = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.Stock.CurrencyId, cancellationToken);
+        assetMoney.Quantity += -deal.Amount;
     }
 }
