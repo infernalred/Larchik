@@ -1,4 +1,5 @@
 ﻿using Larchik.Application.Contracts;
+using Larchik.Application.Models.Market;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -25,18 +26,20 @@ public class LastPriceUpdater
         
         var stocks = await _context.Stocks.Where(x => tickers.Contains(x.Ticker) && !string.IsNullOrEmpty(x.Figi)).ToListAsync(cancellationToken);
 
-        // if (stocks.Count > 0)
-        // {
-        //     var figis = stocks.Select(x => x.Figi);
-        //
-        //     var stockPrices = (await _marketAccessor.GetLastPrice(figis, cancellationToken)).ToDictionary(x => x.Figi);
-        //
-        //     foreach (var stock in stocks)
-        //     {
-        //         stock.LastPrice = stockPrices[stock.Figi].LastPrice;
-        //     }
-        //
-        //     await _context.SaveChangesAsync(cancellationToken);
-        // }
+        if (stocks.Count > 0)
+        {
+            var figis = stocks.Select(x => x.Figi);
+        
+            var stockPrices = (await _marketAccessor.GetLastPrice(figis, cancellationToken)).ToDictionary(x => x.Figi);
+        
+            foreach (var stock in stocks)
+            {
+                stockPrices.TryGetValue(stock.Figi, out var stockPrice);
+                if (stockPrice != null) stock.LastPrice = stockPrice.LastPrice;
+                
+            }
+        
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 }

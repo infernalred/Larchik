@@ -34,7 +34,11 @@ public class MarketAccessor : IMarketAccessor
         var httpClient = _httpClientFactory.CreateClient("Market");
         var httpResponseMessage = await httpClient.PostAsync("", content, cancellationToken);
 
-        httpResponseMessage.EnsureSuccessStatusCode();
+        if (!httpResponseMessage.IsSuccessStatusCode)
+        {
+            _logger.LogError("Error response {service}. Message: {error}", nameof(MarketAccessor), httpResponseMessage);
+            return new List<StockPrice>();
+        }
 
         await using var contentStream = await httpResponseMessage.Content.ReadAsStreamAsync(cancellationToken);
         var response = JsonSerializer.Deserialize<LastPriceResponse>(contentStream, serializeOptions);
