@@ -8,6 +8,8 @@ import { Account, AccountFormValues } from '../models/account';
 import { Deal, DealFormValues } from '../models/deal';
 import { Operation } from '../models/operation';
 import { Stock } from '../models/stock';
+import { Portfolio } from '../models/portfolio';
+import { Currency } from '../models/currency';
 
 axios.defaults.baseURL = process.env.REACT_APP_API_URL!;
 
@@ -90,12 +92,22 @@ const Stocks = {
     list: () => requests.get<OperationResult<Stock[]>>('/stocks')
 }
 
+const Portfolios = {
+    details: () => requests.get<OperationResult<Portfolio>>('/portfolio')
+}
+
+const Currencies = {
+    list: () => requests.get<OperationResult<Currency[]>>('/currency')
+}
+
 const agent = {
     Users,
     Accounts,
     Deals,
     Operations,
-    Stocks
+    Stocks,
+    Portfolios,
+    Currencies
 }
 
 export default agent;

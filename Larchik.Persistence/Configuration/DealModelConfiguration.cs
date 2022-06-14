@@ -11,6 +11,6 @@ public class DealModelConfiguration: IEntityTypeConfiguration<Deal>
         builder.HasKey(x => x.Id);
         
         builder.Property(x => x.OperationId).IsRequired();
-        builder.Property(x => x.StockId).IsRequired();
+        builder.Property(x => x.CurrencyId).IsRequired();
     }
 }

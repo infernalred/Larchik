@@ -1,4 +1,4 @@
-﻿namespace Larchik.Application.Portfolios;
+﻿namespace Larchik.Application.Portfolio;
 
 public class Portfolio
 {

@@ -6,7 +6,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Larchik.Application.Portfolios;
+namespace Larchik.Application.Portfolio;
 
 public class Details
 {
@@ -32,16 +32,19 @@ public class Details
             var accounts = await _context.Accounts
                 .AsNoTracking()
                 .Where(x => x.User.UserName == _userAccessor.GetUsername())
-                .Include(x => x.Assets.Where(a => a.Quantity != 0))
-                .ThenInclude(x => x.Stock)
                 .Include(x => x.Deals)
+                .ToListAsync(cancellationToken);
+
+            var assetsByAccounts = await _context.Assets
+                .AsNoTracking()
+                .Where(x => x.Quantity != 0 && accounts.Contains(x.Account))
+                .Include(x => x.Stock)
                 .ToListAsync(cancellationToken);
 
             var deals = accounts.SelectMany(x => x.Deals).ToList();
             
             var assets =
-                from ac in accounts
-                from a in ac.Assets
+                from a in assetsByAccounts
                 group a by a.Stock.Ticker into g
                 select new Asset
                 {
@@ -52,7 +55,10 @@ public class Details
 
             foreach (var asset in assets)
             {
-                var dealsByTicker = deals.Where(x => x.StockId == asset.StockId && x.OperationId is ListOperations.Purchase or ListOperations.Sale).OrderBy(x => x.CreatedAt);
+                var dealsByTicker = deals
+                    .Where(x => x.StockId == asset.StockId && x.OperationId is ListOperations.Purchase or ListOperations.Sale)
+                    .OrderBy(x => x.CreatedAt);
+                
                 portfolio.Assets.Add(AveragePrice(asset, new Queue<Deal>(dealsByTicker)));
             }
             
@@ -92,7 +98,7 @@ public class Details
             {
                 var totalAmount = queueData.Sum(x => x.Quantity * x.Price);
                 var quantity = queueData.Sum(x => x.Quantity);
-                average = totalAmount / quantity;
+                average = Math.Round(totalAmount / quantity, 2);
             }
 
             return new PortfolioAsset
@@ -101,7 +107,7 @@ public class Details
                 CompanyName = asset.Stock.CompanyName,
                 AveragePrice = average,
                 Type = asset.Stock.TypeId,
-                Price = new decimal(asset.Stock.LastPrice),
+                Price = (decimal)asset.Stock.LastPrice,
                 Quantity = asset.Quantity,
                 Sector = asset.Stock.SectorId
             };

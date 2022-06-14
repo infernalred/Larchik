@@ -56,13 +56,13 @@ public class CreateDealTests
     }
     
     [Fact]
-    public async Task CreateDeal_Failure_StockIsNull()
+    public async Task CreateDeal_Failure_StockIsNotExist()
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();
         var context = SetupDbContext.Generate();
         var mapper = new Mock<IMapper>();
-
+    
         var deal = new DealDto
         {
             Id = Guid.NewGuid(),
@@ -71,19 +71,15 @@ public class CreateDealTests
             Operation = ListOperations.Add,
             Price = 500,
             Quantity = 1,
-            Stock = "RUB1"
+            Currency = "RUB1"
         };
         
         mockUserAccessor.Setup(x => x.GetUsername()).Returns("admin");
         
         var dealService = new Services.DealService(logger.Object, context, mapper.Object, mockUserAccessor.Object);
-
-        var actual = await dealService.CreateDeal(deal, CancellationToken.None);
+    
+        await Assert.ThrowsAsync<NullReferenceException>(() => dealService.CreateDeal(deal, CancellationToken.None));
         
-        Assert.False(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
-        Assert.NotNull(actual.Error);
-        Assert.Equal("Тикер не найден", actual.Error);
         mockUserAccessor.Verify(x => x.GetUsername());
         mockUserAccessor.VerifyNoOtherCalls();
         mockUserAccessor.VerifyAll();
@@ -104,7 +100,7 @@ public class CreateDealTests
         var context = SetupDbContext.Generate();
         var mapper = new Mapper(_mapperConfiguration);
 
-        var stock1 = context.Stocks.First(x => x.Ticker == "RUB");
+        var currency = context.Currencies.First(x => x.Code == "RUB");
         
         var deal = new DealDto
         {
@@ -115,7 +111,7 @@ public class CreateDealTests
             Price = price,
             Quantity = 1,
             Commission = commission,
-            Stock = stock1.Ticker
+            Currency = currency.Code
         };
         
         mockUserAccessor.Setup(x => x.GetUsername()).Returns("admin");
@@ -124,7 +120,7 @@ public class CreateDealTests
 
         var actual = await dealService.CreateDeal(deal, CancellationToken.None);
         var deals = await context.Deals.ToListAsync();
-        var assetActual1 = await context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.Stock);
+        var assetActual1 = await context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.Currency);
         var actualDeal = await context.Deals.FirstAsync(x => x.Id == deal.Id);
         
         Assert.True(actual.IsSuccess);
@@ -136,7 +132,8 @@ public class CreateDealTests
         Assert.Equal(price, actualDeal.Price);
         Assert.Equal(1, actualDeal.Quantity);
         Assert.Equal(commission, actualDeal.Commission);
-        Assert.Equal(stock1.Ticker, actualDeal.StockId);
+        Assert.Equal(currency.Code, actualDeal.CurrencyId);
+        Assert.Null(actualDeal.StockId);
         Assert.Equal(quantity, Math.Round(actualDeal.Amount, 2));
         mockUserAccessor.Verify(x => x.GetUsername());
         mockUserAccessor.VerifyNoOtherCalls();
@@ -155,9 +152,9 @@ public class CreateDealTests
         var context = SetupDbContext.Generate();
         var mapper = new Mapper(_mapperConfiguration);
         
-        var stock1 = context.Stocks.First(x => x.Ticker == "RUB");
+        var currency = context.Currencies.First(x => x.Code == "RUB");
         var stock2 = context.Stocks.First(x => x.Ticker == "MTSS");
-        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40000, StockId = stock1.Ticker};
+        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40000, StockId = currency.Code};
         var asset2 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40, StockId = stock2.Ticker};
         context.Assets.Add(asset1);
         context.Assets.Add(asset2);
@@ -172,6 +169,7 @@ public class CreateDealTests
             Price = price,
             Quantity = quantity,
             Commission = commission,
+            Currency = currency.Code,
             Stock = stock2.Ticker
         };
         
@@ -181,7 +179,7 @@ public class CreateDealTests
 
         var actual = await dealService.CreateDeal(deal, CancellationToken.None);
         var deals = await context.Deals.ToListAsync();
-        var assetActual1 = await context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == stock1.Ticker);
+        var assetActual1 = await context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == currency.Code);
         var assetActual2 = await context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == stock2.Ticker);
         var actualDeal = await context.Deals.FirstAsync(x => x.Id == deal.Id);
         
@@ -196,6 +194,7 @@ public class CreateDealTests
         Assert.Equal(quantity, actualDeal.Quantity);
         Assert.Equal(commission, actualDeal.Commission);
         Assert.Equal(stock2.Ticker, actualDeal.StockId);
+        Assert.Equal(currency.Code, actualDeal.CurrencyId);
         Assert.Equal(amount, actualDeal.Amount);
         mockUserAccessor.Verify(x => x.GetUsername());
         mockUserAccessor.VerifyNoOtherCalls();

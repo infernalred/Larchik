@@ -5,8 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
-using Larchik.Application.Portfolios;
+using Larchik.Application.Portfolio;
 using Larchik.Domain;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -22,9 +23,12 @@ public class DetailsTests
         var logger = new Mock<ILogger<Details.Handler>>();
         var context = SetupDbContext.Generate();
         
+        var user = await context.Users.FirstAsync(x => x.UserName == "admin");
+        var currency = context.Currencies.First(x => x.Code == "RUB");
         var stock = context.Stocks.First(x => x.Ticker == "MTSS");
         var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 49, StockId = stock.Ticker};
         var asset2 = new Asset{AccountId = Guid.Parse("860C80E3-AE30-4179-8E0E-C2C0DBA68268"), Id = Guid.NewGuid(), Quantity = 12, StockId = stock.Ticker};
+        
         var deal1 = new Deal
         {
             AccountId = asset1.AccountId,
@@ -33,8 +37,11 @@ public class DetailsTests
             Quantity = 50, 
             Price = 190,
             OperationId = ListOperations.Purchase, 
-            StockId = stock.Ticker
+            StockId = stock.Ticker,
+            CurrencyId = currency.Code,
+            UserId = user.Id
         };
+        
         var deal2 = new Deal
         {
             AccountId = asset2.AccountId,
@@ -43,8 +50,11 @@ public class DetailsTests
             Quantity = 11, 
             Price = 230,
             OperationId = ListOperations.Purchase, 
-            StockId = stock.Ticker
+            StockId = stock.Ticker,
+            CurrencyId = currency.Code,
+            UserId = user.Id
         };
+        
         var deal3 = new Deal
         {
             AccountId = asset1.AccountId,
@@ -53,8 +63,11 @@ public class DetailsTests
             Quantity = 5, 
             Price = 210,
             OperationId = ListOperations.Purchase, 
-            StockId = stock.Ticker
+            StockId = stock.Ticker,
+            CurrencyId = currency.Code,
+            UserId = user.Id
         };
+        
         var deal4 = new Deal
         {
             AccountId = asset1.AccountId,
@@ -63,8 +76,11 @@ public class DetailsTests
             Quantity = 3, 
             Price = 100,
             OperationId = ListOperations.Sale, 
-            StockId = stock.Ticker
+            StockId = stock.Ticker,
+            CurrencyId = currency.Code,
+            UserId = user.Id
         };
+        
         var deal5 = new Deal
         {
             AccountId = asset1.AccountId,
@@ -73,8 +89,11 @@ public class DetailsTests
             Quantity = 3, 
             Price = 100,
             OperationId = ListOperations.Sale, 
-            StockId = stock.Ticker
+            StockId = stock.Ticker,
+            CurrencyId = currency.Code,
+            UserId = user.Id
         };
+        
         var deal6 = new Deal
         {
             AccountId = asset2.AccountId,
@@ -83,8 +102,11 @@ public class DetailsTests
             Quantity = 1, 
             Price = 55,
             OperationId = ListOperations.Purchase, 
-            StockId = stock.Ticker
+            StockId = stock.Ticker,
+            CurrencyId = currency.Code,
+            UserId = user.Id
         };
+        
         context.Assets.Add(asset1);
         context.Assets.Add(asset2);
         context.Deals.AddRange(new List<Deal>{deal1, deal2, deal3, deal4, deal5, deal6});
@@ -118,17 +140,19 @@ public class DetailsTests
         string ticker, 
         decimal quantity, 
         decimal averagePrice, 
-        Tuple<int, decimal, string> data1, 
-        Tuple<int, decimal, string> data2, 
-        Tuple<int, decimal, string> data3, 
-        Tuple<int, decimal, string> data4)
+        Tuple<int, decimal, string, string, string?> data1, 
+        Tuple<int, decimal, string, string, string?> data2, 
+        Tuple<int, decimal, string, string, string?> data3, 
+        Tuple<int, decimal, string, string, string?> data4)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Details.Handler>>();
         var context = SetupDbContext.Generate();
 
         var stock = context.Stocks.First(x => x.Ticker == ticker);
+        var user = await context.Users.FirstAsync(x => x.UserName == "admin");
         var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = quantity, StockId = ticker};
+        
         var deal1 = new Deal
         {
             AccountId = asset1.AccountId,
@@ -136,9 +160,12 @@ public class DetailsTests
             Id = Guid.NewGuid(), 
             Quantity = data1.Item1, 
             Price = data1.Item2,
-            OperationId = data1.Item3, 
-            StockId = stock.Ticker
+            OperationId = data1.Item3,
+            CurrencyId = data1.Item4,
+            StockId = data1.Item5,
+            UserId = user.Id
         };
+        
         var deal2 = new Deal
         {
             AccountId = asset1.AccountId,
@@ -146,9 +173,12 @@ public class DetailsTests
             Id = Guid.NewGuid(), 
             Quantity = data2.Item1, 
             Price = data2.Item2,
-            OperationId = data2.Item3,  
-            StockId = stock.Ticker
+            OperationId = data2.Item3, 
+            CurrencyId = data2.Item4,
+            StockId = data2.Item5,
+            UserId = user.Id
         };
+        
         var deal3 = new Deal
         {
             AccountId = asset1.AccountId,
@@ -156,9 +186,12 @@ public class DetailsTests
             Id = Guid.NewGuid(), 
             Quantity = data3.Item1, 
             Price = data3.Item2,
-            OperationId = data3.Item3,  
-            StockId = stock.Ticker
+            OperationId = data3.Item3, 
+            CurrencyId = data3.Item4,
+            StockId = data3.Item5,
+            UserId = user.Id
         };
+        
         var deal4 = new Deal
         {
             AccountId = asset1.AccountId,
@@ -166,9 +199,12 @@ public class DetailsTests
             Id = Guid.NewGuid(), 
             Quantity = data4.Item1, 
             Price = data4.Item2,
-            OperationId = data4.Item3,
-            StockId = stock.Ticker
+            OperationId = data4.Item3, 
+            CurrencyId = data4.Item4,
+            StockId = data4.Item5,
+            UserId = user.Id
         };
+        
         context.Assets.Add(asset1);
         context.Deals.AddRange(new List<Deal>{deal1, deal2, deal3, deal4});
         await context.SaveChangesAsync();
@@ -196,10 +232,10 @@ public class DetailsTests
     }
     
     public static IEnumerable<object[]> Data(){
-        yield return new object[] { "USD", 556.32m, 75.00m, Tuple.Create(1, 356.32m, ListOperations.Add), Tuple.Create(445, 75.00m, ListOperations.Purchase), Tuple.Create(345, 56.89m, ListOperations.Sale), Tuple.Create(1, 300.00m, ListOperations.Withdrawal)};
-        yield return new object[] { "RUB", 16389.01m, 1.00m, Tuple.Create(1, 6300.56m, ListOperations.Add), Tuple.Create(1, 8579.06m, ListOperations.Add), Tuple.Create(1, 7369.00m, ListOperations.Add), Tuple.Create(1, 5859.61m, ListOperations.Add)};
-        yield return new object[] { "MTSS", 40m, 190.00m, Tuple.Create(3, 243.00m, ListOperations.Purchase), Tuple.Create(3, 179.00m, ListOperations.Sale), Tuple.Create(41, 190.00m, ListOperations.Purchase), Tuple.Create(1, 163.00m, ListOperations.Sale)};
-        yield return new object[] { "MTSS", 8m, 177.62m, Tuple.Create(3, 250.00m, ListOperations.Purchase), Tuple.Create(3, 210.00m, ListOperations.Purchase), Tuple.Create(5, 220.00m, ListOperations.Sale), Tuple.Create(7, 173.00m, ListOperations.Purchase)};
-        yield return new object[] { "MTSS", 12m, 196.67m, Tuple.Create(3, 250.00m, ListOperations.Purchase), Tuple.Create(3, 210.00m, ListOperations.Sale), Tuple.Create(5, 220.00m, ListOperations.Purchase), Tuple.Create(7, 180.00m, ListOperations.Purchase)};
+        yield return new object[] { "USD", 556.32m, 75.00m, Tuple.Create<int, decimal, string, string, string?>(1, 356.32m, ListOperations.Add, "USD", null), Tuple.Create(445, 75.00m, ListOperations.Purchase, "RUB", "USD"), Tuple.Create(345, 56.89m, ListOperations.Sale, "RUB", "USD"), Tuple.Create<int, decimal, string, string, string?>(1, 300.00m, ListOperations.Withdrawal, "USD", null)};
+        yield return new object[] { "RUB", 16389.01m, 1.00m, Tuple.Create<int, decimal, string, string, string?>(1, 6300.56m, ListOperations.Add, "RUB", null), Tuple.Create<int, decimal, string, string, string?>(1, 8579.06m, ListOperations.Add, "RUB", null), Tuple.Create<int, decimal, string, string, string?>(1, 7369.00m, ListOperations.Add, "RUB", null), Tuple.Create<int, decimal, string, string, string?>(1, 5859.61m, ListOperations.Add, "RUB", null)};
+        yield return new object[] { "MTSS", 40m, 190.00m, Tuple.Create(3, 243.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(3, 179.00m, ListOperations.Sale, "RUB", "MTSS"), Tuple.Create(41, 190.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(1, 163.00m, ListOperations.Sale, "RUB", "MTSS")};
+        yield return new object[] { "MTSS", 8m, 177.62m, Tuple.Create(3, 250.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(3, 210.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(5, 220.00m, ListOperations.Sale, "RUB", "MTSS"), Tuple.Create(7, 173.00m, ListOperations.Purchase, "RUB", "MTSS")};
+        yield return new object[] { "MTSS", 12m, 196.67m, Tuple.Create(3, 250.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(3, 210.00m, ListOperations.Sale, "RUB", "MTSS"), Tuple.Create(5, 220.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(7, 180.00m, ListOperations.Purchase, "RUB", "MTSS")};
     }
 }

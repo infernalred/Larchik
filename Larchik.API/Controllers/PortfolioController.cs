@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using Larchik.Application.Helpers;
-using Larchik.Application.Portfolios;
+using Larchik.Application.Portfolio;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Larchik.API.Controllers;

@@ -17,87 +17,47 @@ namespace Larchik.Application.Tests.DealService;
 
 public class DeleteDealTests
 {
-    [Fact]
-    public async Task DeleteDeal_Fail_Variant1()
+    [Theory]
+    [InlineData(48.53, 40, 40, 9, 8.53, 0.47, ListOperations.Add, ListOperations.Add, 40.00)]
+    [InlineData(38.18, 49, 49, 9, -10.82, 1.82, ListOperations.Add, ListOperations.Withdrawal, 49.00)]
+    [InlineData(55.99, 49, 49, 9, 6.99, 2.01, ListOperations.Add, ListOperations.Dividends, 49.00)]
+    [InlineData(39.84, 49, 49, 9, -9.16, 0.16, ListOperations.Add, ListOperations.Tax, 49.00)]
+    public async Task DeleteDeal_Success_Money_Variant1(decimal quantity, decimal price1, decimal amount1, decimal price2, decimal amount2, decimal commission, string operation1, string operation2, decimal expectQuantity)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();
         var context = SetupDbContext.Generate();
         var mapper = new Mock<IMapper>();
     
-        var dealService = new Services.DealService(logger.Object, context, mapper.Object, mockUserAccessor.Object);
-    
-        var actual = await dealService.DeleteDeal(Guid.NewGuid(), CancellationToken.None);
-    
-        Assert.False(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
-        Assert.NotNull(actual.Error);
-        mockUserAccessor.VerifyNoOtherCalls();
-        mockUserAccessor.VerifyAll();
-        logger.VerifyNoOtherCalls();
-        logger.VerifyAll();
-    }
-    
-    [Fact]
-    public async Task DeleteDeal_Fail_Variant2()
-    {
-        var mockUserAccessor = new Mock<IUserAccessor>();
-        var logger = new Mock<ILogger<Services.DealService>>();
-        var context = SetupDbContext.Generate();
-        var mapper = new Mock<IMapper>();
-    
-        var deal = new Deal {Id = Guid.NewGuid() };
-        context.Deals.Add(deal);
-        await context.SaveChangesAsync();
-    
-        var dealService = new Services.DealService(logger.Object, context, mapper.Object, mockUserAccessor.Object);
-    
-        var actual = await dealService.DeleteDeal(Guid.NewGuid(), CancellationToken.None);
-    
-        var deals = await context.Deals.ToListAsync();
-    
-        Assert.False(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
-        Assert.NotNull(actual.Error);
-        Assert.Single(deals);
-        mockUserAccessor.VerifyNoOtherCalls();
-        mockUserAccessor.VerifyAll();
-        logger.VerifyNoOtherCalls();
-        logger.VerifyAll();
-    }
-    
-    [Fact]
-    public async Task DeleteDeal_Success_Money_Variant1()
-    {
-        var mockUserAccessor = new Mock<IUserAccessor>();
-        var logger = new Mock<ILogger<Services.DealService>>();
-        var context = SetupDbContext.Generate();
-        var mapper = new Mock<IMapper>();
-    
-        var stock = context.Stocks.First(x => x.Ticker == "RUB");
-        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 48.53m, StockId = stock.Ticker};
+        var currency = context.Currencies.First(x => x.Code == "RUB");
+        var user = await context.Users.FirstAsync(x => x.UserName == "admin");
+        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = quantity, StockId = currency.Code};
+        
         var deal1 = new Deal
         {
             AccountId = asset1.AccountId,
             CreatedAt = new DateTime(2022, 05, 01), 
             Id = Guid.NewGuid(), 
             Quantity = 1, 
-            Price = 40,
-            Amount = 40,
-            OperationId = ListOperations.Add, 
-            StockId = stock.Ticker
+            Price = price1,
+            Amount = amount1,
+            OperationId = operation1, 
+            CurrencyId = currency.Code,
+            UserId = user.Id
         };
+        
         var deal2 = new Deal
         {
             AccountId = asset1.AccountId,
             CreatedAt = new DateTime(2022, 05, 01), 
             Id = Guid.NewGuid(), 
             Quantity = 1, 
-            Price = 9,
-            Amount = 8.53m,
-            Commission = 0.47m,
-            OperationId = ListOperations.Add, 
-            StockId = stock.Ticker
+            Price = price2,
+            Amount = amount2,
+            Commission = commission,
+            OperationId = operation2, 
+            CurrencyId = currency.Code,
+            UserId = user.Id
         };
         
         context.Assets.Add(asset1);
@@ -115,175 +75,7 @@ public class DeleteDealTests
         Assert.Equal(Unit.Value, actual.Result);
         Assert.Null(actual.Error);
         Assert.Single(deals);
-        Assert.Equal(40.00m, asset.Quantity);
-        mockUserAccessor.VerifyNoOtherCalls();
-        mockUserAccessor.VerifyAll();
-        logger.VerifyNoOtherCalls();
-        logger.VerifyAll();
-    }
-    
-    [Fact]
-    public async Task DeleteDeal_Success_Money_Variant2()
-    {
-        var mockUserAccessor = new Mock<IUserAccessor>();
-        var logger = new Mock<ILogger<Services.DealService>>();
-        var context = SetupDbContext.Generate();
-        var mapper = new Mock<IMapper>();
-    
-        var stock = context.Stocks.First(x => x.Ticker == "RUB");
-        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 38.18m, StockId = stock.Ticker};
-        var deal1 = new Deal
-        {
-            AccountId = asset1.AccountId,
-            CreatedAt = new DateTime(2022, 05, 01), 
-            Id = Guid.NewGuid(), 
-            Quantity = 1, 
-            Price = 49,
-            Amount = 49,
-            OperationId = ListOperations.Add, 
-            StockId = stock.Ticker
-        };
-        var deal2 = new Deal
-        {
-            AccountId = asset1.AccountId,
-            CreatedAt = new DateTime(2022, 05, 01), 
-            Id = Guid.NewGuid(), 
-            Quantity = 1, 
-            Price = 9,
-            Amount = -10.82m,
-            Commission = 1.82m,
-            OperationId = ListOperations.Withdrawal, 
-            StockId = stock.Ticker
-        };
-        
-        context.Assets.Add(asset1);
-        context.Deals.AddRange(new List<Deal>{deal1, deal2});
-        await context.SaveChangesAsync();
-        
-        var dealService = new Services.DealService(logger.Object, context, mapper.Object, mockUserAccessor.Object);
-        
-        var actual = await dealService.DeleteDeal(deal2.Id, CancellationToken.None);
-        
-        var deals = await context.Deals.ToListAsync();
-        var asset = await context.Assets.FirstAsync(x => x.Id == asset1.Id);
-    
-        Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
-        Assert.Null(actual.Error);
-        Assert.Single(deals);
-        Assert.Equal(49.00m, asset.Quantity);
-        mockUserAccessor.VerifyNoOtherCalls();
-        mockUserAccessor.VerifyAll();
-        logger.VerifyNoOtherCalls();
-        logger.VerifyAll();
-    }
-    
-    [Fact]
-    public async Task DeleteDeal_Success_Money_Variant3()
-    {
-        var mockUserAccessor = new Mock<IUserAccessor>();
-        var logger = new Mock<ILogger<Services.DealService>>();
-        var context = SetupDbContext.Generate();
-        var mapper = new Mock<IMapper>();
-    
-        var stock = context.Stocks.First(x => x.Ticker == "RUB");
-        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 55.99m, StockId = stock.Ticker};
-        var deal1 = new Deal
-        {
-            AccountId = asset1.AccountId,
-            CreatedAt = new DateTime(2022, 05, 01), 
-            Id = Guid.NewGuid(), 
-            Quantity = 1, 
-            Price = 49,
-            Amount = 49,
-            OperationId = ListOperations.Add, 
-            StockId = stock.Ticker
-        };
-        var deal2 = new Deal
-        {
-            AccountId = asset1.AccountId,
-            CreatedAt = new DateTime(2022, 05, 01), 
-            Id = Guid.NewGuid(), 
-            Quantity = 1, 
-            Price = 9,
-            Amount = 6.99m,
-            Commission = 2.01m,
-            OperationId = ListOperations.Dividends, 
-            StockId = stock.Ticker
-        };
-        
-        context.Assets.Add(asset1);
-        context.Deals.AddRange(new List<Deal>{deal1, deal2});
-        await context.SaveChangesAsync();
-    
-        var dealService = new Services.DealService(logger.Object, context, mapper.Object, mockUserAccessor.Object);
-    
-        var actual = await dealService.DeleteDeal(deal2.Id, CancellationToken.None);
-    
-        var deals = await context.Deals.ToListAsync();
-        var asset = await context.Assets.FirstAsync(x => x.Id == asset1.Id);
-    
-        Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
-        Assert.Null(actual.Error);
-        Assert.Single(deals);
-        Assert.Equal(49.00m, asset.Quantity);
-        mockUserAccessor.VerifyNoOtherCalls();
-        mockUserAccessor.VerifyAll();
-        logger.VerifyNoOtherCalls();
-        logger.VerifyAll();
-    }
-    
-    [Fact]
-    public async Task DeleteDeal_Success_Money_Variant4()
-    {
-        var mockUserAccessor = new Mock<IUserAccessor>();
-        var logger = new Mock<ILogger<Services.DealService>>();
-        var context = SetupDbContext.Generate();
-        var mapper = new Mock<IMapper>();
-    
-        var stock = context.Stocks.First(x => x.Ticker == "RUB");
-        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 39.84m, StockId = stock.Ticker};
-        var deal1 = new Deal
-        {
-            AccountId = asset1.AccountId,
-            CreatedAt = new DateTime(2022, 05, 01), 
-            Id = Guid.NewGuid(), 
-            Quantity = 1, 
-            Price = 49,
-            Amount = 49,
-            OperationId = ListOperations.Add, 
-            StockId = stock.Ticker
-        };
-        var deal2 = new Deal
-        {
-            AccountId = asset1.AccountId,
-            CreatedAt = new DateTime(2022, 05, 01), 
-            Id = Guid.NewGuid(), 
-            Quantity = 1, 
-            Price = 9,
-            Amount = -9.16m,
-            Commission = 0.16m,
-            OperationId = ListOperations.Tax, 
-            StockId = stock.Ticker
-        };
-        
-        context.Assets.Add(asset1);
-        context.Deals.AddRange(new List<Deal>{deal1, deal2});
-        await context.SaveChangesAsync();
-    
-        var dealService = new Services.DealService(logger.Object, context, mapper.Object, mockUserAccessor.Object);
-    
-        var actual = await dealService.DeleteDeal(deal2.Id, CancellationToken.None);
-    
-        var deals = await context.Deals.ToListAsync();
-        var asset = await context.Assets.FirstAsync(x => x.Id == asset1.Id);
-    
-        Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
-        Assert.Null(actual.Error);
-        Assert.Single(deals);
-        Assert.Equal(49.00m, asset.Quantity);
+        Assert.Equal(expectQuantity, asset.Quantity);
         mockUserAccessor.VerifyNoOtherCalls();
         mockUserAccessor.VerifyAll();
         logger.VerifyNoOtherCalls();
@@ -298,9 +90,10 @@ public class DeleteDealTests
         var context = SetupDbContext.Generate();
         var mapper = new Mock<IMapper>();
     
-        var stock = context.Stocks.First(x => x.Ticker == "RUB");
+        var currency = context.Currencies.First(x => x.Code == "RUB");
         var stock2 = context.Stocks.First(x => x.Ticker == "MTSS");
-        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40000, StockId = stock.Ticker};
+        var user = await context.Users.FirstAsync(x => x.UserName == "admin");
+        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40000, StockId = currency.Code};
         var asset2 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40, StockId = stock2.Ticker};
         var deal1 = new Deal
         {
@@ -310,8 +103,10 @@ public class DeleteDealTests
             Quantity = 20, 
             Price = 210,
             Amount = -4200,
-            OperationId = ListOperations.Purchase, 
-            StockId = stock2.Ticker
+            OperationId = ListOperations.Purchase,
+            CurrencyId = currency.Code,
+            StockId = stock2.Ticker,
+            UserId = user.Id
         };
         var deal2 = new Deal
         {
@@ -322,8 +117,10 @@ public class DeleteDealTests
             Price = 220,
             Amount = -4403.44m,
             Commission = 3.44m,
-            OperationId = ListOperations.Purchase, 
-            StockId = stock2.Ticker
+            OperationId = ListOperations.Purchase,
+            CurrencyId = currency.Code,
+            StockId = stock2.Ticker,
+            UserId = user.Id
         };
         
         context.Assets.Add(asset1);
@@ -359,9 +156,10 @@ public class DeleteDealTests
         var context = SetupDbContext.Generate();
         var mapper = new Mock<IMapper>();
 
-        var stock = context.Stocks.First(x => x.Ticker == "RUB");
+        var currency = context.Currencies.First(x => x.Code == "RUB");
         var stock2 = context.Stocks.First(x => x.Ticker == "MTSS");
-        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40000, StockId = stock.Ticker};
+        var user = await context.Users.FirstAsync(x => x.UserName == "admin");
+        var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40000, StockId = currency.Code};
         var asset2 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 20, StockId = stock2.Ticker};
         var deal1 = new Deal
         {
@@ -371,8 +169,10 @@ public class DeleteDealTests
             Quantity = 20, 
             Price = 210,
             Amount = -4200,
-            OperationId = ListOperations.Purchase, 
-            StockId = stock2.Ticker
+            OperationId = ListOperations.Purchase,
+            CurrencyId = currency.Code,
+            StockId = stock2.Ticker,
+            UserId = user.Id
         };
         var deal2 = new Deal
         {
@@ -383,8 +183,10 @@ public class DeleteDealTests
             Price = 220,
             Amount = 4397.11m,
             Commission = 2.89m,
-            OperationId = ListOperations.Sale, 
-            StockId = stock2.Ticker
+            OperationId = ListOperations.Sale,
+            CurrencyId = currency.Code,
+            StockId = stock2.Ticker,
+            UserId = user.Id
         };
         
         context.Assets.Add(asset1);

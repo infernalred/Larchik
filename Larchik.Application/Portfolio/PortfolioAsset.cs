@@ -1,4 +1,4 @@
-﻿namespace Larchik.Application.Portfolios;
+﻿namespace Larchik.Application.Portfolio;
 
 public class PortfolioAsset
 {
@@ -8,5 +8,7 @@ public class PortfolioAsset
     public string Type { get; set; } = null!;
     public decimal Quantity { get; set; }
     public decimal Price { get; set; }
+    public decimal Amount => Quantity * Price;
     public decimal AveragePrice { get; set; }
+    public decimal AmountByPurchase => Quantity * AveragePrice;
 }

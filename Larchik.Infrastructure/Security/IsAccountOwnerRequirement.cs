@@ -30,11 +30,9 @@ public class IsAccountOwnerRequirementHandler : AuthorizationHandler<IsAccountOw
 
         var account = _dbContext.Accounts
             .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.User.Id == userId && x.Id == accountId).Result;
+            .SingleOrDefaultAsync(x => x.UserId == userId && x.Id == accountId).Result;
         
-        if (account == null) return Task.CompletedTask;
-        
-        if (account.UserId == userId) context.Succeed(requirement);
+        if (account != null) context.Succeed(requirement);
         
         return Task.CompletedTask;
     }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Larchik.Domain;
 using Larchik.Persistence.Context;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,6 +14,7 @@ public static class SetupDbContext
     {
         var options = CreateNewContextOptions();
         var context = new DataContext(options);
+        context.Database.EnsureCreated();
         CreateUserAndAccount(context);
         CreateCurrency(context);
         CreateStockTypes(context);
@@ -138,17 +140,11 @@ public static class SetupDbContext
     
     private static DbContextOptions<DataContext> CreateNewContextOptions()
     {
-        // Create a fresh service provider, and therefore a fresh 
-        // InMemory database instance.
-        var serviceProvider = new ServiceCollection()
-            .AddEntityFrameworkInMemoryDatabase()
-            .BuildServiceProvider();
+        var connection = new SqliteConnection("Filename=:memory:");
+        connection.Open();
 
-        // Create a new options instance telling the context to use an
-        // InMemory database and the new service provider.
-        var builder = new DbContextOptionsBuilder<DataContext>();
-        builder.UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .UseInternalServiceProvider(serviceProvider);
+        var builder = new DbContextOptionsBuilder<DataContext>()
+            .UseSqlite(connection);
 
         return builder.Options;
     }

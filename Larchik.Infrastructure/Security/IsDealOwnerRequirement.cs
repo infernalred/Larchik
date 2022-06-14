@@ -30,12 +30,9 @@ public class IsDealOwnerRequirementRequirementHandler : AuthorizationHandler<IsD
 
         var deal = _dbContext.Deals
             .AsNoTracking()
-            .Include(x => x.Account)
-            .SingleOrDefaultAsync(x => x.Account.UserId == userId && x.Id == dealId).Result;
+            .SingleOrDefaultAsync(x => x.UserId == userId && x.Id == dealId).Result;
         
-        if (deal == null) return Task.CompletedTask;
-        
-        if (deal.Account.UserId == userId) context.Succeed(requirement);
+        if (deal != null) context.Succeed(requirement);
         
         return Task.CompletedTask;
     }

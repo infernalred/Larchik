@@ -3,6 +3,7 @@ using System;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Larchik.Persistence.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20220612173329_CurrencyToDeal")]
+    partial class CurrencyToDeal
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -169,7 +171,7 @@ namespace Larchik.Persistence.Migrations
 
                     b.Property<string>("CurrencyId")
                         .IsRequired()
-                        .HasColumnType("character varying(5)");
+                        .HasColumnType("text");
 
                     b.Property<string>("OperationId")
                         .IsRequired()
@@ -182,6 +184,7 @@ namespace Larchik.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("StockId")
+                        .IsRequired()
                         .HasColumnType("character varying(8)");
 
                     b.Property<string>("UserId")
@@ -191,8 +194,6 @@ namespace Larchik.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId");
-
-                    b.HasIndex("CurrencyId");
 
                     b.HasIndex("OperationId");
 
@@ -448,12 +449,6 @@ namespace Larchik.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Larchik.Domain.Currency", "Currency")
-                        .WithMany()
-                        .HasForeignKey("CurrencyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Larchik.Domain.Operation", "Operation")
                         .WithMany()
                         .HasForeignKey("OperationId")
@@ -462,7 +457,9 @@ namespace Larchik.Persistence.Migrations
 
                     b.HasOne("Larchik.Domain.Stock", "Stock")
                         .WithMany()
-                        .HasForeignKey("StockId");
+                        .HasForeignKey("StockId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Larchik.Domain.AppUser", "User")
                         .WithMany()
@@ -471,8 +468,6 @@ namespace Larchik.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Account");
-
-                    b.Navigation("Currency");
 
                     b.Navigation("Operation");
 

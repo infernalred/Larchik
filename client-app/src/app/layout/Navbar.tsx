@@ -19,6 +19,7 @@ export default observer(function Navbar() {
                     <>
                         <Menu.Item as={NavLink} to='/accounts' content='Счета' />
                         <Menu.Item as={NavLink} to='/reports' content='Отчеты' />
+                        <Menu.Item as={NavLink} to='/portfolio' content='Портфолио' />
                         <Menu.Item>
                             <Button as={NavLink} to='/deal' positive content='Новая сделка' />
                         </Menu.Item>

@@ -3,6 +3,7 @@ export interface Deal {
     quantity: number;
     price: number;
     operation: string;
+    currency: string;
     stock: string;
     commission: number;
     createdAt: Date;
@@ -20,9 +21,10 @@ export class DealFormValues {
     quantity: number = 1;
     price: number = 0;
     operation: string = '';
+    currency: string = '';
     stock: string = '';
     commission: number = 0;
-    createdAt: Date | null = null;
+    createdAt: Date = new Date();
     accountId: string = '';
 
     constructor(deal?: DealFormValues) {
@@ -31,6 +33,7 @@ export class DealFormValues {
             this.quantity = deal.quantity;
             this.price = deal.price;
             this.operation = deal.operation;
+            this.currency = deal.currency;
             this.stock = deal.stock;
             this.commission = deal.commission;
             this.createdAt = deal.createdAt;

@@ -12,6 +12,7 @@ public static class OperationHelper
         { ListOperations.Dividends, (count, price, commission) => count * price - commission },
         { ListOperations.Purchase, (count, price, commission) => -(count * price + commission) },
         { ListOperations.Sale, (count, price, commission) => count * price - commission },
+        { ListOperations.Commission, (count, price, commission) => -(count * price) }
     };
     
     private static readonly Dictionary<string, Func<int, int>> MakeAssetOperations = new()
