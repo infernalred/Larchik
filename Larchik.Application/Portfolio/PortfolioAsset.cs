@@ -8,7 +8,9 @@ public class PortfolioAsset
     public string Type { get; set; } = null!;
     public decimal Quantity { get; set; }
     public decimal Price { get; set; }
-    public decimal Amount => Quantity * Price;
+    public decimal AmountMarket { get; set; }
+    public decimal AmountMarketCurrency { get; set; }
     public decimal AveragePrice { get; set; }
-    public decimal AmountByPurchase => Quantity * AveragePrice;
+    public decimal AmountAverage { get; set; }
+    public decimal AmountAverageCurrency { get; set; }
 }

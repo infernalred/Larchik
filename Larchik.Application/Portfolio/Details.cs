@@ -28,6 +28,10 @@ public class Details
         public async Task<OperationResult<Portfolio>> Handle(Query request, CancellationToken cancellationToken)
         {
             var portfolio = new Portfolio();
+
+            var currencyExchange = await _context.Stocks
+                .Where(x => x.TypeId == "MONEY")
+                .ToDictionaryAsync(x => x.Ticker, x => x, cancellationToken);
             
             var accounts = await _context.Accounts
                 .AsNoTracking()
@@ -44,14 +48,14 @@ public class Details
             var deals = accounts.SelectMany(x => x.Deals).ToList();
             
             var assets =
-                from a in assetsByAccounts
+                (from a in assetsByAccounts
                 group a by a.Stock.Ticker into g
                 select new Asset
                 {
                     StockId = g.Key,
                     Quantity = g.Sum(x => x.Quantity),
                     Stock = g.First().Stock
-                };
+                }).OrderBy(x => x.Stock.TypeId);
 
             foreach (var asset in assets)
             {
@@ -59,13 +63,18 @@ public class Details
                     .Where(x => x.StockId == asset.StockId && x.OperationId is ListOperations.Purchase or ListOperations.Sale)
                     .OrderBy(x => x.CreatedAt);
                 
-                portfolio.Assets.Add(AveragePrice(asset, new Queue<Deal>(dealsByTicker)));
+                portfolio.Assets.Add(AveragePrice(asset, new Queue<Deal>(dealsByTicker), currencyExchange));
             }
+
+            var moneyDeals = deals.Where(x => x.OperationId is not (ListOperations.Purchase or ListOperations.Sale));
+            var moneyResult = GetTotalMoneyOperations(moneyDeals, currencyExchange);
+
+            portfolio.Profit = portfolio.TotalBalance - moneyResult;
             
             return OperationResult<Portfolio>.Success(portfolio);
         }
 
-        private static PortfolioAsset AveragePrice(Asset asset, Queue<Deal> deals)
+        private static PortfolioAsset AveragePrice(Asset asset, Queue<Deal> deals, IReadOnlyDictionary<string, Stock> currencyExchange)
         {
             var queueData = new Queue<Deal>();
             while (deals.Count > 0)
@@ -101,16 +110,43 @@ public class Details
                 average = Math.Round(totalAmount / quantity, 2);
             }
 
+            var price = new decimal(asset.Stock.LastPrice);
+            
+            currencyExchange.TryGetValue(asset.Stock.CurrencyId, out var stock);
+
+            var amountMarket = Math.Round(asset.Quantity * price, 2);
+            var amountAverage = Math.Round(asset.Quantity * average, 2);
+
+            var rate = stock == null ? 1m : new decimal(stock.LastPrice);
+
             return new PortfolioAsset
             {
                 Ticker = asset.Stock.Ticker,
                 CompanyName = asset.Stock.CompanyName,
                 AveragePrice = average,
                 Type = asset.Stock.TypeId,
-                Price = (decimal)asset.Stock.LastPrice,
+                Price = price,
                 Quantity = asset.Quantity,
-                Sector = asset.Stock.SectorId
+                Sector = asset.Stock.SectorId,
+                AmountMarket = amountMarket,
+                AmountAverage = amountAverage,
+                AmountMarketCurrency = amountMarket * rate,
+                AmountAverageCurrency = amountAverage * rate
             };
+        }
+
+        private static decimal GetTotalMoneyOperations(IEnumerable<Deal> deals, IReadOnlyDictionary<string, Stock> currencyExchange)
+        {
+            var result = 0m;
+
+            foreach (var deal in deals)
+            {
+                currencyExchange.TryGetValue(deal.CurrencyId, out var stock);
+                var rate = stock == null ? 1m : new decimal(stock.LastPrice);
+                result += deal.Amount * rate;
+            }
+
+            return Math.Round(result);
         }
     }
 }

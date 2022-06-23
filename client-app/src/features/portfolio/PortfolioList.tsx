@@ -19,14 +19,14 @@ export default observer(function PortfolioList() {
             <Table.Header>
                 <Table.Row>
                     <Table.HeaderCell>Тикер</Table.HeaderCell>
-                    <Table.HeaderCell>Компания</Table.HeaderCell>
+                    <Table.HeaderCell width={2}>Компания</Table.HeaderCell>
                     <Table.HeaderCell>Сектор</Table.HeaderCell>
                     <Table.HeaderCell>Тип</Table.HeaderCell>
                     <Table.HeaderCell>Кол-во</Table.HeaderCell>
                     <Table.HeaderCell>Цена</Table.HeaderCell>
                     <Table.HeaderCell>Сумма рыночная</Table.HeaderCell>
                     <Table.HeaderCell>Средняя цена</Table.HeaderCell>
-                    <Table.HeaderCell>Сумма</Table.HeaderCell>
+                    <Table.HeaderCell>Сумма покупки</Table.HeaderCell>
                 </Table.Row>
             </Table.Header>
 
@@ -38,13 +38,27 @@ export default observer(function PortfolioList() {
                         <Table.Cell>{asset.sector}</Table.Cell>
                         <Table.Cell>{asset.type}</Table.Cell>
                         <Table.Cell>{asset.quantity}</Table.Cell>
-                        <Table.Cell>{asset.price}</Table.Cell>
-                        <Table.Cell>{asset.amount}</Table.Cell>
+                        <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.price}</Table.Cell>
+                        <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.amountMarket}</Table.Cell>
                         <Table.Cell>{asset.averagePrice}</Table.Cell>
-                        <Table.Cell>{asset.amountByPurchase}</Table.Cell>
+                        <Table.Cell>{asset.amountAverage}</Table.Cell>
                     </Table.Row>
                 ))}
             </Table.Body>
+
+            <Table.Footer>
+                <Table.Row>
+                    <Table.HeaderCell />
+                    <Table.HeaderCell />
+                    <Table.HeaderCell />
+                    <Table.HeaderCell />
+                    <Table.HeaderCell />
+                    <Table.HeaderCell>Сумма</Table.HeaderCell>
+                    <Table.HeaderCell>{portfolio?.totalBalance}</Table.HeaderCell>
+                    <Table.HeaderCell>Прибыль</Table.HeaderCell>
+                    <Table.HeaderCell className={portfolio && portfolio?.profit < 0 ? "redstock" : "greenstock"}>{portfolio?.profit}</Table.HeaderCell>
+                </Table.Row>
+            </Table.Footer>
         </Table>
     )
 })

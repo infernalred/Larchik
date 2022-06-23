@@ -21,7 +21,7 @@ public static class OperationHelper
         { ListOperations.Sale, quantity => -quantity }
     };
 
-    public static decimal GetAmount(string operation, int count, decimal price, decimal commission) => CurrencyOperations[operation](count, price, commission);
+    public static decimal GetAmount(string operation, int count, decimal price, decimal commission) => Math.Round(CurrencyOperations[operation](count, price, commission), 2);
     
     public static int GetAssetQuantity(string operation, int quantity) => MakeAssetOperations[operation](quantity);
 }

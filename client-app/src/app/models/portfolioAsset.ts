@@ -5,7 +5,9 @@ export interface PortfolioAsset {
     type: string;
     quantity: number;
     price: number;
-    amount: number;
+    amountMarket: number;
+    amountMarketCurrency: number;
     averagePrice: number;
-    amountByPurchase: number;
+    amountAverage: number;
+    amountAverageCurrency: number;
 }

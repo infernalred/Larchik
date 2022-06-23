@@ -1,5 +1,4 @@
 ﻿using Larchik.Application.Contracts;
-using Larchik.Application.Models.Market;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,25 +20,27 @@ public class LastPriceUpdater
 
     public async Task UpdateLastPrice(CancellationToken cancellationToken)
     {
-        var assets = await _context.Assets.Where(a => a.Quantity != 0).ToListAsync(cancellationToken);
-        var tickers = assets.Select(x => x.StockId);
-        
-        var stocks = await _context.Stocks.Where(x => tickers.Contains(x.Ticker) && !string.IsNullOrEmpty(x.Figi)).ToListAsync(cancellationToken);
+        var assets = await _context.Assets
+            .Include(x => x.Stock)
+            .Where(a => a.Quantity != 0)
+            .ToListAsync(cancellationToken);
 
-        // if (stocks.Count > 0)
-        // {
-        //     var figis = stocks.Select(x => x.Figi);
-        //
-        //     var stockPrices = (await _marketAccessor.GetLastPrice(figis, cancellationToken)).ToDictionary(x => x.Figi);
-        //
-        //     foreach (var stock in stocks)
-        //     {
-        //         stockPrices.TryGetValue(stock.Figi, out var stockPrice);
-        //         if (stockPrice != null) stock.LastPrice = stockPrice.LastPrice;
-        //         
-        //     }
-        //
-        //     await _context.SaveChangesAsync(cancellationToken);
-        // }
+        var stocks = assets.Select(x => x.Stock).DistinctBy(x => x.Ticker).Where(x => !string.IsNullOrEmpty(x.Figi)).ToList();
+
+        if (stocks.Count > 0)
+        {
+            var figis = stocks.Select(x => x.Figi);
+        
+            var stockPrices = (await _marketAccessor.GetLastPrice(figis, cancellationToken)).ToDictionary(x => x.Figi);
+        
+            foreach (var stock in stocks)
+            {
+                stockPrices.TryGetValue(stock.Figi, out var stockPrice);
+                if (stockPrice != null) stock.LastPrice = stockPrice.LastPrice;
+                
+            }
+        
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 }

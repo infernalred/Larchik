@@ -47,10 +47,6 @@ public class DealService : IDealService
         
         if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
         
-        // var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Ticker == dealDto.Stock, cancellationToken);
-        //
-        // if (stock == null) return OperationResult<Unit>.Failure("Тикер не найден");
-        
         var amount = OperationHelper.GetAmount(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
         
         await _operations[dealDto.Operation](amount, dealDto, cancellationToken);
@@ -73,10 +69,6 @@ public class DealService : IDealService
             .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
         
         if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
-        
-        // var stock = await _context.Stocks.FirstOrDefaultAsync(x => x.Ticker == dealDto.Stock, cancellationToken);
-        //
-        // if (stock == null) return OperationResult<Unit>.Failure("Тикер не найден");
         
         await RollbackAssetAsync(deal, cancellationToken);
         
@@ -112,8 +104,12 @@ public class DealService : IDealService
     private async Task OperationPurchaseAsync(decimal amount, DealDto dealDto, CancellationToken cancellationToken)
     {
         await AddOrUpdateAssetAsync(dealDto.Currency, amount, dealDto.AccountId, cancellationToken);
-        var quantity = OperationHelper.GetAssetQuantity(dealDto.Operation, dealDto.Quantity);
-        await AddOrUpdateAssetAsync(dealDto.Stock, quantity, dealDto.AccountId, cancellationToken);
+
+        if (dealDto.Stock != null)
+        {
+            var quantity = OperationHelper.GetAssetQuantity(dealDto.Operation, dealDto.Quantity);
+            await AddOrUpdateAssetAsync(dealDto.Stock, quantity, dealDto.AccountId, cancellationToken);
+        }
     }
 
     private async Task AddOrUpdateAssetAsync(string ticker, decimal quantity, Guid accountId, CancellationToken cancellationToken)

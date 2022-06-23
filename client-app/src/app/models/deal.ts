@@ -4,7 +4,7 @@ export interface Deal {
     price: number;
     operation: string;
     currency: string;
-    stock: string;
+    stock: string | undefined;
     commission: number;
     createdAt: Date;
     accountId: string;
@@ -22,7 +22,7 @@ export class DealFormValues {
     price: number = 0;
     operation: string = '';
     currency: string = '';
-    stock: string = '';
+    stock: string | undefined;
     commission: number = 0;
     createdAt: Date = new Date();
     accountId: string = '';

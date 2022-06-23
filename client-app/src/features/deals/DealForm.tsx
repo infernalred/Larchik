@@ -37,7 +37,7 @@ export default observer(function DealForm() {
         stock: Yup.string().when("operation", {
             is: (value: string) => value === "Продажа" || value === "Покупка",
             then: Yup.string().required("Тикер обязателен"),
-            otherwise: Yup.string()
+            otherwise: Yup.string().nullable()
         }),
         commission: Yup.string().required("Значение обязательно"),
         createdAt: Yup.string().required("Дата сделки обязательна").nullable(),
