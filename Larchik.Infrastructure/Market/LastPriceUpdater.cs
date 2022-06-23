@@ -20,10 +20,12 @@ public class LastPriceUpdater
 
     public async Task UpdateLastPrice(CancellationToken cancellationToken)
     {
-        var assets = await _context.Assets.Where(a => a.Quantity != 0).ToListAsync(cancellationToken);
-        var tickers = assets.Select(x => x.StockId);
-        
-        var stocks = await _context.Stocks.Where(x => tickers.Contains(x.Ticker) && !string.IsNullOrEmpty(x.Figi)).ToListAsync(cancellationToken);
+        var assets = await _context.Assets
+            .Include(x => x.Stock)
+            .Where(a => a.Quantity != 0)
+            .ToListAsync(cancellationToken);
+
+        var stocks = assets.Select(x => x.Stock).DistinctBy(x => x.Ticker).Where(x => !string.IsNullOrEmpty(x.Figi)).ToList();
 
         if (stocks.Count > 0)
         {
@@ -33,7 +35,9 @@ public class LastPriceUpdater
         
             foreach (var stock in stocks)
             {
-                stock.LastPrice = stockPrices[stock.Figi].LastPrice;
+                stockPrices.TryGetValue(stock.Figi, out var stockPrice);
+                if (stockPrice != null) stock.LastPrice = stockPrice.LastPrice;
+                
             }
         
             await _context.SaveChangesAsync(cancellationToken);

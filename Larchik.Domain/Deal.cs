@@ -8,12 +8,14 @@ public class Deal
     public decimal Amount { get; set; }
     public Operation? Operation { get; set; }
     public string OperationId { get; set; } = string.Empty;
-    public Stock Stock { get; set; } = null!;
-    public string StockId { get; set; } = string.Empty;
+    public Currency Currency { get; set; } = null!;
+    public string CurrencyId { get; set; } = null!;
+    public Stock? Stock { get; set; }
+    public string? StockId { get; set; }
     public decimal Commission { get; set; }
-
     public DateTime CreatedAt{ get; set; }
-
     public Account Account { get; set; } = null!;
     public Guid AccountId { get; set; }
+    public AppUser User { get; set; } = null!;
+    public string UserId { get; set; } = null!;
 }

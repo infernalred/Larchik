@@ -1,7 +1,7 @@
-import { observer } from "mobx-react-lite"
-import React, { useEffect } from "react"
+import { observer } from "mobx-react-lite";
+import React, { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Button, Table } from "semantic-ui-react"
+import { Button, Table } from "semantic-ui-react";
 import LoadingComponent from "../../app/layout/LoadingComponent";
 import { useStore } from "../../app/store/store";
 
@@ -35,7 +35,7 @@ export default observer(function AccountList() {
                 {deals.map(deal => (
                     <Table.Row key={deal.id}>
                         <Table.Cell>{deal.createdAt.toLocaleDateString()}</Table.Cell>
-                        <Table.Cell>{deal.stock}</Table.Cell>
+                        <Table.Cell>{deal.stock || deal.currency}</Table.Cell>
                         <Table.Cell>{deal.quantity}</Table.Cell>
                         <Table.Cell>{deal.price}</Table.Cell>
                         <Table.Cell>{deal.commission}</Table.Cell>

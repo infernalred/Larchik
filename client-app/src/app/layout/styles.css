@@ -64,3 +64,11 @@ body {
   font-size: 1.7em;
   font-weight: normal;
 }
+
+.redstock {
+  color: red !important;
+}
+
+.greenstock {
+  color: green !important;
+}

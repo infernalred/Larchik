@@ -15,6 +15,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.Infrastructure", "L
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{50D54204-9FA3-47C9-A65A-5E3CACF8D0A5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{7BF0CAAB-542E-42F8-856D-643DC7E2F5D9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.Application.Tests", "Tests\Larchik.Application.Tests\Larchik.Application.Tests.csproj", "{83143EDF-0F9A-4651-A268-64FF037BA623}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,11 +49,18 @@ Global
 		{50D54204-9FA3-47C9-A65A-5E3CACF8D0A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{50D54204-9FA3-47C9-A65A-5E3CACF8D0A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{50D54204-9FA3-47C9-A65A-5E3CACF8D0A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83143EDF-0F9A-4651-A268-64FF037BA623}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83143EDF-0F9A-4651-A268-64FF037BA623}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83143EDF-0F9A-4651-A268-64FF037BA623}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83143EDF-0F9A-4651-A268-64FF037BA623}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4DF5D5BE-8FEE-49E5-BF67-BBDBF512E412}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{83143EDF-0F9A-4651-A268-64FF037BA623} = {7BF0CAAB-542E-42F8-856D-643DC7E2F5D9}
 	EndGlobalSection
 EndGlobal

@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
 using MediatR;
@@ -22,11 +23,13 @@ public class CurrencyOperationsReport
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
+        private readonly IUserAccessor _userAccessor;
 
-        public Handler(ILogger<Handler> logger, DataContext context)
+        public Handler(ILogger<Handler> logger, DataContext context, IUserAccessor userAccessor)
         {
             _logger = logger;
             _context = context;
+            _userAccessor = userAccessor;
         }
         
         public async Task<OperationResult<ReportResult>> Handle(Query request, CancellationToken cancellationToken)
@@ -34,7 +37,7 @@ public class CurrencyOperationsReport
             var deals = await _context.Deals
                 .Include(x => x.Account)
                 .Include(x => x.Stock)
-                .Where(x => x.CreatedAt >= request.Params.StartDate && x.CreatedAt <= request.Params.EndDate && x.Stock.TypeId == "MONEY")
+                .Where(x => x.Account.User.UserName == _userAccessor.GetUsername() && x.CreatedAt >= request.Params.StartDate && x.CreatedAt <= request.Params.EndDate && x.Stock.TypeId == "MONEY")
                 .GroupBy(x => new { x.Account.Name, x.StockId, x.OperationId }, (key, group) => new CurrencyDealsReport
                 {
                     Account = key.Name,

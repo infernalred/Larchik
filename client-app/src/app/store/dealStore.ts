@@ -17,7 +17,8 @@ export default class DealStore {
     }
 
     get deals() {
-        return Array.from(this.dealsRegistry.values());
+        return Array.from(this.dealsRegistry.values()).sort((a, b) => 
+        b.createdAt.getTime() - a.createdAt.getTime());
     }
 
     loadDeals = async (id: string) => {
