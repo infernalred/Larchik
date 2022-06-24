@@ -27,6 +27,9 @@ export default observer(function PortfolioList() {
                     <Table.HeaderCell>Сумма рыночная</Table.HeaderCell>
                     <Table.HeaderCell>Средняя цена</Table.HeaderCell>
                     <Table.HeaderCell>Сумма покупки</Table.HeaderCell>
+                    <Table.HeaderCell>Сумма RUB</Table.HeaderCell>
+                    <Table.HeaderCell>Средняя Сумма RUB</Table.HeaderCell>
+                    <Table.HeaderCell>Доход RUB</Table.HeaderCell>
                 </Table.Row>
             </Table.Header>
 
@@ -42,6 +45,9 @@ export default observer(function PortfolioList() {
                         <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.amountMarket}</Table.Cell>
                         <Table.Cell>{asset.averagePrice}</Table.Cell>
                         <Table.Cell>{asset.amountAverage}</Table.Cell>
+                        <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.amountMarketCurrency}</Table.Cell>
+                        <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.amountAverageCurrency}</Table.Cell>
+                        <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.profitCurrency}</Table.Cell>
                     </Table.Row>
                 ))}
             </Table.Body>

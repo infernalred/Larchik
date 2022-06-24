@@ -31,7 +31,7 @@ public class LastPriceWorker : BackgroundService
             }
             catch (Exception e)
             {
-               _logger.LogError("Error occurred executing {service}. Message: {error}", nameof(lastPriceUpdaterService), e.Message);
+               _logger.LogError("Error occurred executing {service}. Message: {message}. Error: {error}", nameof(lastPriceUpdaterService), e.Message, e);
             }
             
             

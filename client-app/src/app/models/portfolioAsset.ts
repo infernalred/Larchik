@@ -10,4 +10,5 @@ export interface PortfolioAsset {
     averagePrice: number;
     amountAverage: number;
     amountAverageCurrency: number;
+    profitCurrency: number;
 }

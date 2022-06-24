@@ -13,4 +13,5 @@ public class PortfolioAsset
     public decimal AveragePrice { get; set; }
     public decimal AmountAverage { get; set; }
     public decimal AmountAverageCurrency { get; set; }
+    public decimal ProfitCurrency => AmountMarketCurrency - AmountAverageCurrency;
 }

@@ -130,8 +130,8 @@ public class Details
                 Sector = asset.Stock.SectorId,
                 AmountMarket = amountMarket,
                 AmountAverage = amountAverage,
-                AmountMarketCurrency = amountMarket * rate,
-                AmountAverageCurrency = amountAverage * rate
+                AmountMarketCurrency = Math.Round(amountMarket * rate, 2),
+                AmountAverageCurrency = Math.Round(amountAverage * rate, 2)
             };
         }
 
@@ -146,7 +146,7 @@ public class Details
                 result += deal.Amount * rate;
             }
 
-            return Math.Round(result);
+            return Math.Round(result, 2);
         }
     }
 }
