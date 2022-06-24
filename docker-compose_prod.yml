@@ -22,8 +22,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - TokenKey=${TokenKey}
       - "ConnectionStrings__DefaultConnection=Server=larchikdb;Port=5432;UserId=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Database=larchik;"
-      - "MarketSettings:Token=${MARKET_TOKEN}"
-      - "MarketSettings:BaseAddress=${MARKET_BASE_ADDRESS}"
+      - "MarketSettings_Token=${MARKET_TOKEN}"
+      - "MarketSettings_BaseAddress=${MARKET_BASE_ADDRESS}"
     restart: always
     depends_on:
       - larchikdb
