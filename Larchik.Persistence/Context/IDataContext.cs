@@ -14,4 +14,5 @@ public interface IDataContext
     DbSet<Sector> Sectors { get; set; }
     DbSet<Operation> Operations { get; set; }
     DbSet<Deal> Deals { get; set; }
+    DbSet<Exchange> Exchanges { get; set; }
 }

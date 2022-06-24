@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Larchik.Persistence.Configuration;
 
-public class DealModelConfiguration: IEntityTypeConfiguration<Deal>
+public class DealModelConfiguration : IEntityTypeConfiguration<Deal>
 {
     public void Configure(EntityTypeBuilder<Deal> builder)
     {
