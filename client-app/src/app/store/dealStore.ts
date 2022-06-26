@@ -22,6 +22,7 @@ export default class DealStore {
     }
 
     loadDeals = async (id: string) => {
+        this.dealsRegistry.clear();
         this.setLoadingInitial(true);
         try {
             const request = await agent.Deals.list(id);

@@ -2,6 +2,7 @@ import { observer } from "mobx-react-lite"
 import React, { useEffect } from "react"
 import { Table } from "semantic-ui-react"
 import LoadingComponent from "../../app/layout/LoadingComponent"
+import { PortfolioAsset } from "../../app/models/portfolioAsset"
 import { useStore } from "../../app/store/store"
 
 export default observer(function PortfolioList() {
@@ -11,6 +12,18 @@ export default observer(function PortfolioList() {
     useEffect(() => {
         loadPortfolio();
     }, [loadPortfolio])
+
+    function getColor(asset: PortfolioAsset) {
+        if (asset.averagePrice < asset.price) {
+            return "greenstock";
+        }
+
+        if (asset.averagePrice > asset.price) {
+            return "redstock";
+        }
+        
+        return "";
+    }
 
     if (loadingPortfolio) return <LoadingComponent content='Loading portfolio...' />
 
@@ -23,13 +36,11 @@ export default observer(function PortfolioList() {
                     <Table.HeaderCell>Сектор</Table.HeaderCell>
                     <Table.HeaderCell>Тип</Table.HeaderCell>
                     <Table.HeaderCell>Кол-во</Table.HeaderCell>
-                    <Table.HeaderCell>Цена</Table.HeaderCell>
-                    <Table.HeaderCell>Сумма рыночная</Table.HeaderCell>
                     <Table.HeaderCell>Средняя цена</Table.HeaderCell>
-                    <Table.HeaderCell>Сумма покупки</Table.HeaderCell>
+                    <Table.HeaderCell>Цена</Table.HeaderCell>
+                    <Table.HeaderCell>Стоимость актива</Table.HeaderCell>
                     <Table.HeaderCell>Сумма RUB</Table.HeaderCell>
-                    <Table.HeaderCell>Средняя Сумма RUB</Table.HeaderCell>
-                    <Table.HeaderCell>Доход RUB</Table.HeaderCell>
+                    <Table.HeaderCell>Доход</Table.HeaderCell>
                 </Table.Row>
             </Table.Header>
 
@@ -41,13 +52,11 @@ export default observer(function PortfolioList() {
                         <Table.Cell>{asset.sector}</Table.Cell>
                         <Table.Cell>{asset.type}</Table.Cell>
                         <Table.Cell>{asset.quantity}</Table.Cell>
-                        <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.price}</Table.Cell>
-                        <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.amountMarket}</Table.Cell>
-                        <Table.Cell>{asset.averagePrice}</Table.Cell>
-                        <Table.Cell>{asset.amountAverage}</Table.Cell>
-                        <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.amountMarketCurrency}</Table.Cell>
-                        <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.amountAverageCurrency}</Table.Cell>
-                        <Table.Cell className={asset.averagePrice < asset.price ? "greenstock" : "redstock"}>{asset.profitCurrency}</Table.Cell>
+                        <Table.Cell>{asset.averagePrice.toLocaleString("ru")}</Table.Cell>
+                        <Table.Cell>{asset.price.toLocaleString("ru")}</Table.Cell>
+                        <Table.Cell className={getColor(asset)}>{asset.amountMarket.toLocaleString("ru")}</Table.Cell>
+                        <Table.Cell className={getColor(asset)}>{asset.amountMarketCurrency.toLocaleString("ru")}</Table.Cell>
+                        <Table.Cell className={getColor(asset)}>{asset.profit.toLocaleString("ru")}</Table.Cell>
                     </Table.Row>
                 ))}
             </Table.Body>
@@ -59,10 +68,11 @@ export default observer(function PortfolioList() {
                     <Table.HeaderCell />
                     <Table.HeaderCell />
                     <Table.HeaderCell />
-                    <Table.HeaderCell>Сумма</Table.HeaderCell>
-                    <Table.HeaderCell>{portfolio?.totalBalance}</Table.HeaderCell>
+                    <Table.HeaderCell>Стоимость</Table.HeaderCell>
+                    <Table.HeaderCell>{portfolio?.totalBalance.toLocaleString("ru")}</Table.HeaderCell>
                     <Table.HeaderCell>Прибыль</Table.HeaderCell>
-                    <Table.HeaderCell className={portfolio && portfolio?.profit < 0 ? "redstock" : "greenstock"}>{portfolio?.profit}</Table.HeaderCell>
+                    <Table.HeaderCell className={portfolio && portfolio?.profit < 0 ? "redstock" : "greenstock"}>{portfolio?.profit.toLocaleString("ru")}</Table.HeaderCell>
+                    <Table.HeaderCell />
                 </Table.Row>
             </Table.Footer>
         </Table>

@@ -34,11 +34,11 @@ export default observer(function AccountList() {
             <Table.Body>
                 {deals.map(deal => (
                     <Table.Row key={deal.id}>
-                        <Table.Cell>{deal.createdAt.toLocaleDateString()}</Table.Cell>
+                        <Table.Cell>{deal.createdAt.toLocaleDateString("ru")}</Table.Cell>
                         <Table.Cell>{deal.stock || deal.currency}</Table.Cell>
                         <Table.Cell>{deal.quantity}</Table.Cell>
-                        <Table.Cell>{deal.price}</Table.Cell>
-                        <Table.Cell>{deal.commission}</Table.Cell>
+                        <Table.Cell>{deal.price.toLocaleString("ru")}</Table.Cell>
+                        <Table.Cell>{deal.commission.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell>{deal.operation}</Table.Cell>
                         <Table.Cell>
                             <Button

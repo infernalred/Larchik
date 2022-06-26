@@ -67,7 +67,7 @@ public class Details
             }
 
             var moneyDeals = deals.Where(x => x.OperationId is not (ListOperations.Purchase or ListOperations.Sale));
-            var moneyResult = GetTotalMoneyOperations(moneyDeals, currencyExchange);
+            var moneyResult = await GeInOutMoneyProfit(moneyDeals);
 
             portfolio.Profit = portfolio.TotalBalance - moneyResult;
             
@@ -102,20 +102,26 @@ public class Details
             }
             
             var average = 1.00m;
-
             if (queueData.Any())
             {
-                var totalAmount = queueData.Sum(x => x.Quantity * x.Price);
-                var quantity = queueData.Sum(x => x.Quantity);
-                average = Math.Round(totalAmount / quantity, 2);
+                var totalAmount = 0m;
+                var quantity = 0m;
+                
+                foreach (var deal in queueData)
+                {
+                    totalAmount += deal.Quantity * deal.Price;
+                    quantity += deal.Quantity;
+                }
+                
+                average = totalAmount / quantity;
             }
 
             var price = new decimal(asset.Stock.LastPrice);
             
             currencyExchange.TryGetValue(asset.Stock.CurrencyId, out var stock);
 
-            var amountMarket = Math.Round(asset.Quantity * price, 2);
-            var amountAverage = Math.Round(asset.Quantity * average, 2);
+            var amountMarket = asset.Stock.TypeId == "MONEY" ? asset.Quantity : asset.Quantity * price;
+            var amountAverage = asset.Stock.TypeId == "MONEY" ? asset.Quantity : asset.Quantity * average;
 
             var rate = stock == null ? 1m : new decimal(stock.LastPrice);
 
@@ -123,30 +129,46 @@ public class Details
             {
                 Ticker = asset.Stock.Ticker,
                 CompanyName = asset.Stock.CompanyName,
-                AveragePrice = average,
+                AveragePrice = Math.Round(average, 2),
                 Type = asset.Stock.TypeId,
                 Price = price,
                 Quantity = asset.Quantity,
                 Sector = asset.Stock.SectorId,
-                AmountMarket = amountMarket,
-                AmountAverage = amountAverage,
-                AmountMarketCurrency = Math.Round(amountMarket * rate, 2),
-                AmountAverageCurrency = Math.Round(amountAverage * rate, 2)
+                AmountMarket = Math.Round(amountMarket, 2),
+                AmountAverage = Math.Round(amountAverage, 2),
+                AmountMarketCurrency = Math.Round(amountMarket * rate, 2)
             };
         }
 
-        private static decimal GetTotalMoneyOperations(IEnumerable<Deal> deals, IReadOnlyDictionary<string, Stock> currencyExchange)
+        private async Task<decimal> GeInOutMoneyProfit(IEnumerable<Deal> deals)
         {
             var result = 0m;
 
             foreach (var deal in deals)
             {
-                currencyExchange.TryGetValue(deal.CurrencyId, out var stock);
-                var rate = stock == null ? 1m : new decimal(stock.LastPrice);
-                result += deal.Amount * rate;
+                if (deal.CurrencyId == "RUB")
+                {
+                    result += deal.Amount;
+                }
+                else
+                {
+                    result += await ExchangeRate(deal, $"{deal.CurrencyId}_RUB");
+                }
             }
 
             return Math.Round(result, 2);
+        }
+
+        private async Task<decimal> ExchangeRate(Deal deal, string code)
+        {
+            var date = new DateOnly(deal.CreatedAt.Year, deal.CreatedAt.Month, deal.CreatedAt.Day);
+            
+            var exchange = await _context.Exchanges
+                .AsNoTracking()
+                .OrderByDescending(x => x.Date)
+                .FirstAsync(x => x.Code == code && x.Date <= date);
+            
+            return deal.Amount * (decimal) exchange.Rate / exchange.Nominal;
         }
     }
 }
