@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Globalization;
 using System.Text;
 using Larchik.Domain;
 using Larchik.Persistence.Context;
@@ -23,6 +24,8 @@ public class CbrExchangeRates
 
     public async Task GetLastRates(CancellationToken cancellationToken)
     {
+        Thread.CurrentThread.CurrentCulture = new CultureInfo("ru-RU");
+        
         var currency = await _context.Currencies
             .ToDictionaryAsync(x => x.Code, cancellationToken);
         
