@@ -9,6 +9,5 @@ export interface PortfolioAsset {
     amountMarketCurrency: number;
     averagePrice: number;
     amountAverage: number;
-    amountAverageCurrency: number;
-    profitCurrency: number;
+    profit: number;
 }

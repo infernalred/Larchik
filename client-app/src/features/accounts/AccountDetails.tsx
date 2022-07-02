@@ -32,7 +32,7 @@ export default observer(function AccountDetails() {
                 {account.assets.map(asset => (
                     <Table.Row key={asset.id}>
                         <Table.Cell>{asset.stock.ticker}</Table.Cell>
-                        <Table.Cell>{asset.quantity}</Table.Cell>
+                        <Table.Cell>{asset.quantity.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell>{asset.stock.sector}</Table.Cell>
                         <Table.Cell>{asset.stock.type}</Table.Cell>
                     </Table.Row>
