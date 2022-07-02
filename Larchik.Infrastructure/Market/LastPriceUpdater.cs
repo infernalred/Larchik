@@ -25,7 +25,17 @@ public class LastPriceUpdater
             .Where(a => a.Quantity != 0)
             .ToListAsync(cancellationToken);
 
-        var stocks = assets.Select(x => x.Stock).DistinctBy(x => x.Ticker).Where(x => !string.IsNullOrEmpty(x.Figi)).ToList();
+        var stocks = assets
+            .Select(x => x.Stock)
+            .DistinctBy(x => x.Ticker)
+            .Where(x => !string.IsNullOrEmpty(x.Figi) && x.TypeId != "MONEY")
+            .ToList();
+
+        var moneyStocks = await _context.Stocks
+            .Where(x => x.TypeId == "MONEY" && !string.IsNullOrEmpty(x.Figi))
+            .ToListAsync(cancellationToken);
+        
+        stocks.AddRange(moneyStocks);
 
         if (stocks.Count > 0)
         {
