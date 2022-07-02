@@ -17,7 +17,7 @@ namespace Larchik.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.5")
+                .HasAnnotation("ProductVersion", "6.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -205,6 +205,12 @@ namespace Larchik.Persistence.Migrations
 
             modelBuilder.Entity("Larchik.Domain.Exchange", b =>
                 {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasColumnType("text");
@@ -217,6 +223,8 @@ namespace Larchik.Persistence.Migrations
 
                     b.Property<double>("Rate")
                         .HasColumnType("double precision");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("Code", "Date");
 

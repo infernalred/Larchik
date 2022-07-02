@@ -8,7 +8,7 @@ public class ExchangeModelConfiguration : IEntityTypeConfiguration<Exchange>
 {
     public void Configure(EntityTypeBuilder<Exchange> builder)
     {
-        builder.HasNoKey();
+        builder.HasKey(x => x.Id);
         builder.HasIndex(x => new {x.Code, x.Date});
     }
 }

@@ -161,7 +161,7 @@ public class Details
 
         private async Task<decimal> ExchangeRate(Deal deal, string code)
         {
-            var date = new DateOnly(deal.CreatedAt.Year, deal.CreatedAt.Month, deal.CreatedAt.Day);
+            var date = DateOnly.FromDateTime(deal.CreatedAt);
             
             var exchange = await _context.Exchanges
                 .AsNoTracking()

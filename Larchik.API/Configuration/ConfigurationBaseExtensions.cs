@@ -5,6 +5,7 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Deals;
 using Larchik.Application.Helpers;
 using Larchik.Application.Services;
+using Larchik.Infrastructure.ExchangeServices.Cbr;
 using Larchik.Infrastructure.Market;
 using Larchik.Infrastructure.Security;
 using Larchik.Persistence.Context;
@@ -45,11 +46,16 @@ public static class ConfigurationBaseExtensions
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", marketConfig.Token);
             });
 
+            services.Configure<CbrSettings>(configuration.GetSection(nameof(CbrSettings)));
             services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddScoped<IDealService, DealService>();
             services.AddSingleton<IMarketAccessor, MarketAccessor>();
+            
             services.AddScoped<LastPriceUpdater>();
+            services.AddScoped<CbrExchangeRates>();
             services.AddHostedService<LastPriceWorker>();
+            services.AddHostedService<CbrExchangeWorker>();
+            
             services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
             
         return services;

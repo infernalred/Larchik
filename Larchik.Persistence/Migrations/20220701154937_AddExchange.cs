@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -13,6 +14,8 @@ namespace Larchik.Persistence.Migrations
                 name: "Exchanges",
                 columns: table => new
                 {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Code = table.Column<string>(type: "text", nullable: false),
                     Nominal = table.Column<int>(type: "integer", nullable: false),
                     Rate = table.Column<double>(type: "double precision", nullable: false),
@@ -20,6 +23,7 @@ namespace Larchik.Persistence.Migrations
                 },
                 constraints: table =>
                 {
+                    table.PrimaryKey("PK_Exchanges", x => x.Id);
                 });
 
             migrationBuilder.CreateIndex(
