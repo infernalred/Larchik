@@ -59,6 +59,7 @@ public class CbrExchangeRates
 
                 if (exchange == null)
                 {
+                    _logger.LogInformation("Model for code: {code} and Date: {date} is null.", code, date);
                     exchange = new Exchange
                     {
                         Code = code,
@@ -71,6 +72,7 @@ public class CbrExchangeRates
                 }
                 else
                 {
+                    _logger.LogInformation("Model for code: {code} and Date: {date} is Id: {id}.", code, date, exchange.Id);
                     exchange.Rate = value;
                 }
             }
