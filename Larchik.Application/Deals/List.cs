@@ -11,12 +11,13 @@ namespace Larchik.Application.Deals;
 
 public class List
 {
-    public class Query : IRequest<OperationResult<List<DealDto>>>
+    public class Query : IRequest<OperationResult<PagedList<DealDto>>>
     {
         public Guid Id { get; set; }
+        public DealParams Params { get; set; } = null!;
     }
     
-    public class Handler : IRequestHandler<Query, OperationResult<List<DealDto>>>
+    public class Handler : IRequestHandler<Query, OperationResult<PagedList<DealDto>>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -29,16 +30,27 @@ public class List
             _mapper = mapper;
         }
         
-        public async Task<OperationResult<List<DealDto>>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<OperationResult<PagedList<DealDto>>> Handle(Query request, CancellationToken cancellationToken)
         {
-            var deals = await _context.Deals
+            var query = _context.Deals
                 .AsNoTracking()
                 .Where(x => x.AccountId == request.Id)
-                .ProjectTo<DealDto>(_mapper.ConfigurationProvider)
                 .OrderByDescending(x => x.CreatedAt)
-                .ToListAsync(cancellationToken);
+                .ProjectTo<DealDto>(_mapper.ConfigurationProvider)
+                .AsQueryable();
+
+            if (request.Params.Ticker != null)
+            {
+                query = query.Where(x => x.Stock.Contains(request.Params.Ticker.ToUpper()) || x.Currency.Contains(request.Params.Ticker));
+            }
+
+            if (request.Params.Operation != null)
+            {
+                query = query.Where(x => x.Operation == request.Params.Operation);
+            }
             
-            return OperationResult<List<DealDto>>.Success(deals);
+            return OperationResult<PagedList<DealDto>>.Success(
+                await PagedList<DealDto>.CreateAsync(query, request.Params.PageNumber, request.Params.PageSize));
         }
     }
 }

@@ -12,7 +12,6 @@ public static class ConfigurationCorsExtensions
             {
                 builder.AllowAnyHeader();
                 builder.AllowAnyMethod();
-                builder.WithExposedHeaders("Content-Disposition");
                 if (origins != null && origins.Length > 0)
                 {
                     if (origins.Contains("*"))
@@ -20,7 +19,6 @@ public static class ConfigurationCorsExtensions
                         builder.AllowAnyHeader();
                         builder.AllowAnyMethod();
                         builder.AllowCredentials();
-                        builder.WithExposedHeaders("Content-Disposition");
                     }
                     else
                     {
@@ -30,6 +28,7 @@ public static class ConfigurationCorsExtensions
                         }
                     }
                 }
+                builder.WithExposedHeaders("WWW-Authenticate", "Pagination", "Content-Disposition");
             });
         });
         

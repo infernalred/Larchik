@@ -1,15 +1,29 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import agent from "../api/agent";
 import { Deal, DealFormValues } from "../models/deal";
+import { Pagination, PagingParams } from "../models/pagination";
 
 export default class DealStore {
     dealsRegistry = new Map<string, Deal>();
     loadingDeals = false;
     loading = false;
     selectedDeal: Deal | undefined = undefined;
+    pagination: Pagination | null = null;
+    pagingParams = new PagingParams();
 
     constructor() {
         makeAutoObservable(this)
+    }
+
+    setPagingParams = (pagingParams: PagingParams) => {
+        this.pagingParams = pagingParams;
+    }
+
+    get axiosParams() {
+        const params = new URLSearchParams();
+        params.append("pageNumber", this.pagingParams.pageNumber.toString());
+        params.append("pageSize", this.pagingParams.pageSize.toString());
+        return params;
     }
 
     setLoadingInitial = (state: boolean) => {
@@ -25,18 +39,25 @@ export default class DealStore {
         this.dealsRegistry.clear();
         this.setLoadingInitial(true);
         try {
-            const request = await agent.Deals.list(id);
+            const request = await agent.Deals.list(id, this.axiosParams);
+            //console.log(request)
             runInAction(() => {
-                request.result.forEach(deal => {
+                request.data.result.forEach(deal => {
+                    //console.log(deal);
                     this.setDeal(deal);
                 })
             })
+            this.setPagination(request.pagination)
         } catch (error) {
             console.log(error);
         }
         finally {
             this.setLoadingInitial(false);
         }
+    }
+
+    setPagination = (pagination: Pagination) => {
+        this.pagination = pagination;
     }
 
     loadDeal = async (id: string) => {

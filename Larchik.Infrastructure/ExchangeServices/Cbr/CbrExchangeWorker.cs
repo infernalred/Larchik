@@ -26,7 +26,7 @@ public class CbrExchangeWorker : BackgroundService
 
             try
             {
-                await cbrExchangeService.GetLastRates(stoppingToken);
+                //await cbrExchangeService.GetLastRates(stoppingToken);
             }
             catch (Exception e)
             {
@@ -34,7 +34,7 @@ public class CbrExchangeWorker : BackgroundService
             }
             
             _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            await Task.Delay(28800000, stoppingToken);
+            await Task.Delay(21600000, stoppingToken);
         }
     }
 }

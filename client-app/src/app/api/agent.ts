@@ -10,6 +10,7 @@ import { Operation } from '../models/operation';
 import { Stock } from '../models/stock';
 import { Portfolio } from '../models/portfolio';
 import { Currency } from '../models/currency';
+import { PaginatedResult } from '../models/pagination';
 
 axios.defaults.baseURL = process.env.REACT_APP_API_URL!;
 
@@ -20,6 +21,11 @@ axios.interceptors.request.use(config => {
 })
 
 axios.interceptors.response.use(async response => {
+    const pagination = response.headers['pagination'];
+    if (pagination) {
+        response.data = new PaginatedResult(response.data, JSON.parse(pagination));
+        return response as AxiosResponse<PaginatedResult<any>>;
+    }
     return response;
 }, (error: AxiosError) => {
     const { data, status, config, headers } = error.response!;
@@ -77,7 +83,7 @@ const Accounts = {
 }
 
 const Deals = {
-    list: (id: string) => requests.get<OperationResult<Deal[]>>(`/deals/accounts/${id}`),
+    list: (id: string, params: URLSearchParams) => axios.get<PaginatedResult<OperationResult<Deal[]>>>(`/deals/accounts/${id}`, {params}).then(responseBody),
     delete: (id: string) => requests.del<void>(`/deals/${id}`),
     create: (deal: DealFormValues) => requests.post<void>('/deals', deal),
     update: (deal: DealFormValues) => requests.put<void>(`/deals/${deal.id}`, deal),
