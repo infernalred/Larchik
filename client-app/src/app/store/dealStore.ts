@@ -15,6 +15,11 @@ export default class DealStore {
         makeAutoObservable(this)
     }
 
+    // changePage = (pageNumber: number) => {
+    //     this.pagingParams.pageNumber = pageNumber;
+    //     console.log(this.pagingParams)
+    // }
+
     setPagingParams = (pagingParams: PagingParams) => {
         this.pagingParams = pagingParams;
     }
@@ -39,8 +44,9 @@ export default class DealStore {
         this.dealsRegistry.clear();
         this.setLoadingInitial(true);
         try {
+            console.log("loaddeals: " + this.axiosParams.toString())
             const request = await agent.Deals.list(id, this.axiosParams);
-            //console.log(request)
+            //console.log(filter.toString())
             runInAction(() => {
                 request.data.result.forEach(deal => {
                     //console.log(deal);

@@ -1,6 +1,6 @@
 import { observer } from "mobx-react-lite";
-import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useHistory, useLocation, useParams } from "react-router-dom";
 import { Button, Form, Pagination, StrictPaginationProps, Table } from "semantic-ui-react";
 import { number } from "yup";
 import LoadingComponent from "../../app/layout/LoadingComponent";
@@ -9,22 +9,29 @@ import { useStore } from "../../app/store/store";
 
 export default observer(function AccountList() {
     const { dealStore, operationStore } = useStore();
-    const { loadDeals, deals, loading, deleteDeal, pagination, setPagingParams } = dealStore;
+    const { loadDeals, deals, loading, deleteDeal, pagination, setPagingParams, pagingParams, axiosParams } = dealStore;
     const { loadOperations, loadingOperations, operationsSet } = operationStore;
     const { id } = useParams<{ id: string }>();
     const [loadingNext, setLoadingNext] = useState(false);
+    const history = useHistory()
+    const { search } = useLocation();
+
+    
+    
 
     function handleGetNext(_: any, pageInfo: StrictPaginationProps) {
         setLoadingNext(true);
-        setPagingParams(new PagingParams(Number(pageInfo.activePage)))
-        loadDeals(id).then(() => setLoadingNext(false));
+        const page = new PagingParams(Number(pageInfo.activePage));
+        setPagingParams(page)
     }
 
     useEffect(() => {
         loadOperations();
 
+        
         if (id) loadDeals(id);
-    }, [loadOperations, id, loadDeals])
+        history.push({search: axiosParams.toString()})
+    }, [loadOperations, id, loadDeals, pagingParams, history, axiosParams])
 
     if (dealStore.loadingDeals && !loadingNext) return <LoadingComponent content='Loading accounts...' />
 
