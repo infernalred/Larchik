@@ -1,37 +1,58 @@
 import { observer } from "mobx-react-lite";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useHistory, useLocation, useParams } from "react-router-dom";
 import { Button, Form, Pagination, StrictPaginationProps, Table } from "semantic-ui-react";
-import { number } from "yup";
 import LoadingComponent from "../../app/layout/LoadingComponent";
 import { PagingParams } from "../../app/models/pagination";
 import { useStore } from "../../app/store/store";
 
 export default observer(function AccountList() {
     const { dealStore, operationStore } = useStore();
-    const { loadDeals, deals, loading, deleteDeal, pagination, setPagingParams, pagingParams, axiosParams } = dealStore;
+    const { loadDeals, deals, loading, deleteDeal, pagination } = dealStore;
     const { loadOperations, loadingOperations, operationsSet } = operationStore;
     const { id } = useParams<{ id: string }>();
     const [loadingNext, setLoadingNext] = useState(false);
     const history = useHistory()
     const { search } = useLocation();
 
+    const params = new URLSearchParams(search);
+    const pageNumber = Number(params.get("pageNumber") || 1);
+    const [pagingParams1, setPagingParams1] = useState<PagingParams>(new PagingParams(pageNumber));
+    console.log(pagingParams1)
     
+
     
+
+    // function axiosParams1() {
+    //     const params = new URLSearchParams();
+    //     params.append("pageNumber", pagingParams1.pageNumber.toString());
+    //     params.append("pageSize", pagingParams1.pageSize.toString());
+    //     return params;
+    // }
+
+    const axiosParams1 = useCallback(() =>  {
+        const params1 = new URLSearchParams();
+        params1.append("pageNumber", pagingParams1.pageNumber.toString());
+        params1.append("pageSize", pagingParams1.pageSize.toString());
+        return params1;
+    }, [pagingParams1])
+
+    const params1 = useMemo(() => axiosParams1(), [axiosParams1]);
 
     function handleGetNext(_: any, pageInfo: StrictPaginationProps) {
         setLoadingNext(true);
-        const page = new PagingParams(Number(pageInfo.activePage));
-        setPagingParams(page)
+        pagingParams1.pageNumber = (Number(pageInfo.activePage));
+        const paging = new PagingParams((Number(pageInfo.activePage)))
+        setPagingParams1(paging)
     }
 
     useEffect(() => {
         loadOperations();
-
+                
+        history.push({search: params1.toString()})
+        if (id) loadDeals(id, params1);
         
-        if (id) loadDeals(id);
-        history.push({search: axiosParams.toString()})
-    }, [loadOperations, id, loadDeals, pagingParams, history, axiosParams])
+    }, [loadOperations, id, loadDeals, pagingParams1, params1, history])
 
     if (dealStore.loadingDeals && !loadingNext) return <LoadingComponent content='Loading accounts...' />
 
@@ -49,7 +70,7 @@ export default observer(function AccountList() {
                     <Pagination
                         boundaryRange={0}
                         ellipsisItem={null}
-                        defaultActivePage={1}
+                        defaultActivePage={pagingParams1.pageNumber}
                         totalPages={pagination ? pagination.totalPages : 0}
                         onPageChange={handleGetNext}
                     />
