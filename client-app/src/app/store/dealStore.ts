@@ -1,7 +1,8 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import agent from "../api/agent";
 import { Deal, DealFormValues } from "../models/deal";
-import { Pagination} from "../models/pagination";
+import { DealSearchParams } from "../models/dealSearchParams";
+import { Pagination, PagingParams} from "../models/pagination";
 
 export default class DealStore {
     dealsRegistry = new Map<string, Deal>();
@@ -9,7 +10,8 @@ export default class DealStore {
     loading = false;
     selectedDeal: Deal | undefined = undefined;
     pagination: Pagination | null = null;
-    //pagingParams = new PagingParams();
+    pagingParams = new PagingParams();
+    searchParams = new DealSearchParams();
 
     constructor() {
         makeAutoObservable(this)
@@ -20,16 +22,28 @@ export default class DealStore {
     //     console.log(this.pagingParams)
     // }
 
-    // setPagingParams = (pagingParams: PagingParams) => {
-    //     this.pagingParams = pagingParams;
-    // }
+    setPagingParams = (pagingParams: PagingParams) => {
+        this.pagingParams = pagingParams;
+    }
 
-    // get axiosParams() {
-    //     const params = new URLSearchParams();
-    //     params.append("pageNumber", this.pagingParams.pageNumber.toString());
-    //     params.append("pageSize", this.pagingParams.pageSize.toString());
-    //     return params;
-    // }
+    setSearchParams = (searchParams: DealSearchParams) => {
+        this.searchParams = searchParams;
+    }
+
+    get axiosParams() {
+        const params = new URLSearchParams();
+        params.append("pageNumber", this.pagingParams.pageNumber.toString());
+        params.append("pageSize", this.pagingParams.pageSize.toString());
+
+        if (this.searchParams.ticker) {
+            params.append("ticker", this.searchParams.ticker);
+        }
+
+        if (this.searchParams.operation) {
+            params.append("operation", this.searchParams.operation);
+        }
+        return params;
+    }
 
     setLoadingInitial = (state: boolean) => {
         this.loadingDeals = state;
@@ -40,12 +54,12 @@ export default class DealStore {
         b.createdAt.getTime() - a.createdAt.getTime());
     }
 
-    loadDeals = async (id: string, axiosParams: URLSearchParams) => {
+    loadDeals = async (id: string) => {
         this.dealsRegistry.clear();
         this.setLoadingInitial(true);
         try {
-            console.log("loaddeals: " + axiosParams.toString())
-            const request = await agent.Deals.list(id, axiosParams);
+            //console.log("loaddeals: " + axiosParams.toString())
+            const request = await agent.Deals.list(id, this.axiosParams);
             //console.log(filter.toString())
             runInAction(() => {
                 request.data.result.forEach(deal => {

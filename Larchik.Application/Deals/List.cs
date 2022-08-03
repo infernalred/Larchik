@@ -39,12 +39,12 @@ public class List
                 .ProjectTo<DealDto>(_mapper.ConfigurationProvider)
                 .AsQueryable();
 
-            if (request.Params.Ticker != null)
+            if (!string.IsNullOrWhiteSpace(request.Params.Ticker))
             {
                 query = query.Where(x => x.Stock.Contains(request.Params.Ticker.ToUpper()) || x.Currency.Contains(request.Params.Ticker));
             }
 
-            if (request.Params.Operation != null)
+            if (!string.IsNullOrWhiteSpace(request.Params.Operation))
             {
                 query = query.Where(x => x.Operation == request.Params.Operation);
             }
