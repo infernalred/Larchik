@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../app/store/store";
-import { Link, useHistory, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { DealFormValues } from "../../app/models/deal";
 import * as Yup from "yup";
 import LoadingComponent from "../../app/layout/LoadingComponent";
@@ -17,7 +17,7 @@ registerLocale("ru", ru);
 
 
 export default observer(function DealForm() {
-    const history = useHistory();
+    const navigate = useNavigate();
     const { dealStore, operationStore, stockStore, accountStore, currencyStore } = useStore();
     const { createDeal, updateDeal, loadDeal, loadingDeals } = dealStore;
     const { loadOperations, loadingOperations, operationsSet } = operationStore;
@@ -61,9 +61,9 @@ export default observer(function DealForm() {
                 ...deal,
                 id: uuid()
             };
-            createDeal(newDeal).then(() => history.push(`/accounts/${newDeal.accountId}/deals`))
+            createDeal(newDeal).then(() => navigate(`/accounts/${newDeal.accountId}/deals`))
         } else {
-            updateDeal(deal).then(() => history.push(`/accounts/${deal.accountId}/deals`))
+            updateDeal(deal).then(() => navigate(`/accounts/${deal.accountId}/deals`))
         }
     }
 

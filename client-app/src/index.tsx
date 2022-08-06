@@ -3,18 +3,15 @@ import ReactDOM from 'react-dom';
 import App from './app/layout/App';
 import reportWebVitals from './reportWebVitals';
 import './app/layout/styles.css'
-import { Router } from 'react-router-dom';
-import {createBrowserHistory} from 'history';
+import { BrowserRouter } from 'react-router-dom';
 import { store, StoreContext } from './app/store/store';
 import 'react-datepicker/dist/react-datepicker.css';
 
-export const history = createBrowserHistory();
-
 ReactDOM.render(
   <StoreContext.Provider value={store}>
-    <Router history={history}>
+    <BrowserRouter>
       <App />
-    </Router>
+    </BrowserRouter>
   </StoreContext.Provider>,
   document.getElementById('root')
 );

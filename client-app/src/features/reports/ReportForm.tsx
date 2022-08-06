@@ -31,30 +31,31 @@ export default function ReportForm() {
     try {
       res = await axios.get(`/reports/`, { params, responseType: 'blob' });
       setLoading(false);
+      const data = res.data;
+
+      const url = window.URL.createObjectURL(
+        new Blob([data], {
+          type: res.headers["content-type"]
+        })
+      );
+
+      const actualFileName = getFileNameFromContentDisposition(
+        res.headers["content-disposition"]
+      );
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", actualFileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
     } catch (error) {
       setLoading(false);
       toast.error("Ошибка получения отчета");
       return;
     }
 
-    const data = res.data;
 
-    const url = window.URL.createObjectURL(
-      new Blob([data], {
-        type: res.headers["content-type"]
-      })
-    );
-
-    const actualFileName = getFileNameFromContentDisposition(
-      res.headers["content-disposition"]
-    );
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", actualFileName);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode?.removeChild(link);
   };
 
 

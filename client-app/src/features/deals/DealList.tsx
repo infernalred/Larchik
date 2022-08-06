@@ -1,6 +1,6 @@
 import { observer } from "mobx-react-lite";
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, useHistory, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { Button, DropdownProps, Form, InputOnChangeData, Pagination, Segment, StrictPaginationProps, Table } from "semantic-ui-react";
 import LoadingComponent from "../../app/layout/LoadingComponent";
 import { PagingParams } from "../../app/models/pagination";
@@ -13,7 +13,7 @@ export default observer(function DealList() {
     const { loadOperations, loadingOperations, operationsSet } = operationStore;
     const { id } = useParams<{ id: string }>();
     const [loadingNext, setLoadingNext] = useState(false);
-    const history = useHistory()
+    //const history = useHistory()
     const { search } = useLocation();
 
     // const params = new URLSearchParams(search);
@@ -78,7 +78,7 @@ export default observer(function DealList() {
         //const paging = new PagingParams((Number(pageInfo.activePage)))
         //setPagingParams1(paging)
         setPagingParams(new PagingParams((Number(pageInfo.activePage))));
-        loadDeals(id).then(() => setLoadingNext(false))
+        loadDeals(id!).then(() => setLoadingNext(false))
     }
 
     // function handleSearch(event: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>) {
@@ -112,12 +112,12 @@ export default observer(function DealList() {
     useEffect(() => {
         loadOperations();
 
-        setPageLoad();
+        //setPageLoad();
 
-        history.push({ search: axiosParams.toString() })
+        //history.push({ search: axiosParams.toString() })
         if (id) loadDeals(id);
 
-    }, [loadOperations, id, loadDeals, axiosParams, history])
+    }, [loadOperations, id, loadDeals, axiosParams])
 
     if (dealStore.loadingDeals && !loadingNext) return <LoadingComponent content='Loading accounts...' />
 
