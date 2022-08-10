@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import { User, UserFormValues } from '../models/user';
 import { store } from '../store/store';
+import { history } from '../..';
 import { toast } from 'react-toastify';
 import { OperationResult } from '../models/operationResult';
 import { Account, AccountFormValues } from '../models/account';
@@ -49,11 +50,11 @@ axios.interceptors.response.use(async response => {
             }
             break;
         case 404:
-            // history.push('/not-found');
+            history.push('/not-found');
             break;
         case 500:
             store.commonStore.setServerError(data);
-            // history.push('/server-error')
+            history.push('/server-error')
             break;
     }
     return Promise.reject(error);

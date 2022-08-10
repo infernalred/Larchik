@@ -1,6 +1,6 @@
 import { observer } from "mobx-react-lite";
-import React, { useCallback, useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Button, DropdownProps, Form, InputOnChangeData, Pagination, Segment, StrictPaginationProps, Table } from "semantic-ui-react";
 import LoadingComponent from "../../app/layout/LoadingComponent";
 import { PagingParams } from "../../app/models/pagination";
@@ -9,115 +9,77 @@ import { useStore } from "../../app/store/store";
 
 export default observer(function DealList() {
     const { dealStore, operationStore } = useStore();
-    const { loadDeals, deals, loading, deleteDeal, pagination, pagingParams, setPagingParams, searchParams, setSearchParams, axiosParams } = dealStore;
+    const { loadDeals, deals, loading, deleteDeal, pagination, pagingParams, setPagingParams, dealSearchParams, setDealSearchParams, axiosParams } = dealStore;
     const { loadOperations, loadingOperations, operationsSet } = operationStore;
     const { id } = useParams<{ id: string }>();
     const [loadingNext, setLoadingNext] = useState(false);
-    //const history = useHistory()
-    const { search } = useLocation();
-
-    // const params = new URLSearchParams(search);
-    // const pageNumber = Number(params.get("pageNumber") || 1);
-    // setPagingParams(new PagingParams((pageNumber)));
-    //const [pagingParams1, setPagingParams1] = useState<PagingParams>(new PagingParams(pageNumber));
-    //const [searchParams, setSearchParams] = useState<DealSearchParams>(new DealSearchParams());
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [pageNumber] = useState(Number(searchParams.get("pageNumber")) || pagingParams.pageNumber);
+    const [pageSize] = useState(Number(searchParams.get("pageSize") || pagingParams.pageSize));
+    const [ticker] = useState(searchParams.get("ticker") || "");
+    const [operation] = useState(searchParams.get("operation") || "");
     const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
 
-    //console.log(pagingParams1)
+    function getParams(paging: PagingParams, searchParams: DealSearchParams) {
+        const params = new URLSearchParams();
+        params.append("pageNumber", paging.pageNumber.toString());
+        params.append("pageSize", paging.pageSize.toString());
 
-
-    function changeDelay() {
-        if (timer) {
-          clearTimeout(timer);
-          setTimer(null);
+        if (searchParams.ticker) {
+            params.append("ticker", searchParams.ticker);
         }
 
-        setTimer(
-            setTimeout(() => {
-              console.log();
-            }, 3000)
-        );
+        if (searchParams.operation) {
+            params.append("operation", searchParams.operation);
+        }
+        return params;
     }
-
-    function setPageLoad() {
-        const params = new URLSearchParams(search);
-        const pageNumber = Number(params.get("pageNumber") || 1);
-        setPagingParams(new PagingParams((pageNumber)));
-    }
-
-
-    // function axiosParams1() {
-    //     const params = new URLSearchParams();
-    //     params.append("pageNumber", pagingParams1.pageNumber.toString());
-    //     params.append("pageSize", pagingParams1.pageSize.toString());
-    //     return params;
-    // }
-
-    // const axiosParams1 = useCallback(() => {
-    //     const params = new URLSearchParams(search);
-    //     const pageNumber = Number(params.get("pageNumber") || 1);
-    //     params1.append("pageNumber", pagingParams1.pageNumber.toString());
-    //     params1.append("pageSize", pagingParams1.pageSize.toString());
-
-    //     if (searchParams.ticker) {
-    //         params1.append("ticker", searchParams.ticker);
-    //     }
-
-    //     if (searchParams.operation) {
-    //         params1.append("operation", searchParams.operation);
-    //     }
-
-    //     return params1;
-    // }, [pagingParams1, searchParams])
-
-    //const params1 = useMemo(() => axiosParams1(), [axiosParams1]);
 
     function handleGetNext(_: any, pageInfo: StrictPaginationProps) {
         setLoadingNext(true);
-        //pagingParams1.pageNumber = (Number(pageInfo.activePage));
-        //const paging = new PagingParams((Number(pageInfo.activePage)))
-        //setPagingParams1(paging)
-        setPagingParams(new PagingParams((Number(pageInfo.activePage))));
-        loadDeals(id!).then(() => setLoadingNext(false))
+        const newPagingParams = new PagingParams(Number(pageInfo.activePage), pagingParams.pageSize)
+        setPagingParams(newPagingParams);
+        setSearchParams(getParams(newPagingParams, dealSearchParams));
+        loadDeals(id!).then(() => setLoadingNext(false));
     }
 
-    // function handleSearch(event: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>) {
-    //     setLoadingNext(true);
-    //     const {name, value} = event.target;
-    //     console.log(name, value)
-    //     setSearchParams({...searchParams, [name]: value})
-    //     console.log(searchParams)
-    // }
+    function handleOnChangeOperation(_: any, data: DropdownProps) {
+        setLoadingNext(true);
+        handleOnChange(dealSearchParams.ticker, (data.value?.toString() || ""));
+        loadDeals(id!).then(() => setLoadingNext(false));
+    }
 
-    function handleOnChangeDelay(_: any, data: InputOnChangeData | DropdownProps) {
-        console.log("1")
+    function handleOnChangeDelay(_: any, data: InputOnChangeData) {
         if (timer) {
             clearTimeout(timer);
             setTimer(null);
         }
-        handleOnChange(_, data)
+
+        handleOnChange(data.value, dealSearchParams.operation)
+        setLoadingNext(true);
         setTimer(
             setTimeout(() => {
-                
+                loadDeals(id!).then(() => setLoadingNext(false));
             }, 500)
-        );        
+        );
     }
 
-    function handleOnChange(_: any, data: InputOnChangeData | DropdownProps) {
-        setLoadingNext(true);
-        const {name, value} = data;
-        setSearchParams({...searchParams, [name]: value})    
+    function handleOnChange(ticker: string, operation: string) {        
+        const newDealSearchParams = new DealSearchParams(ticker, operation);
+        setDealSearchParams(newDealSearchParams);
+        setSearchParams(getParams(pagingParams, newDealSearchParams));
     }
 
     useEffect(() => {
         loadOperations();
 
-        //setPageLoad();
+        if (id) {
+            setPagingParams(new PagingParams(pageNumber, pageSize));
+            setDealSearchParams(new DealSearchParams(ticker, operation));
+            loadDeals(id);
+        }
 
-        //history.push({ search: axiosParams.toString() })
-        if (id) loadDeals(id);
-
-    }, [loadOperations, id, loadDeals, axiosParams])
+    }, [id, loadDeals, loadOperations, pageNumber, pageSize, setPagingParams, setDealSearchParams, ticker, operation])
 
     if (dealStore.loadingDeals && !loadingNext) return <LoadingComponent content='Loading accounts...' />
 
@@ -126,15 +88,15 @@ export default observer(function DealList() {
             <Segment clearing>
                 <Form autoComplete="off">
                     <Form.Group widths="equal">
-                        <Form.Input fluid placeholder="Тикер" value={searchParams.ticker} name="ticker" onChange={handleOnChangeDelay} />
+                        <Form.Input fluid placeholder="Тикер" value={dealSearchParams.ticker} name="ticker" onChange={handleOnChangeDelay} />
                         <Form.Select
                             fluid
                             options={operationsSet}
                             placeholder="Тип операции"
                             loading={loadingOperations}
-                            value={searchParams.operation}
+                            value={dealSearchParams.operation}
                             name="operation"
-                            onChange={handleOnChange}
+                            onChange={handleOnChangeOperation}
                             clearable
                         />
                         <Pagination

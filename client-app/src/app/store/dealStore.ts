@@ -11,7 +11,7 @@ export default class DealStore {
     selectedDeal: Deal | undefined = undefined;
     pagination: Pagination | null = null;
     pagingParams = new PagingParams();
-    searchParams = new DealSearchParams();
+    dealSearchParams = new DealSearchParams();
 
     constructor() {
         makeAutoObservable(this)
@@ -26,8 +26,8 @@ export default class DealStore {
         this.pagingParams = pagingParams;
     }
 
-    setSearchParams = (searchParams: DealSearchParams) => {
-        this.searchParams = searchParams;
+    setDealSearchParams = (dealSearchParams: DealSearchParams) => {
+        this.dealSearchParams = dealSearchParams;
     }
 
     get axiosParams() {
@@ -35,12 +35,12 @@ export default class DealStore {
         params.append("pageNumber", this.pagingParams.pageNumber.toString());
         params.append("pageSize", this.pagingParams.pageSize.toString());
 
-        if (this.searchParams.ticker) {
-            params.append("ticker", this.searchParams.ticker);
+        if (this.dealSearchParams.ticker) {
+            params.append("ticker", this.dealSearchParams.ticker);
         }
 
-        if (this.searchParams.operation) {
-            params.append("operation", this.searchParams.operation);
+        if (this.dealSearchParams.operation) {
+            params.append("operation", this.dealSearchParams.operation);
         }
         return params;
     }

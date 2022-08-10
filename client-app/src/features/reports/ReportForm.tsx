@@ -54,8 +54,6 @@ export default function ReportForm() {
       toast.error("Ошибка получения отчета");
       return;
     }
-
-
   };
 
 
