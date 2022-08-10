@@ -9,7 +9,7 @@ import { useStore } from "../../app/store/store";
 
 export default observer(function DealList() {
     const { dealStore, operationStore } = useStore();
-    const { loadDeals, deals, loading, deleteDeal, pagination, pagingParams, setPagingParams, dealSearchParams, setDealSearchParams, axiosParams } = dealStore;
+    const { loadDeals, deals, loading, deleteDeal, pagination, pagingParams, setPagingParams, dealSearchParams, setDealSearchParams } = dealStore;
     const { loadOperations, loadingOperations, operationsSet } = operationStore;
     const { id } = useParams<{ id: string }>();
     const [loadingNext, setLoadingNext] = useState(false);
