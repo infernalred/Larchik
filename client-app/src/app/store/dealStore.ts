@@ -1,15 +1,48 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import agent from "../api/agent";
 import { Deal, DealFormValues } from "../models/deal";
+import { DealSearchParams } from "../models/dealSearchParams";
+import { Pagination, PagingParams} from "../models/pagination";
 
 export default class DealStore {
     dealsRegistry = new Map<string, Deal>();
     loadingDeals = false;
     loading = false;
     selectedDeal: Deal | undefined = undefined;
+    pagination: Pagination | null = null;
+    pagingParams = new PagingParams();
+    dealSearchParams = new DealSearchParams();
 
     constructor() {
         makeAutoObservable(this)
+    }
+
+    // changePage = (pageNumber: number) => {
+    //     this.pagingParams.pageNumber = pageNumber;
+    //     console.log(this.pagingParams)
+    // }
+
+    setPagingParams = (pagingParams: PagingParams) => {
+        this.pagingParams = pagingParams;
+    }
+
+    setDealSearchParams = (dealSearchParams: DealSearchParams) => {
+        this.dealSearchParams = dealSearchParams;
+    }
+
+    get axiosParams() {
+        const params = new URLSearchParams();
+        params.append("pageNumber", this.pagingParams.pageNumber.toString());
+        params.append("pageSize", this.pagingParams.pageSize.toString());
+
+        if (this.dealSearchParams.ticker) {
+            params.append("ticker", this.dealSearchParams.ticker);
+        }
+
+        if (this.dealSearchParams.operation) {
+            params.append("operation", this.dealSearchParams.operation);
+        }
+        return params;
     }
 
     setLoadingInitial = (state: boolean) => {
@@ -25,18 +58,26 @@ export default class DealStore {
         this.dealsRegistry.clear();
         this.setLoadingInitial(true);
         try {
-            const request = await agent.Deals.list(id);
+            //console.log("loaddeals: " + axiosParams.toString())
+            const request = await agent.Deals.list(id, this.axiosParams);
+            //console.log(filter.toString())
             runInAction(() => {
-                request.result.forEach(deal => {
+                request.data.result.forEach(deal => {
+                    //console.log(deal);
                     this.setDeal(deal);
                 })
             })
+            this.setPagination(request.pagination)
         } catch (error) {
             console.log(error);
         }
         finally {
             this.setLoadingInitial(false);
         }
+    }
+
+    setPagination = (pagination: Pagination) => {
+        this.pagination = pagination;
     }
 
     loadDeal = async (id: string) => {

@@ -13,6 +13,8 @@ services:
       - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
 
   larchik.api:
     image: infernalred/larchikapi
@@ -30,6 +32,9 @@ services:
       - larchikdb
     ports:
       - "80"
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
   
   larchik.app:
     image: infernalred/larchikapp
@@ -45,6 +50,8 @@ services:
       - "3000"
     volumes:
       - ./:/larchik.app
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     command: npm start
   
   proxy:
@@ -61,6 +68,8 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./fullchain.pem:/etc/nginx/fullchain.pem
       - ./privkey.pem:/etc/nginx/privkey.pem
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
   
   pgadmin:
     image: dpage/pgadmin4
@@ -72,6 +81,8 @@ services:
     ports:
       - "5050:80"
     volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
       - pgadmin_data:/root/.pgadmin
   
 

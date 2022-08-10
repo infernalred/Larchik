@@ -22,7 +22,6 @@ export default class UserStore {
             runInAction(() => 
                 this.user = user
             );
-            history.push('/accounts');
             store.modalStore.closeModal();
         } catch (error) {
             throw error;
@@ -42,7 +41,7 @@ export default class UserStore {
         store.commonStore.setToken(null);
         window.localStorage.removeItem('jwt');
         this.user = null;
-        history.push('/')
+        history.push('/');
     }
 
     register = async (creds: UserFormValues) => {

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Larchik.API.Configuration;
 using Larchik.Application.Deals;
 using Larchik.Application.Dtos;
 using Larchik.Application.Helpers;
@@ -48,12 +49,14 @@ public class DealsController : BaseApiController
     
     [Authorize(Policy = "IsAccountOwner")]
     [HttpGet("accounts/{id:guid}")]
-    [ProducesResponseType(typeof(OperationResult<List<DealDto>>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(OperationResult<PagedList<DealDto>>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<Unit>>> AccountDeals(Guid id)
+    public async Task<ActionResult<OperationResult<PagedList<DealDto>>>> GetAccountDeals(Guid id, [FromQuery]DealParams param)
     {
-        var result = await Mediator.Send(new List.Query { Id = id});
+        var result = await Mediator.Send(new List.Query { Id = id, Params = param });
+        
+        Response.AddPaginationHeader(result.Result.CurrentPage, result.Result.PageSize, result.Result.TotalCount, result.Result.TotalPages);
 
         return Ok(result);
     }
@@ -63,7 +66,7 @@ public class DealsController : BaseApiController
     [ProducesResponseType(typeof(OperationResult<DealDto>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<Unit>>> GetDeal(Guid id)
+    public async Task<ActionResult<OperationResult<DealDto>>> GetDeal(Guid id)
     {
         var result = await Mediator.Send(new Details.Query { Id = id});
 
