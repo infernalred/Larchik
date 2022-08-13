@@ -23,6 +23,7 @@ public static class ConfigurationBaseExtensions
         services.AddDbContext<DataContext>(opt =>
             {
                 opt.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
+                opt.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
             });
 
             services.AddAutoMapper(typeof(MappingProfiles).Assembly);

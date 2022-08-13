@@ -33,7 +33,6 @@ public class List
         public async Task<OperationResult<PagedList<DealDto>>> Handle(Query request, CancellationToken cancellationToken)
         {
             var query = _context.Deals
-                .AsNoTracking()
                 .Where(x => x.AccountId == request.Id)
                 .OrderByDescending(x => x.CreatedAt)
                 .ProjectTo<DealDto>(_mapper.ConfigurationProvider)

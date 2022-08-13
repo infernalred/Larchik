@@ -55,6 +55,7 @@ public class CbrExchangeRates
                 var date = DateOnly.FromDateTime(DateTime.Now.AddDays(1));
             
                 var exchange = await _context.Exchanges
+                    .AsTracking()
                     .FirstOrDefaultAsync(x => x.Code == code && x.Date == date, cancellationToken);
 
                 if (exchange == null)

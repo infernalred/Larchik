@@ -8,10 +8,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Larchik.Application.Portfolio;
 
-public class Details
+public class DetailsAccount
 {
-    public class Query : IRequest<OperationResult<Portfolio>> { }
-
+    public class Query : IRequest<OperationResult<Portfolio>>
+    {
+        public Guid Id { get; set; }
+    }
+    
     public class Handler : IRequestHandler<Query, OperationResult<Portfolio>>
     {
         private readonly ILogger<Handler> _logger;
@@ -34,26 +37,27 @@ public class Details
                 .ToDictionaryAsync(x => x.Ticker, x => x, cancellationToken);
             
             var accounts = await _context.Accounts
-                .Where(x => x.User.UserName == _userAccessor.GetUsername())
+                .Where(x => x.User.UserName == _userAccessor.GetUsername() && x.Id == request.Id)
                 .Include(x => x.Deals)
                 .ToListAsync(cancellationToken);
 
             var assetsByAccounts = await _context.Assets
+                .AsNoTracking()
                 .Where(x => x.Quantity != 0 && accounts.Contains(x.Account))
                 .Include(x => x.Stock)
                 .ToListAsync(cancellationToken);
-
+            
             var deals = accounts.SelectMany(x => x.Deals).ToList();
             
             var assets =
                 (from a in assetsByAccounts
-                group a by a.Stock.Ticker into g
-                select new Asset
-                {
-                    StockId = g.Key,
-                    Quantity = g.Sum(x => x.Quantity),
-                    Stock = g.First().Stock
-                }).OrderBy(x => x.Stock.TypeId);
+                    group a by a.Stock.Ticker into g
+                    select new Asset
+                    {
+                        StockId = g.Key,
+                        Quantity = g.Sum(x => x.Quantity),
+                        Stock = g.First().Stock
+                    }).OrderBy(x => x.Stock.TypeId);
 
             foreach (var asset in assets)
             {
@@ -71,8 +75,8 @@ public class Details
             
             return OperationResult<Portfolio>.Success(portfolio);
         }
-
-        private static PortfolioAsset AveragePrice(Asset asset, Queue<Deal> deals, IReadOnlyDictionary<string, Stock> currencyExchange)
+        
+         private static PortfolioAsset AveragePrice(Asset asset, Queue<Deal> deals, IReadOnlyDictionary<string, Stock> currencyExchange)
         {
             var queueData = new Queue<Deal>();
             while (deals.Count > 0)
@@ -162,6 +166,7 @@ public class Details
             var date = DateOnly.FromDateTime(deal.CreatedAt);
             
             var exchange = await _context.Exchanges
+                .AsNoTracking()
                 .OrderByDescending(x => x.Date)
                 .FirstAsync(x => x.Code == code && x.Date <= date);
             

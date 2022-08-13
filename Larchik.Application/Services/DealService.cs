@@ -62,11 +62,15 @@ public class DealService : IDealService
 
     public async Task<OperationResult<Unit>> EditDeal(DealDto dealDto, CancellationToken cancellationToken)
     {
-        var deal = await _context.Deals.Include(x => x.Stock).FirstAsync(x => x.Id == dealDto.Id, cancellationToken);
+        var deal = await _context.Deals
+            .AsTracking()
+            .Include(x => x.Stock)
+            .FirstAsync(x => x.Id == dealDto.Id, cancellationToken);
         
         var account = await _context.Accounts
             .Include(x => x.User)
-            .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId 
+                                      && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
         
         if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
         
@@ -85,7 +89,10 @@ public class DealService : IDealService
 
     public async Task<OperationResult<Unit>> DeleteDeal(Guid id, CancellationToken cancellationToken)
     {
-        var deal = await _context.Deals.Include(x => x.Stock).FirstAsync(x => x.Id == id, cancellationToken);
+        var deal = await _context.Deals
+            .AsTracking()
+            .Include(x => x.Stock)
+            .FirstAsync(x => x.Id == id, cancellationToken);
         
         await RollbackAssetAsync(deal, cancellationToken);
 
@@ -114,7 +121,9 @@ public class DealService : IDealService
 
     private async Task AddOrUpdateAssetAsync(string ticker, decimal quantity, Guid accountId, CancellationToken cancellationToken)
     {
-        var asset = await _context.Assets.FirstOrDefaultAsync(x => x.AccountId == accountId && x.StockId == ticker, cancellationToken);
+        var asset = await _context.Assets
+            .AsTracking()
+            .FirstOrDefaultAsync(x => x.AccountId == accountId && x.StockId == ticker, cancellationToken);
         
         if (asset == null)
         {
@@ -139,11 +148,18 @@ public class DealService : IDealService
         if (deal.OperationId is ListOperations.Purchase or ListOperations.Sale)
         {
             var quantity = OperationHelper.GetAssetQuantity(deal.OperationId, deal.Quantity);
-            var asset = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.StockId, cancellationToken);
+            
+            var asset = await _context.Assets
+                .AsTracking()
+                .FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.StockId, cancellationToken);
+            
             asset.Quantity += -quantity;
         }
 
-        var assetMoney = await _context.Assets.FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.CurrencyId, cancellationToken);
+        var assetMoney = await _context.Assets
+            .AsTracking()
+            .FirstAsync(x => x.AccountId == deal.AccountId && x.StockId == deal.CurrencyId, cancellationToken);
+        
         assetMoney.Quantity += -deal.Amount;
     }
 }

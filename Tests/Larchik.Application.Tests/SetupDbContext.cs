@@ -21,6 +21,7 @@ public static class SetupDbContext
         CreateSectors(context);
         CreateOperations(context);
         CreateStocks(context);
+        CreateExchanges(context);
 
         context.SaveChanges();
 
@@ -136,6 +137,16 @@ public static class SetupDbContext
         };
             
         context.Stocks.AddRange(stocks);
+    }
+
+    private static void CreateExchanges(IDataContext context)
+    {
+        var exchanges = new List<Exchange>
+        {
+            new Exchange {Code = "USD_RUB", Nominal = 1, Date = new DateOnly(2022, 05, 01), Rate = 70.00},
+        };
+        
+        context.Exchanges.AddRange(exchanges);
     }
     
     private static DbContextOptions<DataContext> CreateNewContextOptions()
