@@ -36,18 +36,17 @@ public class DetailsAccount
                 .Where(x => x.TypeId == "MONEY")
                 .ToDictionaryAsync(x => x.Ticker, x => x, cancellationToken);
             
-            var accounts = await _context.Accounts
+            var account = await _context.Accounts
                 .Where(x => x.User.UserName == _userAccessor.GetUsername() && x.Id == request.Id)
                 .Include(x => x.Deals)
-                .ToListAsync(cancellationToken);
+                .FirstAsync(cancellationToken);
 
             var assetsByAccounts = await _context.Assets
-                .AsNoTracking()
-                .Where(x => x.Quantity != 0 && accounts.Contains(x.Account))
+                .Where(x => x.Quantity != 0 && x.AccountId == account.Id)
                 .Include(x => x.Stock)
                 .ToListAsync(cancellationToken);
             
-            var deals = accounts.SelectMany(x => x.Deals).ToList();
+            var deals = account.Deals.ToList();
             
             var assets =
                 (from a in assetsByAccounts
@@ -166,7 +165,6 @@ public class DetailsAccount
             var date = DateOnly.FromDateTime(deal.CreatedAt);
             
             var exchange = await _context.Exchanges
-                .AsNoTracking()
                 .OrderByDescending(x => x.Date)
                 .FirstAsync(x => x.Code == code && x.Date <= date);
             
