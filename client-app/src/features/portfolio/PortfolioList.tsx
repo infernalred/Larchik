@@ -1,5 +1,6 @@
 import { observer } from "mobx-react-lite"
 import React, { useEffect } from "react"
+import { useParams } from "react-router-dom"
 import { Table } from "semantic-ui-react"
 import LoadingComponent from "../../app/layout/LoadingComponent"
 import { PortfolioAsset } from "../../app/models/portfolioAsset"
@@ -7,11 +8,17 @@ import { useStore } from "../../app/store/store"
 
 export default observer(function PortfolioList() {
     const { portfolioStore } = useStore();
-    const { loadPortfolio, loadingPortfolio, portfolio } = portfolioStore;
+    const { loadPortfolio, loadAccountPortfolio, loadingPortfolio, portfolio } = portfolioStore;
+    const { id } = useParams<{ id: string }>();
 
     useEffect(() => {
-        loadPortfolio();
-    }, [loadPortfolio])
+        if (id) {
+            loadAccountPortfolio(id);
+        } else {
+            loadPortfolio();
+        }
+        
+    }, [id, loadAccountPortfolio, loadPortfolio])
 
     function getColor(asset: PortfolioAsset) {
         if (asset.averagePrice < asset.price) {

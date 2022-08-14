@@ -143,7 +143,7 @@ public static class SetupDbContext
     {
         var exchanges = new List<Exchange>
         {
-            new Exchange {Code = "USD_RUB", Nominal = 1, Date = new DateOnly(2022, 05, 01), Rate = 70.00},
+            new() {Code = "USD_RUB", Nominal = 1, Date = new DateOnly(2022, 05, 01), Rate = 70.31},
         };
         
         context.Exchanges.AddRange(exchanges);

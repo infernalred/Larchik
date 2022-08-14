@@ -5,6 +5,7 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Deals;
 using Larchik.Application.Helpers;
 using Larchik.Application.Services;
+using Larchik.Application.Services.Contracts;
 using Larchik.Infrastructure.ExchangeServices.Cbr;
 using Larchik.Infrastructure.Market;
 using Larchik.Infrastructure.Security;

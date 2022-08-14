@@ -2,6 +2,7 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Dtos;
 using Larchik.Application.Helpers;
+using Larchik.Application.Services.Contracts;
 using Larchik.Domain;
 using Larchik.Persistence.Context;
 using MediatR;

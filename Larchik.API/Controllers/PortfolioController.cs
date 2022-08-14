@@ -20,6 +20,7 @@ public class PortfolioController : BaseApiController
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(OperationResult<Portfolio>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    [ProducesResponseType((int)HttpStatusCode.Forbidden)]
     public async Task<ActionResult<OperationResult<Portfolio>>> GetAccountPortfolio(Guid id)
     {
         return Ok(await Mediator.Send(new DetailsAccount.Query {Id = id}));

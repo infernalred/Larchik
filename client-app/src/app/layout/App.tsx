@@ -55,7 +55,9 @@ function App() {
               <Route path=":id" element={<DealForm />} />
             </Route>
             <Route path="reports" element={<ReportForm />} />
-            <Route path="portfolio" element={<PortfolioList />} />
+            <Route path="portfolio" element={<PortfolioList />}>
+              <Route path=":id" element={<PortfolioList />} />
+            </Route>
             <Route path="server-error" element={<ServerError />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
