@@ -27,7 +27,7 @@ public class LastPriceWorker : BackgroundService
 
             try
             {
-                await lastPriceUpdaterService.UpdateLastPrice(stoppingToken);
+                //await lastPriceUpdaterService.UpdateLastPrice(stoppingToken);
             }
             catch (Exception e)
             {

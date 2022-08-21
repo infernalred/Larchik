@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoMapper;
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Services.Contracts;
@@ -16,6 +17,8 @@ namespace Larchik.Application.Tests.PortfolioService;
 
 public class PortfolioServiceTests
 {
+    private readonly MapperConfiguration _mapperConfiguration = new(cfg => cfg.AddProfile(new MappingProfiles()));
+    
     [Fact]
     public async Task GetPortfolioAsync_Variant1()
     {
@@ -23,6 +26,7 @@ public class PortfolioServiceTests
         var logger = new Mock<ILogger<Services.PortfolioService>>();
         var exchange = new Mock<IExchangeService>();
         var context = SetupDbContext.Generate();
+        var mapper = new Mapper(_mapperConfiguration);
         
         var user = await context.Users.FirstAsync(x => x.UserName == "admin");
         var test = await context.Users.FirstAsync(x => x.UserName == "test");
@@ -144,17 +148,17 @@ public class PortfolioServiceTests
         
         mockUserAccessor.Setup(x => x.GetUsername()).Returns("admin");
     
-        var service = new Services.PortfolioService(logger.Object, context, mockUserAccessor.Object, exchange.Object);
+        var service = new Services.PortfolioService(logger.Object, context, mockUserAccessor.Object, exchange.Object, mapper);
     
         var actual = await service.GetPortfolioAsync(CancellationToken.None);
     
         Assert.Single(actual.Assets);
         Assert.Equal(196.64m, Math.Round(actual.Assets[0].AveragePrice, 2));
-        Assert.Equal(new decimal(stock.LastPrice), actual.Assets[0].Price);
-        Assert.Equal(stock.TypeId, actual.Assets[0].Type);
-        Assert.Equal(stock.SectorId, actual.Assets[0].Sector);
-        Assert.Equal(stock.Ticker, actual.Assets[0].Ticker);
-        Assert.Equal(stock.CompanyName, actual.Assets[0].CompanyName);
+        Assert.Equal(new decimal(stock.LastPrice), (decimal)actual.Assets[0].Stock.LastPrice);
+        Assert.Equal(stock.TypeId, actual.Assets[0].Stock.Type);
+        Assert.Equal(stock.SectorId, actual.Assets[0].Stock.Sector);
+        Assert.Equal(stock.Ticker, actual.Assets[0].Stock.Ticker);
+        Assert.Equal(stock.CompanyName, actual.Assets[0].Stock.CompanyName);
         Assert.Equal(61, actual.Assets[0].Quantity);
         mockUserAccessor.Verify(x => x.GetUsername());
         mockUserAccessor.VerifyNoOtherCalls();
@@ -170,6 +174,7 @@ public class PortfolioServiceTests
         var logger = new Mock<ILogger<Services.PortfolioService>>();
         var exchange = new Mock<IExchangeService>();
         var context = SetupDbContext.Generate();
+        var mapper = new Mapper(_mapperConfiguration);
         
         var user = await context.Users.FirstAsync(x => x.UserName == "admin");
         var test = await context.Users.FirstAsync(x => x.UserName == "test");
@@ -291,17 +296,17 @@ public class PortfolioServiceTests
         
         mockUserAccessor.Setup(x => x.GetUsername()).Returns("admin");
     
-        var service = new Services.PortfolioService(logger.Object, context, mockUserAccessor.Object, exchange.Object);
+        var service = new Services.PortfolioService(logger.Object, context, mockUserAccessor.Object, exchange.Object, mapper);
     
         var actual = await service.GetPortfolioAsync(Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), CancellationToken.None);
     
         Assert.Single(actual.Assets);
         Assert.Equal(192.04m, Math.Round(actual.Assets[0].AveragePrice, 2));
-        Assert.Equal(new decimal(stock.LastPrice), actual.Assets[0].Price);
-        Assert.Equal(stock.TypeId, actual.Assets[0].Type);
-        Assert.Equal(stock.SectorId, actual.Assets[0].Sector);
-        Assert.Equal(stock.Ticker, actual.Assets[0].Ticker);
-        Assert.Equal(stock.CompanyName, actual.Assets[0].CompanyName);
+        Assert.Equal(new decimal(stock.LastPrice), (decimal)actual.Assets[0].Stock.LastPrice);
+        Assert.Equal(stock.TypeId, actual.Assets[0].Stock.Type);
+        Assert.Equal(stock.SectorId, actual.Assets[0].Stock.Sector);
+        Assert.Equal(stock.Ticker, actual.Assets[0].Stock.Ticker);
+        Assert.Equal(stock.CompanyName, actual.Assets[0].Stock.CompanyName);
         Assert.Equal(49, actual.Assets[0].Quantity);
         mockUserAccessor.Verify(x => x.GetUsername());
         mockUserAccessor.VerifyNoOtherCalls();
@@ -325,6 +330,7 @@ public class PortfolioServiceTests
         var logger = new Mock<ILogger<Services.PortfolioService>>();
         var exchange = new Mock<IExchangeService>();
         var context = SetupDbContext.Generate();
+        var mapper = new Mapper(_mapperConfiguration);
 
         var stock = context.Stocks.First(x => x.Ticker == ticker);
         var user = await context.Users.FirstAsync(x => x.UserName == "admin");
@@ -388,17 +394,17 @@ public class PortfolioServiceTests
         
         mockUserAccessor.Setup(x => x.GetUsername()).Returns("admin");
 
-        var service = new Services.PortfolioService(logger.Object, context, mockUserAccessor.Object, exchange.Object);
+        var service = new Services.PortfolioService(logger.Object, context, mockUserAccessor.Object, exchange.Object, mapper);
     
         var actual = await service.GetPortfolioAsync(CancellationToken.None);
 
         Assert.Single(actual.Assets);
         Assert.Equal(averagePrice, Math.Round(actual.Assets[0].AveragePrice, 2));
-        Assert.Equal((decimal)stock.LastPrice, actual.Assets[0].Price);
-        Assert.Equal(stock.TypeId, actual.Assets[0].Type);
-        Assert.Equal(stock.SectorId, actual.Assets[0].Sector);
-        Assert.Equal(stock.Ticker, actual.Assets[0].Ticker);
-        Assert.Equal(stock.CompanyName, actual.Assets[0].CompanyName);
+        Assert.Equal((decimal)stock.LastPrice, (decimal)actual.Assets[0].Stock.LastPrice);
+        Assert.Equal(stock.TypeId, actual.Assets[0].Stock.Type);
+        Assert.Equal(stock.SectorId, actual.Assets[0].Stock.Sector);
+        Assert.Equal(stock.Ticker, actual.Assets[0].Stock.Ticker);
+        Assert.Equal(stock.CompanyName, actual.Assets[0].Stock.CompanyName);
         Assert.Equal(quantity, actual.Assets[0].Quantity);
         mockUserAccessor.Verify(x => x.GetUsername());
         mockUserAccessor.VerifyNoOtherCalls();

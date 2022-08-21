@@ -21,11 +21,11 @@ export default observer(function PortfolioList() {
     }, [id, loadAccountPortfolio, loadPortfolio])
 
     function getColor(asset: PortfolioAsset) {
-        if (asset.averagePrice < asset.price) {
+        if (asset.averagePrice < asset.stock.lastPrice) {
             return "greenstock";
         }
 
-        if (asset.averagePrice > asset.price) {
+        if (asset.averagePrice > asset.stock.lastPrice) {
             return "redstock";
         }
         
@@ -53,14 +53,14 @@ export default observer(function PortfolioList() {
 
             <Table.Body>
                 {portfolio?.assets.map(asset => (
-                    <Table.Row key={asset.ticker}>
-                        <Table.Cell>{asset.ticker}</Table.Cell>
-                        <Table.Cell>{asset.companyName}</Table.Cell>
-                        <Table.Cell>{asset.sector}</Table.Cell>
-                        <Table.Cell>{asset.type}</Table.Cell>
+                    <Table.Row key={asset.stock.ticker}>
+                        <Table.Cell>{asset.stock.ticker}</Table.Cell>
+                        <Table.Cell>{asset.stock.companyName}</Table.Cell>
+                        <Table.Cell>{asset.stock.sector}</Table.Cell>
+                        <Table.Cell>{asset.stock.type}</Table.Cell>
                         <Table.Cell>{asset.quantity}</Table.Cell>
                         <Table.Cell>{asset.averagePrice.toLocaleString("ru")}</Table.Cell>
-                        <Table.Cell>{asset.price.toLocaleString("ru")}</Table.Cell>
+                        <Table.Cell>{asset.stock.lastPrice.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell className={getColor(asset)}>{asset.amountMarket.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell className={getColor(asset)}>{asset.amountMarketCurrency.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell className={getColor(asset)}>{asset.profit.toLocaleString("ru")}</Table.Cell>

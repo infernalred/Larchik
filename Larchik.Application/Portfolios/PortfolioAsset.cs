@@ -1,16 +1,28 @@
-﻿namespace Larchik.Application.Portfolios;
+﻿using Larchik.Application.Dtos;
+
+namespace Larchik.Application.Portfolios;
 
 public class PortfolioAsset
 {
-    public string Ticker { get; set; } = null!;
-    public string CompanyName { get; set; } = null!;
-    public string Sector { get; set; } = null!;
-    public string Type { get; set; } = null!;
-    public decimal Quantity { get; set; }
-    public decimal Price { get; set; }
-    public decimal AmountMarket { get; set; }
-    public decimal AmountMarketCurrency { get; set; }
+    public StockDto Stock { get; }
+    private decimal _rate;
+    public decimal Quantity { get; init; }
+    public decimal AmountMarket => Stock.Type == "MONEY" 
+            ? Quantity 
+            : Quantity * (decimal)Stock.LastPrice;
+
+    public decimal AmountMarketCurrency => Math.Round(AmountMarket * _rate, 2);
     public decimal AveragePrice { get; set; }
-    public decimal AmountAverage { get; set; }
+    public decimal AmountAverage => Stock.Type == "MONEY" 
+        ? Quantity 
+        : Quantity * AveragePrice;
     public decimal Profit => AmountMarket - AmountAverage;
+
+    public PortfolioAsset(StockDto stock, decimal rate, decimal quantity, decimal averagePrice)
+    {
+        Stock = stock;
+        _rate = rate;
+        Quantity = quantity;
+        AveragePrice = averagePrice;
+    }
 }
