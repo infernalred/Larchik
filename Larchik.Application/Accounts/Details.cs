@@ -36,7 +36,6 @@ public class Details
             var account = await _context.Accounts
                 .Include(x => x.Assets.Where(a => a.Quantity != 0))
                 .ThenInclude(a => a.Stock)
-                .Include(x => x.Deals)
                 .SingleOrDefaultAsync(x => x.Id == request.Id && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
             
             return OperationResult<AccountDto>.Success(_mapper.Map<AccountDto>(account));

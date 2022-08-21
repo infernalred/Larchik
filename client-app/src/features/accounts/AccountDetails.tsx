@@ -17,10 +17,11 @@ export default observer(function AccountDetails() {
     if (loadingInitial || !account) return <LoadingComponent />;
 
     return (
-        <Table celled color="blue" inverted>
+        <Table celled>
             <Table.Header>
                 <Table.Row>
                     <Table.HeaderCell>Название</Table.HeaderCell>
+                    <Table.HeaderCell>Тикер</Table.HeaderCell>
                     <Table.HeaderCell>Кол-во</Table.HeaderCell>
                     <Table.HeaderCell>Сектор</Table.HeaderCell>
                     <Table.HeaderCell>Тип</Table.HeaderCell>
@@ -31,6 +32,7 @@ export default observer(function AccountDetails() {
             <Table.Body>
                 {account.assets.map(asset => (
                     <Table.Row key={asset.id}>
+                        <Table.Cell width={3}>{asset.stock.companyName}</Table.Cell>
                         <Table.Cell>{asset.stock.ticker}</Table.Cell>
                         <Table.Cell>{asset.quantity.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell>{asset.stock.sector}</Table.Cell>

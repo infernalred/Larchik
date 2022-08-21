@@ -16,7 +16,7 @@ public class ExchangeService : IExchangeService
         _context = context;
         _cache = cache;
     }
-    
+
     public async Task<decimal> GetAmountAsync(Deal deal, string code)
     {
         var date = DateOnly.FromDateTime(deal.CreatedAt);
@@ -30,7 +30,7 @@ public class ExchangeService : IExchangeService
 
             _cache.Set(key, exchange, new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromHours(1)));
         }
-        
-        return deal.Amount * (decimal) exchange.Rate / exchange.Nominal;
+
+        return deal.Amount * (decimal)exchange.Rate / exchange.Nominal;
     }
 }

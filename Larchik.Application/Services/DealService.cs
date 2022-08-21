@@ -40,9 +40,11 @@ public class DealService : IDealService
     public async Task<OperationResult<Unit>> CreateDeal(DealDto dealDto, CancellationToken cancellationToken)
     {
         var user = await _context.Users
+            .AsTracking()
             .FirstAsync(x => x.UserName == _userAccessor.GetUsername(), cancellationToken: cancellationToken);
         
         var account = await _context.Accounts
+            .AsTracking()
             .Include(x => x.User)
             .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId && x.User == user, cancellationToken);
         
@@ -53,7 +55,7 @@ public class DealService : IDealService
         await _operations[dealDto.Operation](amount, dealDto, cancellationToken);
 
         var deal = _mapper.Map<Deal>(dealDto, opt => { opt.Items["Amount"] = amount; });
-        deal.User = user;
+        deal.UserId = user.Id;
         
         _context.Deals.Add(deal);
         await _context.SaveChangesAsync(cancellationToken);
