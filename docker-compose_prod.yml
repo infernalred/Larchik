@@ -78,8 +78,6 @@ services:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
     restart: always
-    depends_on:
-      - nginx
     ports:
       - "5050:80"
     volumes:
