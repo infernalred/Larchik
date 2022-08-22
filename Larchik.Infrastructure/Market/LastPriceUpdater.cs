@@ -21,6 +21,7 @@ public class LastPriceUpdater
     public async Task UpdateLastPrice(CancellationToken cancellationToken)
     {
         var assets = await _context.Assets
+            .AsTracking()
             .Include(x => x.Stock)
             .Where(a => a.Quantity != 0)
             .ToListAsync(cancellationToken);
@@ -32,6 +33,7 @@ public class LastPriceUpdater
             .ToList();
 
         var moneyStocks = await _context.Stocks
+            .AsTracking()
             .Where(x => x.TypeId == "MONEY" && !string.IsNullOrEmpty(x.Figi))
             .ToListAsync(cancellationToken);
         

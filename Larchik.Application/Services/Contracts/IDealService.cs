@@ -2,7 +2,7 @@
 using Larchik.Application.Helpers;
 using MediatR;
 
-namespace Larchik.Application.Services;
+namespace Larchik.Application.Services.Contracts;
 
 public interface IDealService
 {

@@ -31,7 +31,6 @@ public class List
         public async Task<OperationResult<List<AccountDto>>> Handle(Query request, CancellationToken cancellationToken)
         {
             var accounts = await _context.Accounts
-                .AsNoTracking()
                 .Where(x => x.User.UserName == _userAccessor.GetUsername())
                 .Include(x => x.Deals)
                 .Include(x => x.Assets.Where(a => a.Quantity != 0))

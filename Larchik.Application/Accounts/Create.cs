@@ -43,7 +43,9 @@ public class Create
         
         public async Task<OperationResult<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == _userAccessor.GetUsername(), cancellationToken);
+            var user = await _context.Users
+                .AsTracking()
+                .FirstOrDefaultAsync(x => x.UserName == _userAccessor.GetUsername(), cancellationToken);
 
             var account = new Account
             {

@@ -31,7 +31,6 @@ public class Details
         public async Task<OperationResult<DealDto>> Handle(Query request, CancellationToken cancellationToken)
         {
             var deal = await _context.Deals
-                .AsNoTracking()
                 .SingleOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
             
             return OperationResult<DealDto>.Success(_mapper.Map<DealDto>(deal));

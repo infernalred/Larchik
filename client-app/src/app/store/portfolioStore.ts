@@ -28,4 +28,19 @@ export default class PortfolioStore {
             this.setLoadingInitial(false);
         }
     }
+
+    loadAccountPortfolio = async (id: string) => {
+        this.setLoadingInitial(true);
+        try {
+            const request = await agent.Portfolios.accountDetails(id);
+            runInAction(() => {
+                this.portfolio = request.result;
+            })
+        } catch (error) {
+            console.log(error);
+        }
+        finally {
+            this.setLoadingInitial(false);
+        }
+    }
 }

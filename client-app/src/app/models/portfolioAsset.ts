@@ -1,10 +1,8 @@
+import { Stock } from "./stock";
+
 export interface PortfolioAsset {
-    ticker: string;
-    companyName: string;
-    sector: string;
-    type: string;
+    stock: Stock;
     quantity: number;
-    price: number;
     amountMarket: number;
     amountMarketCurrency: number;
     averagePrice: number;

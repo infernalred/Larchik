@@ -36,7 +36,10 @@ public class Edit
         
         public async Task<OperationResult<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
-            var account = await _context.Accounts.FirstAsync(x => x.Id == request.Account.Id, cancellationToken);
+            var account = await _context.Accounts
+                .AsTracking()
+                .FirstAsync(x => x.Id == request.Account.Id, cancellationToken);
+            
             account.Name = request.Account.Name;
 
             await _context.SaveChangesAsync(cancellationToken);

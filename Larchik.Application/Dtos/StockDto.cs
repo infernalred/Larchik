@@ -8,4 +8,5 @@ public class StockDto
     public string Type { get; set; } = null!;
     public string Currency { get; set; } = null!;
     public string Sector { get; set; } = null!;
+    public double LastPrice { get; set; }
 }

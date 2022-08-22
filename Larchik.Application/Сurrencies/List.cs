@@ -25,7 +25,6 @@ public class List
         public async Task<OperationResult<List<Currency>>> Handle(Query request, CancellationToken cancellationToken)
         {
             var currency = await _context.Currencies
-                .AsNoTracking()
                 .ToListAsync(cancellationToken);
 
             return OperationResult<List<Currency>>.Success(currency);

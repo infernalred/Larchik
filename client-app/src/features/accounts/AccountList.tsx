@@ -14,11 +14,11 @@ export default observer(function AccountList() {
         if (accountsRegistry.size <= 1) loadAccounts();
     }, [accountsRegistry.size, loadAccounts])
 
-    if (accountStore.loadingInitial) return <LoadingComponent content='Loading accounts...' />
+    if (accountStore.loadingInitial) return <LoadingComponent content="Loading accounts..." />
 
     return (
         <>
-            <Table celled inverted>
+            <Table>
                 <Table.Header>
                     <Table.Row>
                         <Table.HeaderCell>Название</Table.HeaderCell>
@@ -33,9 +33,10 @@ export default observer(function AccountList() {
                             <Table.Cell>{account.name}</Table.Cell>
                             <Table.Cell>{account.assets.length}</Table.Cell>
                             <Table.Cell>
-                                <Button as={NavLink} to={`/accounts/${account.id}`} primary inverted><Icon name='info circle' />Детали</Button>
-                                <Button as={NavLink} to={`/accounts/${account.id}/deals`} primary inverted><Icon name='list' />Сделки</Button>
-                                <Button onClick={() => modalStore.openModal(<AccountForm id={account.id} />)} primary inverted>Изменить</Button>
+                                <Button as={NavLink} to={`/accounts/${account.id}`} primary><Icon name="info circle" />Детали</Button>
+                                <Button as={NavLink} to={`/accounts/${account.id}/deals`} primary><Icon name="list" />Сделки</Button>
+                                <Button as={NavLink} to={`/portfolio/${account.id}`} primary><Icon name="info circle" />Портфолио</Button>
+                                <Button onClick={() => modalStore.openModal(<AccountForm id={account.id} />)} primary>Изменить</Button>
                             </Table.Cell>
                         </Table.Row>
                     ))}
@@ -46,7 +47,7 @@ export default observer(function AccountList() {
                         <Table.HeaderCell>Всего счетов</Table.HeaderCell>
                         <Table.HeaderCell>{accounts.length}</Table.HeaderCell>
                         <Table.HeaderCell>
-                            <Button onClick={() => modalStore.openModal(<AccountForm id={''} />)} size="mini" positive>+</Button>
+                            <Button onClick={() => modalStore.openModal(<AccountForm id={""} />)} size="mini" positive>+</Button>
                         </Table.HeaderCell>
                     </Table.Row>
                 </Table.Footer>

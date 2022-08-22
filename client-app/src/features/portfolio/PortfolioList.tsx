@@ -1,5 +1,6 @@
 import { observer } from "mobx-react-lite"
 import React, { useEffect } from "react"
+import { useParams } from "react-router-dom"
 import { Table } from "semantic-ui-react"
 import LoadingComponent from "../../app/layout/LoadingComponent"
 import { PortfolioAsset } from "../../app/models/portfolioAsset"
@@ -7,18 +8,24 @@ import { useStore } from "../../app/store/store"
 
 export default observer(function PortfolioList() {
     const { portfolioStore } = useStore();
-    const { loadPortfolio, loadingPortfolio, portfolio } = portfolioStore;
+    const { loadPortfolio, loadAccountPortfolio, loadingPortfolio, portfolio } = portfolioStore;
+    const { id } = useParams<{ id: string }>();
 
     useEffect(() => {
-        loadPortfolio();
-    }, [loadPortfolio])
+        if (id) {
+            loadAccountPortfolio(id);
+        } else {
+            loadPortfolio();
+        }
+        
+    }, [id, loadAccountPortfolio, loadPortfolio])
 
     function getColor(asset: PortfolioAsset) {
-        if (asset.averagePrice < asset.price) {
+        if (asset.averagePrice < asset.stock.lastPrice) {
             return "greenstock";
         }
 
-        if (asset.averagePrice > asset.price) {
+        if (asset.averagePrice > asset.stock.lastPrice) {
             return "redstock";
         }
         
@@ -46,14 +53,14 @@ export default observer(function PortfolioList() {
 
             <Table.Body>
                 {portfolio?.assets.map(asset => (
-                    <Table.Row key={asset.ticker}>
-                        <Table.Cell>{asset.ticker}</Table.Cell>
-                        <Table.Cell>{asset.companyName}</Table.Cell>
-                        <Table.Cell>{asset.sector}</Table.Cell>
-                        <Table.Cell>{asset.type}</Table.Cell>
+                    <Table.Row key={asset.stock.ticker}>
+                        <Table.Cell>{asset.stock.ticker}</Table.Cell>
+                        <Table.Cell>{asset.stock.companyName}</Table.Cell>
+                        <Table.Cell>{asset.stock.sector}</Table.Cell>
+                        <Table.Cell>{asset.stock.type}</Table.Cell>
                         <Table.Cell>{asset.quantity}</Table.Cell>
                         <Table.Cell>{asset.averagePrice.toLocaleString("ru")}</Table.Cell>
-                        <Table.Cell>{asset.price.toLocaleString("ru")}</Table.Cell>
+                        <Table.Cell>{asset.stock.lastPrice.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell className={getColor(asset)}>{asset.amountMarket.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell className={getColor(asset)}>{asset.amountMarketCurrency.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell className={getColor(asset)}>{asset.profit.toLocaleString("ru")}</Table.Cell>

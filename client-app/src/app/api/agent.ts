@@ -99,7 +99,8 @@ const Stocks = {
 }
 
 const Portfolios = {
-    details: () => requests.get<OperationResult<Portfolio>>('/portfolio')
+    details: () => requests.get<OperationResult<Portfolio>>('/portfolio'),
+    accountDetails: (id: string) => requests.get<OperationResult<Portfolio>>(`/portfolio/${id}`)
 }
 
 const Currencies = {
