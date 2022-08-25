@@ -1,4 +1,5 @@
 ﻿using Larchik.Domain;
+using Larchik.Domain.Enum;
 using Larchik.Persistence.Context;
 using Microsoft.AspNetCore.Identity;
 
@@ -34,10 +35,10 @@ public class Seed
         
         if (!context.StockTypes.Any())
         {
-            var type1 = new StockType { Code = "SHARE" };
-            var type2 = new StockType { Code = "BOND" };
-            var type3 = new StockType { Code = "ETF" };
-            var type4 = new StockType { Code = "MONEY" };
+            var type1 = new StockType { Id = 1, Code = "SHARE" };
+            var type2 = new StockType { Id = 2, Code = "BOND" };
+            var type3 = new StockType { Id = 3, Code = "ETF" };
+            var type4 = new StockType { Id = 4, Code = "MONEY" };
 
             var stockTypes = new List<StockType>
             {
@@ -80,9 +81,9 @@ public class Seed
 
         if (!context.Stocks.Any())
         {
-            var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта", Figi = "RUB", LastPrice = 1 };
-            var money2 = new Stock { Ticker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта", Figi = "USD", LastPrice = 121 };
-            var money3 = new Stock { Ticker = "EUR", CompanyName = "", CurrencyId = "EUR", TypeId = "MONEY", SectorId = "Валюта", Figi = "EUR", LastPrice = 134 };
+            var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта", Figi = "RUB", LastPrice = 1, Type = StockKind.Money};
+            var money2 = new Stock { Ticker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта", Figi = "USD", LastPrice = 121, Type = StockKind.Money };
+            var money3 = new Stock { Ticker = "EUR", CompanyName = "", CurrencyId = "EUR", TypeId = "MONEY", SectorId = "Валюта", Figi = "EUR", LastPrice = 134, Type = StockKind.Money };
 
             var stocks = new List<Stock>
             {

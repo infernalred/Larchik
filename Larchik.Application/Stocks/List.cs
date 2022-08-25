@@ -19,14 +19,12 @@ public class List
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
         private readonly IMapper _mapper;
-        private readonly IUserAccessor _userAccessor;
         
-        public Handler(ILogger<Handler> logger, DataContext context, IMapper mapper, IUserAccessor userAccessor)
+        public Handler(ILogger<Handler> logger, DataContext context, IMapper mapper)
         {
             _logger = logger;
             _context = context;
             _mapper = mapper;
-            _userAccessor = userAccessor;
         }
         
         public async Task<OperationResult<List<StockDto>>> Handle(Query request, CancellationToken cancellationToken)

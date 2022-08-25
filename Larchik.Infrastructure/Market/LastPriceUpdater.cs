@@ -1,4 +1,5 @@
 ﻿using Larchik.Application.Contracts;
+using Larchik.Domain.Enum;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -29,12 +30,12 @@ public class LastPriceUpdater
         var stocks = assets
             .Select(x => x.Stock)
             .DistinctBy(x => x.Ticker)
-            .Where(x => !string.IsNullOrEmpty(x.Figi) && x.TypeId != "MONEY")
+            .Where(x => !string.IsNullOrEmpty(x.Figi) && x.Type != StockKind.Money)
             .ToList();
 
         var moneyStocks = await _context.Stocks
             .AsTracking()
-            .Where(x => x.TypeId == "MONEY" && !string.IsNullOrEmpty(x.Figi))
+            .Where(x => x.Type == StockKind.Money && !string.IsNullOrEmpty(x.Figi))
             .ToListAsync(cancellationToken);
         
         stocks.AddRange(moneyStocks);

@@ -26,7 +26,7 @@ public class CbrExchangeWorker : BackgroundService
 
             try
             {
-                await cbrExchangeService.GetLastRates(stoppingToken);
+                //await cbrExchangeService.GetLastRates(stoppingToken);
             }
             catch (Exception e)
             {
