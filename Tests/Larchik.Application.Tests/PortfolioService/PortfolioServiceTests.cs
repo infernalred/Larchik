@@ -155,7 +155,7 @@ public class PortfolioServiceTests
         Assert.Single(actual.Assets);
         Assert.Equal(196.64m, Math.Round(actual.Assets[0].AveragePrice, 2));
         Assert.Equal(new decimal(stock.LastPrice), (decimal)actual.Assets[0].Stock.LastPrice);
-        Assert.Equal(stock.TypeId, actual.Assets[0].Stock.Type);
+        Assert.Equal(stock.Type, actual.Assets[0].Stock.Type);
         Assert.Equal(stock.SectorId, actual.Assets[0].Stock.Sector);
         Assert.Equal(stock.Ticker, actual.Assets[0].Stock.Ticker);
         Assert.Equal(stock.CompanyName, actual.Assets[0].Stock.CompanyName);
@@ -303,7 +303,7 @@ public class PortfolioServiceTests
         Assert.Single(actual.Assets);
         Assert.Equal(192.04m, Math.Round(actual.Assets[0].AveragePrice, 2));
         Assert.Equal(new decimal(stock.LastPrice), (decimal)actual.Assets[0].Stock.LastPrice);
-        Assert.Equal(stock.TypeId, actual.Assets[0].Stock.Type);
+        Assert.Equal(stock.Type, actual.Assets[0].Stock.Type);
         Assert.Equal(stock.SectorId, actual.Assets[0].Stock.Sector);
         Assert.Equal(stock.Ticker, actual.Assets[0].Stock.Ticker);
         Assert.Equal(stock.CompanyName, actual.Assets[0].Stock.CompanyName);
@@ -401,7 +401,7 @@ public class PortfolioServiceTests
         Assert.Single(actual.Assets);
         Assert.Equal(averagePrice, Math.Round(actual.Assets[0].AveragePrice, 2));
         Assert.Equal((decimal)stock.LastPrice, (decimal)actual.Assets[0].Stock.LastPrice);
-        Assert.Equal(stock.TypeId, actual.Assets[0].Stock.Type);
+        Assert.Equal(stock.Type, actual.Assets[0].Stock.Type);
         Assert.Equal(stock.SectorId, actual.Assets[0].Stock.Sector);
         Assert.Equal(stock.Ticker, actual.Assets[0].Stock.Ticker);
         Assert.Equal(stock.CompanyName, actual.Assets[0].Stock.CompanyName);

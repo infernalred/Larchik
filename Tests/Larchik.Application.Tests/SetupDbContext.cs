@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using Larchik.Domain;
+using Larchik.Domain.Enum;
 using Larchik.Persistence.Context;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Larchik.Application.Tests;
 
@@ -63,10 +63,10 @@ public static class SetupDbContext
     
     private static void CreateStockTypes(DataContext context)
     {
-        var type1 = new StockType { Code = "SHARE" };
-        var type2 = new StockType { Code = "BOND" };
-        var type3 = new StockType { Code = "ETF" };
-        var type4 = new StockType { Code = "MONEY" };
+        var type1 = new StockType { Id = 1, Code = "SHARE" };
+        var type2 = new StockType { Id = 2, Code = "BOND" };
+        var type3 = new StockType { Id = 3, Code = "ETF" };
+        var type4 = new StockType { Id = 4, Code = "MONEY" };
 
         var stockTypes = new List<StockType>
         {
@@ -125,11 +125,11 @@ public static class SetupDbContext
     
     private static void CreateStocks(DataContext context)
     {
-        var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта", Figi = "RUB", LastPrice = 1 };
-        var money2 = new Stock { Ticker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта", Figi = "USD", LastPrice = 121 };
-        var money3 = new Stock { Ticker = "EUR", CompanyName = "", CurrencyId = "EUR", TypeId = "MONEY", SectorId = "Валюта", Figi = "EUR", LastPrice = 134 };
-        var stock1 = new Stock { Ticker = "MTSS", CompanyName = "МТС", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Telecom", Figi = "MTSS", LastPrice = 249.5 };
-        var stock2 = new Stock { Ticker = "SBER", CompanyName = "СБЕРБАНК", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Financial", Figi = "SBER", LastPrice = 157 };
+        var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта", Figi = "RUB", LastPrice = 1, Type = StockKind.Money };
+        var money2 = new Stock { Ticker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта", Figi = "USD", LastPrice = 121, Type = StockKind.Money };
+        var money3 = new Stock { Ticker = "EUR", CompanyName = "", CurrencyId = "EUR", TypeId = "MONEY", SectorId = "Валюта", Figi = "EUR", LastPrice = 134, Type = StockKind.Money };
+        var stock1 = new Stock { Ticker = "MTSS", CompanyName = "МТС", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Telecom", Figi = "MTSS", LastPrice = 249.5, Type = StockKind.Share };
+        var stock2 = new Stock { Ticker = "SBER", CompanyName = "СБЕРБАНК", CurrencyId = "RUB", TypeId = "SHARE", SectorId = "Financial", Figi = "SBER", LastPrice = 157, Type = StockKind.Share };
 
         var stocks = new List<Stock>
         {
