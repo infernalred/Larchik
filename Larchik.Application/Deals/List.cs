@@ -4,7 +4,6 @@ using Larchik.Application.Dtos;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Larchik.Application.Deals;
@@ -43,9 +42,9 @@ public class List
                 query = query.Where(x => x.Stock.Contains(request.Params.Ticker.ToUpper()) || x.Currency.Contains(request.Params.Ticker));
             }
 
-            if (!string.IsNullOrWhiteSpace(request.Params.Operation))
+            if (request.Params.Type != null)
             {
-                query = query.Where(x => x.Operation == request.Params.Operation);
+                query = query.Where(x => x.Type == request.Params.Type);
             }
             
             return OperationResult<PagedList<DealDto>>.Success(

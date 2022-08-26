@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 using Larchik.Application.Dtos;
-using Larchik.Application.Helpers;
+using Larchik.Domain.Enum;
 
 namespace Larchik.Application.Deals;
 
@@ -11,7 +11,7 @@ public class DealValidator : AbstractValidator<DealDto>
         RuleFor(x => x.Quantity).GreaterThan(0);
         RuleFor(x => x.Price).GreaterThan(0);
         RuleFor(x => x.Currency).NotEmpty();
-        RuleFor(x => x.Stock).NotEmpty().When(x => x.Operation is ListOperations.Purchase or ListOperations.Sale);
-        RuleFor(x => x.Operation).NotEmpty();
+        RuleFor(x => x.Stock).NotEmpty().When(x => x.Type is DealKind.Purchase or DealKind.Sale);
+        //RuleFor(x => x.Type).NotEmpty();
     }
 }

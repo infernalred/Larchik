@@ -11,11 +11,10 @@ public class MappingProfiles : AutoMapper.Profile
         CreateMap<AssetDto, Asset>().ReverseMap();
         CreateMap<Stock, StockDto>()
             .ForMember(d => d.Currency, o => o.MapFrom(s => s.CurrencyId))
-            //.ForMember(d => d.Type, o => o.MapFrom(s => s.TypeId))
             .ForMember(d => d.Sector, o => o.MapFrom(s => s.SectorId));
         CreateMap<DealDto, Deal>()
             .ForMember(d => d.Amount, o => o.MapFrom((_, _, _, context) => context.Options.Items["Amount"]))
-            .ForMember(d => d.OperationId, o => o.MapFrom(s => s.Operation))
+            .ForMember(d => d.OperationId, o => o.MapFrom(s => s.Deal))
             .ForMember(d => d.StockId, o => o.MapFrom(s => s.Stock))
             .ForMember(d => d.CurrencyId, o => o.MapFrom(s => s.Currency))
             .ForMember(d => d.Stock, o => o.Ignore())
