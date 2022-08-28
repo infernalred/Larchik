@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom"
 import { Table } from "semantic-ui-react"
 import LoadingComponent from "../../app/layout/LoadingComponent"
 import { PortfolioAsset } from "../../app/models/portfolioAsset"
+import { StockType } from "../../app/models/stock"
 import { useStore } from "../../app/store/store"
 
 export default observer(function PortfolioList() {
@@ -57,7 +58,7 @@ export default observer(function PortfolioList() {
                         <Table.Cell>{asset.stock.ticker}</Table.Cell>
                         <Table.Cell>{asset.stock.companyName}</Table.Cell>
                         <Table.Cell>{asset.stock.sector}</Table.Cell>
-                        <Table.Cell>{asset.stock.type}</Table.Cell>
+                        <Table.Cell>{StockType[asset.stock.type]}</Table.Cell>
                         <Table.Cell>{asset.quantity}</Table.Cell>
                         <Table.Cell>{asset.averagePrice.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell>{asset.stock.lastPrice.toLocaleString("ru")}</Table.Cell>

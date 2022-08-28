@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Larchik.Application.Contracts;
 using Larchik.Application.Dtos;
-using Larchik.Application.Helpers;
 using Larchik.Application.Portfolios;
 using Larchik.Application.Services.Contracts;
 using Larchik.Domain;
@@ -92,7 +91,7 @@ public class PortfolioService : IPortfolioService
         {
             var dealsByTicker = deals
                 .Where(x => x.StockId == asset.StockId &&
-                            x.OperationId is ListOperations.Purchase or ListOperations.Sale)
+                            x.TypeId is (int)DealKind.Purchase or (int)DealKind.Sale)
                 .OrderBy(x => x.CreatedAt);
 
             portfolio.Assets.Add(GetPortfolioAsset(asset, new Queue<Deal>(dealsByTicker), currencyExchange));
@@ -122,12 +121,12 @@ public class PortfolioService : IPortfolioService
         while (deals.Count > 0)
         {
             var deal = deals.Dequeue();
-            switch (deal.OperationId)
+            switch ((DealKind)deal.TypeId)
             {
-                case ListOperations.Purchase:
+                case DealKind.Purchase:
                     queueData.Enqueue(deal);
                     break;
-                case ListOperations.Sale:
+                case DealKind.Sale:
                     var first = queueData.Peek();
                     if (first.Quantity > deal.Quantity)
                     {
@@ -165,7 +164,7 @@ public class PortfolioService : IPortfolioService
     private async Task<decimal> GeInOutMoney(IEnumerable<Deal> deals, string currencyId)
     {
         var moneyDeals = deals
-            .Where(x => x.OperationId is not (ListOperations.Purchase or ListOperations.Sale));
+            .Where(x => x.TypeId is not (int)DealKind.Purchase or (int)DealKind.Sale);
         
         var result = 0m;
 

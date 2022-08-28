@@ -39,7 +39,8 @@ public class List
 
             if (!string.IsNullOrWhiteSpace(request.Params.Ticker))
             {
-                query = query.Where(x => x.Stock.Contains(request.Params.Ticker.ToUpper()) || x.Currency.Contains(request.Params.Ticker));
+                var ticker = request.Params.Ticker.ToUpper();
+                query = query.Where(x => x.Stock.Contains(ticker) || x.Currency.Contains(ticker));
             }
 
             if (request.Params.Type != null)

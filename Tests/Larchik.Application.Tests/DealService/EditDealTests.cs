@@ -8,6 +8,7 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Dtos;
 using Larchik.Application.Helpers;
 using Larchik.Domain;
+using Larchik.Domain.Enum;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -40,7 +41,7 @@ public class EditDealTests
             Quantity = 1, 
             Price = 40,
             Amount = 40,
-            OperationId = ListOperations.Add, 
+            TypeId = (int)DealKind.Add, 
             CurrencyId = currency.Code,
             UserId = user.Id
         };
@@ -53,7 +54,7 @@ public class EditDealTests
             Quantity = 1, 
             Price = 9,
             Amount = 9,
-            OperationId = ListOperations.Add, 
+            TypeId = (int)DealKind.Add, 
             CurrencyId = currency.Code,
             UserId = user.Id
         };
@@ -63,7 +64,7 @@ public class EditDealTests
             Id = deal2.Id,
             AccountId = Guid.NewGuid(),
             CreatedAt = DateTime.Now,
-            Operation = ListOperations.Add,
+            Type = DealKind.Add,
             Price = 500,
             Quantity = 1,
             Currency = currency.Code
@@ -112,7 +113,7 @@ public class EditDealTests
             Quantity = 1, 
             Price = 40,
             Amount = 40,
-            OperationId = ListOperations.Add,
+            TypeId = (int)DealKind.Add,
             CurrencyId = currency.Code,
             UserId = user.Id
         };
@@ -125,7 +126,7 @@ public class EditDealTests
             Quantity = 1, 
             Price = 9,
             Amount = 9,
-            OperationId = ListOperations.Add, 
+            TypeId = (int)DealKind.Add, 
             CurrencyId = currency.Code,
             UserId = user.Id
         };
@@ -135,7 +136,7 @@ public class EditDealTests
             Id = deal2.Id,
             AccountId = asset1.AccountId,
             CreatedAt = DateTime.Now,
-            Operation = ListOperations.Add,
+            Type = DealKind.Add,
             Price = 500,
             Quantity = 1,
             Currency = "RUB1"
@@ -161,11 +162,11 @@ public class EditDealTests
     }
     
     [Theory]
-    [InlineData(ListOperations.Add, 500.00, 0.43, 499.57, 900.12)]
-    [InlineData(ListOperations.Withdrawal, 269.33, 0.87, -270.20, 130.35)]
-    [InlineData(ListOperations.Tax, 125.78, 0.93, -126.71, 273.84)]
-    [InlineData(ListOperations.Dividends, 898.99, 0.23, 898.76, 1299.31)]
-    public async Task EditDeal_Success_Money(string operation, decimal price, decimal commission, decimal amount, decimal quantity)
+    [InlineData(DealKind.Add, 500.00, 0.43, 499.57, 900.12)]
+    [InlineData(DealKind.Withdrawal, 269.33, 0.87, -270.20, 130.35)]
+    [InlineData(DealKind.Tax, 125.78, 0.93, -126.71, 273.84)]
+    [InlineData(DealKind.Dividends, 898.99, 0.23, 898.76, 1299.31)]
+    public async Task EditDeal_Success_Money(DealKind type, decimal price, decimal commission, decimal amount, decimal quantity)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();
@@ -184,7 +185,7 @@ public class EditDealTests
             Quantity = 1, 
             Price = 400.55m,
             Amount = 400.55m,
-            OperationId = ListOperations.Add, 
+            TypeId = (int)DealKind.Add, 
             CurrencyId = currency.Code,
             UserId = user.Id
         };
@@ -197,7 +198,7 @@ public class EditDealTests
             Quantity = 1, 
             Price = 999.99m,
             Amount = 999.99m,
-            OperationId = ListOperations.Add, 
+            TypeId = (int)DealKind.Add, 
             CurrencyId = currency.Code,
             UserId = user.Id
         };
@@ -207,7 +208,7 @@ public class EditDealTests
             Id = deal2.Id,
             AccountId = asset1.AccountId,
             CreatedAt = DateTime.Now,
-            Operation = operation,
+            Type = type,
             Price = price,
             Quantity = 1,
             Commission = commission,
@@ -233,7 +234,7 @@ public class EditDealTests
         Assert.Equal(2, deals.Count);
         Assert.Equal(quantity, assetActual1.Quantity);
         Assert.Equal(deal.CreatedAt, dealActual.CreatedAt);
-        Assert.Equal(deal.Operation, dealActual.OperationId);
+        Assert.Equal((int)deal.Type, dealActual.TypeId);
         Assert.Equal(deal.Price, dealActual.Price);
         Assert.Equal(deal.Quantity, dealActual.Quantity);
         Assert.Equal(amount, dealActual.Amount);
@@ -245,9 +246,9 @@ public class EditDealTests
     }
     
     [Theory]
-    [InlineData(ListOperations.Purchase, "SBER", 236.54, 11, 56.98, 41560.88, 20.00, -2658.92, 11.00)]
-    [InlineData(ListOperations.Sale, "MTSS", 236.54, 11, 43.71, 46778.03, 9.00, 2558.23, 0.00)]
-    public async Task EditDeal_Success_Stock(string operation, string ticker, decimal price, int quantity, decimal commission, decimal assetQuantity1, decimal assetQuantity2, decimal amount, decimal assetQuantity3)
+    [InlineData(DealKind.Purchase, "SBER", 236.54, 11, 56.98, 41560.88, 20.00, -2658.92, 11.00)]
+    [InlineData(DealKind.Sale, "MTSS", 236.54, 11, 43.71, 46778.03, 9.00, 2558.23, 0.00)]
+    public async Task EditDeal_Success_Stock(DealKind type, string ticker, decimal price, int quantity, decimal commission, decimal assetQuantity1, decimal assetQuantity2, decimal amount, decimal assetQuantity3)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();
@@ -270,7 +271,7 @@ public class EditDealTests
             Quantity = 20, 
             Price = 230.55m,
             Amount = -4611.00m,
-            OperationId = ListOperations.Purchase,
+            TypeId = (int)DealKind.Purchase,
             CurrencyId = currency.Code,
             StockId = stock2.Ticker,
             UserId = user.Id
@@ -284,7 +285,7 @@ public class EditDealTests
             Quantity = 20, 
             Price = 210.99m,
             Amount = -4219.80m,
-            OperationId = ListOperations.Purchase,
+            TypeId = (int)DealKind.Purchase,
             CurrencyId = currency.Code,
             StockId = stock2.Ticker,
             UserId = user.Id
@@ -295,7 +296,7 @@ public class EditDealTests
             Id = deal2.Id,
             AccountId = asset1.AccountId,
             CreatedAt = DateTime.Now,
-            Operation = operation,
+            Type = type,
             Price = price,
             Quantity = quantity,
             Commission = commission,
@@ -328,7 +329,7 @@ public class EditDealTests
         Assert.Equal(assetQuantity2, assetActual2.Quantity);
         Assert.Equal(assetQuantity3, assetActual3.Quantity, 2);
         Assert.Equal(deal.CreatedAt, actualDeal.CreatedAt);
-        Assert.Equal(deal.Operation, actualDeal.OperationId);
+        Assert.Equal((int)deal.Type, actualDeal.TypeId);
         Assert.Equal(deal.Price, actualDeal.Price);
         Assert.Equal(deal.Quantity, actualDeal.Quantity);
         Assert.Equal(deal.Commission, actualDeal.Commission);
@@ -361,7 +362,7 @@ public class EditDealTests
             Quantity = 1, 
             Price = 400.55m,
             Amount = 400.55m,
-            OperationId = ListOperations.Add, 
+            TypeId = (int)DealKind.Add, 
             CurrencyId = currency.Code,
             UserId = user.Id
         };
@@ -374,7 +375,7 @@ public class EditDealTests
             Quantity = 1, 
             Price = 999.99m,
             Amount = 999.99m,
-            OperationId = ListOperations.Add, 
+            TypeId = (int)DealKind.Add, 
             CurrencyId = currency.Code,
             UserId = user.Id
         };
@@ -384,7 +385,7 @@ public class EditDealTests
             Id = deal2.Id,
             AccountId = asset1.AccountId,
             CreatedAt = DateTime.Now,
-            Operation = ListOperations.Purchase,
+            Type = DealKind.Purchase,
             Price = 16.78m,
             Quantity = 1,
             Commission = 0.78m,
@@ -413,7 +414,7 @@ public class EditDealTests
         Assert.Equal(382.99m, assetActual1.Quantity);
         Assert.Equal(1, assetActual2.Quantity);
         Assert.Equal(deal.CreatedAt, dealActual.CreatedAt);
-        Assert.Equal(deal.Operation, dealActual.OperationId);
+        Assert.Equal((int)deal.Type, dealActual.TypeId);
         Assert.Equal(deal.Price, dealActual.Price);
         Assert.Equal(deal.Quantity, dealActual.Quantity);
         Assert.Equal(-17.56m, dealActual.Amount);

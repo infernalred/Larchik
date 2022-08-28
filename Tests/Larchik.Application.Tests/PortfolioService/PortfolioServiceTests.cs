@@ -8,6 +8,7 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Services.Contracts;
 using Larchik.Domain;
+using Larchik.Domain.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -43,7 +44,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 50, 
             Price = 190,
-            OperationId = ListOperations.Purchase, 
+            TypeId = (int)DealKind.Purchase, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -56,7 +57,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 11, 
             Price = 230,
-            OperationId = ListOperations.Purchase, 
+            TypeId = (int)DealKind.Purchase, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -69,7 +70,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 5, 
             Price = 210,
-            OperationId = ListOperations.Purchase, 
+            TypeId = (int)DealKind.Purchase, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -82,7 +83,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 3, 
             Price = 100,
-            OperationId = ListOperations.Sale, 
+            TypeId = (int)DealKind.Sale, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -95,7 +96,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 3, 
             Price = 100,
-            OperationId = ListOperations.Sale, 
+            TypeId = (int)DealKind.Sale, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -108,7 +109,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 1, 
             Price = 55,
-            OperationId = ListOperations.Purchase, 
+            TypeId = (int)DealKind.Purchase, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -121,7 +122,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 5, 
             Price = 210,
-            OperationId = ListOperations.Purchase, 
+            TypeId = (int)DealKind.Purchase, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = test.Id
@@ -134,7 +135,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 3, 
             Price = 100,
-            OperationId = ListOperations.Sale, 
+            TypeId = (int)DealKind.Sale, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = test.Id
@@ -191,7 +192,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 50, 
             Price = 190,
-            OperationId = ListOperations.Purchase, 
+            TypeId = (int)DealKind.Purchase, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -204,7 +205,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 11, 
             Price = 230,
-            OperationId = ListOperations.Purchase, 
+            TypeId = (int)DealKind.Purchase, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -217,7 +218,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 5, 
             Price = 210,
-            OperationId = ListOperations.Purchase, 
+            TypeId = (int)DealKind.Purchase, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -230,7 +231,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 3, 
             Price = 100,
-            OperationId = ListOperations.Sale, 
+            TypeId = (int)DealKind.Sale, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -243,7 +244,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 3, 
             Price = 100,
-            OperationId = ListOperations.Sale, 
+            TypeId = (int)DealKind.Sale, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -256,7 +257,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 1, 
             Price = 55,
-            OperationId = ListOperations.Purchase, 
+            TypeId = (int)DealKind.Purchase, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = user.Id
@@ -269,7 +270,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 5, 
             Price = 210,
-            OperationId = ListOperations.Purchase, 
+            TypeId = (int)DealKind.Purchase, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = test.Id
@@ -282,7 +283,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = 3, 
             Price = 100,
-            OperationId = ListOperations.Sale, 
+            TypeId = (int)DealKind.Sale, 
             StockId = stock.Ticker,
             CurrencyId = currency.Code,
             UserId = test.Id
@@ -321,10 +322,10 @@ public class PortfolioServiceTests
         string ticker, 
         decimal quantity, 
         decimal averagePrice, 
-        Tuple<int, decimal, string, string, string?> data1, 
-        Tuple<int, decimal, string, string, string?> data2, 
-        Tuple<int, decimal, string, string, string?> data3, 
-        Tuple<int, decimal, string, string, string?> data4)
+        Tuple<int, decimal, DealKind, string, string?> data1, 
+        Tuple<int, decimal, DealKind, string, string?> data2, 
+        Tuple<int, decimal, DealKind, string, string?> data3, 
+        Tuple<int, decimal, DealKind, string, string?> data4)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.PortfolioService>>();
@@ -343,7 +344,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = data1.Item1, 
             Price = data1.Item2,
-            OperationId = data1.Item3,
+            TypeId = (int)data1.Item3,
             CurrencyId = data1.Item4,
             StockId = data1.Item5,
             UserId = user.Id
@@ -356,7 +357,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = data2.Item1, 
             Price = data2.Item2,
-            OperationId = data2.Item3, 
+            TypeId = (int)data2.Item3, 
             CurrencyId = data2.Item4,
             StockId = data2.Item5,
             UserId = user.Id
@@ -369,7 +370,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = data3.Item1, 
             Price = data3.Item2,
-            OperationId = data3.Item3, 
+            TypeId = (int)data3.Item3, 
             CurrencyId = data3.Item4,
             StockId = data3.Item5,
             UserId = user.Id
@@ -382,7 +383,7 @@ public class PortfolioServiceTests
             Id = Guid.NewGuid(), 
             Quantity = data4.Item1, 
             Price = data4.Item2,
-            OperationId = data4.Item3, 
+            TypeId = (int)data4.Item3, 
             CurrencyId = data4.Item4,
             StockId = data4.Item5,
             UserId = user.Id
@@ -414,10 +415,10 @@ public class PortfolioServiceTests
     }
     
     public static IEnumerable<object[]> Data(){
-        yield return new object[] { "USD", 556.32m, 75.00m, Tuple.Create<int, decimal, string, string, string?>(1, 356.32m, ListOperations.Add, "USD", null), Tuple.Create(445, 75.00m, ListOperations.Purchase, "RUB", "USD"), Tuple.Create(345, 56.89m, ListOperations.Sale, "RUB", "USD"), Tuple.Create<int, decimal, string, string, string?>(1, 300.00m, ListOperations.Withdrawal, "USD", null)};
-        yield return new object[] { "RUB", 16389.01m, 1.00m, Tuple.Create<int, decimal, string, string, string?>(1, 6300.56m, ListOperations.Add, "RUB", null), Tuple.Create<int, decimal, string, string, string?>(1, 8579.06m, ListOperations.Add, "RUB", null), Tuple.Create<int, decimal, string, string, string?>(1, 7369.00m, ListOperations.Add, "RUB", null), Tuple.Create<int, decimal, string, string, string?>(1, 5859.61m, ListOperations.Add, "RUB", null)};
-        yield return new object[] { "MTSS", 40m, 190.00m, Tuple.Create(3, 243.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(3, 179.00m, ListOperations.Sale, "RUB", "MTSS"), Tuple.Create(41, 190.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(1, 163.00m, ListOperations.Sale, "RUB", "MTSS")};
-        yield return new object[] { "MTSS", 8m, 177.62m, Tuple.Create(3, 250.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(3, 210.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(5, 220.00m, ListOperations.Sale, "RUB", "MTSS"), Tuple.Create(7, 173.00m, ListOperations.Purchase, "RUB", "MTSS")};
-        yield return new object[] { "MTSS", 12m, 196.67m, Tuple.Create(3, 250.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(3, 210.00m, ListOperations.Sale, "RUB", "MTSS"), Tuple.Create(5, 220.00m, ListOperations.Purchase, "RUB", "MTSS"), Tuple.Create(7, 180.00m, ListOperations.Purchase, "RUB", "MTSS")};
+        yield return new object[] { "USD", 556.32m, 75.00m, Tuple.Create<int, decimal, DealKind, string, string?>(1, 356.32m, DealKind.Add, "USD", null), Tuple.Create(445, 75.00m, DealKind.Purchase, "RUB", "USD"), Tuple.Create(345, 56.89m, DealKind.Sale, "RUB", "USD"), Tuple.Create<int, decimal, DealKind, string, string?>(1, 300.00m, DealKind.Withdrawal, "USD", null)};
+        yield return new object[] { "RUB", 16389.01m, 1.00m, Tuple.Create<int, decimal, DealKind, string, string?>(1, 6300.56m, DealKind.Add, "RUB", null), Tuple.Create<int, decimal, DealKind, string, string?>(1, 8579.06m, DealKind.Add, "RUB", null), Tuple.Create<int, decimal, DealKind, string, string?>(1, 7369.00m, DealKind.Add, "RUB", null), Tuple.Create<int, decimal, DealKind, string, string?>(1, 5859.61m, DealKind.Add, "RUB", null)};
+        yield return new object[] { "MTSS", 40m, 190.00m, Tuple.Create(3, 243.00m, DealKind.Purchase, "RUB", "MTSS"), Tuple.Create(3, 179.00m, DealKind.Sale, "RUB", "MTSS"), Tuple.Create(41, 190.00m, DealKind.Purchase, "RUB", "MTSS"), Tuple.Create(1, 163.00m, DealKind.Sale, "RUB", "MTSS")};
+        yield return new object[] { "MTSS", 8m, 177.62m, Tuple.Create(3, 250.00m, DealKind.Purchase, "RUB", "MTSS"), Tuple.Create(3, 210.00m, DealKind.Purchase, "RUB", "MTSS"), Tuple.Create(5, 220.00m, DealKind.Sale, "RUB", "MTSS"), Tuple.Create(7, 173.00m, DealKind.Purchase, "RUB", "MTSS")};
+        yield return new object[] { "MTSS", 12m, 196.67m, Tuple.Create(3, 250.00m, DealKind.Purchase, "RUB", "MTSS"), Tuple.Create(3, 210.00m, DealKind.Sale, "RUB", "MTSS"), Tuple.Create(5, 220.00m, DealKind.Purchase, "RUB", "MTSS"), Tuple.Create(7, 180.00m, DealKind.Purchase, "RUB", "MTSS")};
     }
 }

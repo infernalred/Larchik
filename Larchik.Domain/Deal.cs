@@ -8,7 +8,6 @@ public class Deal
     public decimal Amount { get; set; }
     public DealType? Type { get; set; }
     public int TypeId { get; set; }
-    public Operation? Operation { get; set; }
     public string OperationId { get; set; } = string.Empty;
     public Currency Currency { get; set; } = null!;
     public string CurrencyId { get; set; } = null!;

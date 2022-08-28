@@ -1,9 +1,9 @@
 export class DealSearchParams {
     ticker;
-    operation;
+    type: number | undefined;
 
-    constructor(ticker = "", operation = "") {
+    constructor(ticker = "", type?: number | undefined) {
         this.ticker = ticker;
-        this.operation = operation;
+        this.type = type;
     }
 }

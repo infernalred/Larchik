@@ -10,6 +10,7 @@ public class DealTypeModelConfiguration : IEntityTypeConfiguration<DealType>
     {
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Property(x => x.Code).IsRequired().HasMaxLength(25);
     }
 }

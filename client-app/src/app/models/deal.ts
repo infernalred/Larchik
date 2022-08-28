@@ -2,7 +2,7 @@ export interface Deal {
     id: string;
     quantity: number;
     price: number;
-    operation: string;
+    type: number | undefined;
     currency: string;
     stock: string | undefined;
     commission: number;
@@ -20,7 +20,7 @@ export class DealFormValues {
     id: string = '';
     quantity: number = 1;
     price: number = 0;
-    operation: string = '';
+    type: number | undefined = undefined;
     currency: string = '';
     stock: string | undefined;
     commission: number = 0;
@@ -32,7 +32,7 @@ export class DealFormValues {
             this.id = deal.id;
             this.quantity = deal.quantity;
             this.price = deal.price;
-            this.operation = deal.operation;
+            this.type = deal.type;
             this.currency = deal.currency;
             this.stock = deal.stock;
             this.commission = deal.commission;
@@ -40,4 +40,14 @@ export class DealFormValues {
             this.accountId = deal.accountId;
         }
     }
+}
+
+export enum DealKind {
+    Add = 1,
+    Withdrawal,
+    Purchase,
+    Sale,
+    Commission,
+    Tax,
+    Dividends
 }

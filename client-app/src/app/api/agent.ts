@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import { OperationResult } from '../models/operationResult';
 import { Account, AccountFormValues } from '../models/account';
 import { Deal, DealFormValues } from '../models/deal';
-import { Operation } from '../models/operation';
+import { DealType } from '../models/dealType';
 import { Stock } from '../models/stock';
 import { Portfolio } from '../models/portfolio';
 import { Currency } from '../models/currency';
@@ -90,8 +90,8 @@ const Deals = {
     details: (id: string) => requests.get<OperationResult<Deal>>(`/deals/${id}`)
 }
 
-const Operations = {
-    list: () => requests.get<OperationResult<Operation[]>>('/operations')
+const DealTypes = {
+    list: () => requests.get<OperationResult<DealType[]>>('/dealTypes')
 }
 
 const Stocks = {
@@ -111,7 +111,7 @@ const agent = {
     Users,
     Accounts,
     Deals,
-    Operations,
+    DealTypes,
     Stocks,
     Portfolios,
     Currencies
