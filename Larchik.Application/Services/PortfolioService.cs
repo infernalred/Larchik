@@ -85,7 +85,7 @@ public class PortfolioService : IPortfolioService
                     StockId = g.Key,
                     Quantity = g.Sum(x => x.Quantity),
                     Stock = g.First().Stock
-                }).OrderBy(x => x.Stock.TypeId);
+                }).OrderBy(x => x.Stock.Type);
 
         foreach (var asset in assetsGroup)
         {
@@ -164,7 +164,7 @@ public class PortfolioService : IPortfolioService
     private async Task<decimal> GeInOutMoney(IEnumerable<Deal> deals, string currencyId)
     {
         var moneyDeals = deals
-            .Where(x => x.TypeId is not (int)DealKind.Purchase or (int)DealKind.Sale);
+            .Where(x => x.TypeId != (int)DealKind.Purchase && x.TypeId != (int)DealKind.Sale);
         
         var result = 0m;
 
