@@ -13,6 +13,7 @@ public interface IDataContext
     DbSet<StockType> StockTypes { get; set; }
     DbSet<Sector> Sectors { get; set; }
     DbSet<Operation> Operations { get; set; }
+    DbSet<DealType> DealTypes { get; set; }
     DbSet<Deal> Deals { get; set; }
     DbSet<Exchange> Exchanges { get; set; }
 }

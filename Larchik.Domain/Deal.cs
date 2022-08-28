@@ -6,7 +6,8 @@ public class Deal
     public int Quantity { get; set; }
     public decimal Price { get; set; }
     public decimal Amount { get; set; }
-    public Operation? Operation { get; set; }
+    public DealType? Type { get; set; }
+    public int TypeId { get; set; }
     public string OperationId { get; set; } = string.Empty;
     public Currency Currency { get; set; } = null!;
     public string CurrencyId { get; set; } = null!;

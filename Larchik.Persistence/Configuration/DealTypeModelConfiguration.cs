@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Larchik.Persistence.Configuration;
 
-public class StockTypeModelConfiguration : IEntityTypeConfiguration<StockType>
+public class DealTypeModelConfiguration : IEntityTypeConfiguration<DealType>
 {
-    public void Configure(EntityTypeBuilder<StockType> builder)
+    public void Configure(EntityTypeBuilder<DealType> builder)
     {
         builder.HasKey(x => x.Id);
 

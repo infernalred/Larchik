@@ -34,8 +34,8 @@ export default class DealStore {
             params.append("ticker", this.dealSearchParams.ticker);
         }
 
-        if (this.dealSearchParams.operation) {
-            params.append("operation", this.dealSearchParams.operation);
+        if (this.dealSearchParams.type) {
+            params.append("type", this.dealSearchParams.type.toString());
         }
         return params;
     }

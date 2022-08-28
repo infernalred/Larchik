@@ -5,6 +5,7 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
+using Larchik.Domain.Enum;
 using Larchik.Persistence.Context;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -39,7 +40,7 @@ public class CurrencyOperationsReport
                 .Where(x => x.Account.User.UserName == _userAccessor.GetUsername() 
                             && x.CreatedAt >= request.Params.StartDate 
                             && x.CreatedAt <= request.Params.EndDate 
-                            && (x.OperationId == ListOperations.Add || x.OperationId == ListOperations.Dividends))
+                            && (x.TypeId == (int)DealKind.Add || x.TypeId == (int)DealKind.Dividends))
                 .GroupBy(x => new { x.Account.Name, x.CurrencyId }, 
                     (key, group) => new CurrencyDealsReport
                 {

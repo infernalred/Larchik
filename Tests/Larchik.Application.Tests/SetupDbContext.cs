@@ -19,7 +19,7 @@ public static class SetupDbContext
         CreateCurrency(context);
         CreateStockTypes(context);
         CreateSectors(context);
-        CreateOperations(context);
+        CreateDealTypes(context);
         CreateStocks(context);
         CreateExchanges(context);
 
@@ -44,10 +44,10 @@ public static class SetupDbContext
             account1, account2, account3
         };
             
-        context.Accounts.AddRangeAsync(accounts);
+        context.Accounts.AddRange(accounts);
     }
 
-    private static void CreateCurrency(DataContext context)
+    private static void CreateCurrency(IDataContext context)
     {
         var rub = new Currency { Code = "RUB" };
         var usd = new Currency { Code = "USD" };
@@ -61,7 +61,7 @@ public static class SetupDbContext
         context.Currencies.AddRange(currencies);
     }
     
-    private static void CreateStockTypes(DataContext context)
+    private static void CreateStockTypes(IDataContext context)
     {
         var type1 = new StockType { Id = 1, Code = "SHARE" };
         var type2 = new StockType { Id = 2, Code = "BOND" };
@@ -76,7 +76,7 @@ public static class SetupDbContext
         context.StockTypes.AddRange(stockTypes);
     }
     
-    private static void CreateSectors(DataContext context)
+    private static void CreateSectors(IDataContext context)
     {
         var sector1 = new Sector { Code = "Energy" };
         var sector2 = new Sector { Code = "Materials" };
@@ -105,25 +105,25 @@ public static class SetupDbContext
         context.Sectors.AddRange(sectors);
     }
     
-    private static void CreateOperations(DataContext context)
+    private static void CreateDealTypes(IDataContext context)
     {
-        var operation1 = new Operation { Code = "Пополнение" };
-        var operation2 = new Operation { Code = "Вывод" };
-        var operation3 = new Operation { Code = "Покупка" };
-        var operation4 = new Operation { Code = "Продажа" };
-        var operation5 = new Operation { Code = "Комиссия" };
-        var operation6 = new Operation { Code = "Налог" };
-        var operation7 = new Operation { Code = "Дивиденды" };
-            
-        var operations = new List<Operation>
+        var dealType1 = new DealType { Id = 1, Code = "Пополнение" };
+        var dealType2 = new DealType { Id = 2, Code = "Вывод" };
+        var dealType3 = new DealType { Id = 3, Code = "Покупка" };
+        var dealType4 = new DealType { Id = 4, Code = "Продажа" };
+        var dealType5 = new DealType { Id = 5, Code = "Комиссия" };
+        var dealType6 = new DealType { Id = 6, Code = "Налог" };
+        var dealType7 = new DealType { Id = 7, Code = "Дивиденды" };
+
+        var dealTypes = new List<DealType>
         {
-            operation1, operation2, operation3, operation4, operation5, operation6, operation7
+            dealType1, dealType2, dealType3, dealType4, dealType5, dealType6, dealType7
         };
-            
-        context.Operations.AddRange(operations);
+
+        context.DealTypes.AddRange(dealTypes);
     }
     
-    private static void CreateStocks(DataContext context)
+    private static void CreateStocks(IDataContext context)
     {
         var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта", Figi = "RUB", LastPrice = 1, Type = StockKind.Money };
         var money2 = new Stock { Ticker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта", Figi = "USD", LastPrice = 121, Type = StockKind.Money };

@@ -7,6 +7,7 @@ using AutoMapper;
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Domain;
+using Larchik.Domain.Enum;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,11 +19,11 @@ namespace Larchik.Application.Tests.DealService;
 public class DeleteDealTests
 {
     [Theory]
-    [InlineData(48.53, 40, 40, 9, 8.53, 0.47, ListOperations.Add, ListOperations.Add, 40.00)]
-    [InlineData(38.18, 49, 49, 9, -10.82, 1.82, ListOperations.Add, ListOperations.Withdrawal, 49.00)]
-    [InlineData(55.99, 49, 49, 9, 6.99, 2.01, ListOperations.Add, ListOperations.Dividends, 49.00)]
-    [InlineData(39.84, 49, 49, 9, -9.16, 0.16, ListOperations.Add, ListOperations.Tax, 49.00)]
-    public async Task DeleteDeal_Success_Money_Variant1(decimal quantity, decimal price1, decimal amount1, decimal price2, decimal amount2, decimal commission, string operation1, string operation2, decimal expectQuantity)
+    [InlineData(48.53, 40, 40, 9, 8.53, 0.47, DealKind.Add, DealKind.Add, 40.00)]
+    [InlineData(38.18, 49, 49, 9, -10.82, 1.82, DealKind.Add, DealKind.Withdrawal, 49.00)]
+    [InlineData(55.99, 49, 49, 9, 6.99, 2.01, DealKind.Add, DealKind.Dividends, 49.00)]
+    [InlineData(39.84, 49, 49, 9, -9.16, 0.16, DealKind.Add, DealKind.Tax, 49.00)]
+    public async Task DeleteDeal_Success_Money_Variant1(decimal quantity, decimal price1, decimal amount1, decimal price2, decimal amount2, decimal commission, DealKind type1, DealKind type2, decimal expectQuantity)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();
@@ -41,7 +42,7 @@ public class DeleteDealTests
             Quantity = 1, 
             Price = price1,
             Amount = amount1,
-            OperationId = operation1, 
+            TypeId = (int)type1, 
             CurrencyId = currency.Code,
             UserId = user.Id
         };
@@ -55,7 +56,7 @@ public class DeleteDealTests
             Price = price2,
             Amount = amount2,
             Commission = commission,
-            OperationId = operation2, 
+            TypeId = (int)type2, 
             CurrencyId = currency.Code,
             UserId = user.Id
         };
@@ -103,7 +104,7 @@ public class DeleteDealTests
             Quantity = 20, 
             Price = 210,
             Amount = -4200,
-            OperationId = ListOperations.Purchase,
+            TypeId = (int)DealKind.Purchase,
             CurrencyId = currency.Code,
             StockId = stock2.Ticker,
             UserId = user.Id
@@ -117,7 +118,7 @@ public class DeleteDealTests
             Price = 220,
             Amount = -4403.44m,
             Commission = 3.44m,
-            OperationId = ListOperations.Purchase,
+            TypeId = (int)DealKind.Purchase,
             CurrencyId = currency.Code,
             StockId = stock2.Ticker,
             UserId = user.Id
@@ -169,7 +170,7 @@ public class DeleteDealTests
             Quantity = 20, 
             Price = 210,
             Amount = -4200,
-            OperationId = ListOperations.Purchase,
+            TypeId = (int)DealKind.Purchase,
             CurrencyId = currency.Code,
             StockId = stock2.Ticker,
             UserId = user.Id
@@ -183,7 +184,7 @@ public class DeleteDealTests
             Price = 220,
             Amount = 4397.11m,
             Commission = 2.89m,
-            OperationId = ListOperations.Sale,
+            TypeId = (int)DealKind.Sale,
             CurrencyId = currency.Code,
             StockId = stock2.Ticker,
             UserId = user.Id

@@ -3,6 +3,7 @@ import React, { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Table } from "semantic-ui-react";
 import LoadingComponent from "../../app/layout/LoadingComponent";
+import { StockType } from "../../app/models/stock";
 import { useStore } from "../../app/store/store";
 
 export default observer(function AccountDetails() {
@@ -36,7 +37,7 @@ export default observer(function AccountDetails() {
                         <Table.Cell>{asset.stock.ticker}</Table.Cell>
                         <Table.Cell>{asset.quantity.toLocaleString("ru")}</Table.Cell>
                         <Table.Cell>{asset.stock.sector}</Table.Cell>
-                        <Table.Cell>{asset.stock.type}</Table.Cell>
+                        <Table.Cell>{StockType[asset.stock.type]}</Table.Cell>
                     </Table.Row>
                 ))}
             </Table.Body>

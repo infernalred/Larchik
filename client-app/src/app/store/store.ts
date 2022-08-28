@@ -4,7 +4,7 @@ import CommonStore from "./commonStore";
 import CurrencyStore from "./currencyStore";
 import DealStore from "./dealStore";
 import ModalStore from "./modalStore";
-import OperationStore from "./operationStore";
+import DealTypeStore from "./dealTypeStore";
 import PortfolioStore from "./portfolioStore";
 import StockStore from "./stockStore";
 import UserStore from "./userStore";
@@ -15,7 +15,7 @@ interface Store {
     modalStore: ModalStore;
     accountStore: AccountStore;
     dealStore: DealStore;
-    operationStore: OperationStore;
+    dealTypeStore: DealTypeStore;
     stockStore: StockStore;
     portfolioStore: PortfolioStore;
     currencyStore: CurrencyStore;
@@ -27,7 +27,7 @@ export const store: Store = {
     modalStore: new ModalStore(),
     accountStore: new AccountStore(),
     dealStore: new DealStore(),
-    operationStore: new OperationStore(),
+    dealTypeStore: new DealTypeStore(),
     stockStore: new StockStore(),
     portfolioStore: new PortfolioStore(),
     currencyStore: new CurrencyStore()

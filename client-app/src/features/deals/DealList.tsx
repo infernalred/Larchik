@@ -8,16 +8,16 @@ import { DealSearchParams } from "../../app/models/dealSearchParams";
 import { useStore } from "../../app/store/store";
 
 export default observer(function DealList() {
-    const { dealStore, operationStore } = useStore();
+    const { dealStore, dealTypeStore } = useStore();
     const { loadDeals, deals, loading, deleteDeal, pagination, pagingParams, setPagingParams, dealSearchParams, setDealSearchParams } = dealStore;
-    const { loadOperations, loadingOperations, operationsSet } = operationStore;
+    const { loadDealTypes, loadingDealTypes, dealTypesSet, dealTypesRegistry } = dealTypeStore;
     const { id } = useParams<{ id: string }>();
     const [loadingNext, setLoadingNext] = useState(false);
     const [searchParams, setSearchParams] = useSearchParams();
     const [pageNumber] = useState(Number(searchParams.get("pageNumber")) || pagingParams.pageNumber);
     const [pageSize] = useState(Number(searchParams.get("pageSize") || pagingParams.pageSize));
     const [ticker] = useState(searchParams.get("ticker") || "");
-    const [operation] = useState(searchParams.get("operation") || "");
+    const [type] = useState(Number(searchParams.get("type")) || undefined);
     const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
 
     function getParams(paging: PagingParams, searchParams: DealSearchParams) {
@@ -29,8 +29,8 @@ export default observer(function DealList() {
             params.append("ticker", searchParams.ticker);
         }
 
-        if (searchParams.operation) {
-            params.append("operation", searchParams.operation);
+        if (searchParams.type) {
+            params.append("type", searchParams.type.toString());
         }
         return params;
     }
@@ -43,9 +43,9 @@ export default observer(function DealList() {
         loadDeals(id!).then(() => setLoadingNext(false));
     }
 
-    function handleOnChangeOperation(_: any, data: DropdownProps) {
+    function handleOnChangeType(_: any, data: DropdownProps) {
         setLoadingNext(true);
-        handleOnChange(dealSearchParams.ticker, (data.value?.toString() || ""));
+        handleOnChange(dealSearchParams.ticker, Number(data.value) || undefined);
         loadDeals(id!).then(() => setLoadingNext(false));
     }
 
@@ -55,7 +55,7 @@ export default observer(function DealList() {
             setTimer(null);
         }
 
-        handleOnChange(data.value, dealSearchParams.operation)
+        handleOnChange(data.value, dealSearchParams.type)
         setLoadingNext(true);
         setTimer(
             setTimeout(() => {
@@ -64,22 +64,21 @@ export default observer(function DealList() {
         );
     }
 
-    function handleOnChange(ticker: string, operation: string) {        
-        const newDealSearchParams = new DealSearchParams(ticker, operation);
+    function handleOnChange(ticker: string, type: number | undefined = undefined) {        
+        const newDealSearchParams = new DealSearchParams(ticker, type);
         setDealSearchParams(newDealSearchParams);
         setSearchParams(getParams(pagingParams, newDealSearchParams));
     }
 
     useEffect(() => {
-        loadOperations();
-
         if (id) {
             setPagingParams(new PagingParams(pageNumber, pageSize));
-            setDealSearchParams(new DealSearchParams(ticker, operation));
+            setDealSearchParams(new DealSearchParams(ticker, type));
             loadDeals(id);
+            loadDealTypes();
         }
 
-    }, [id, loadDeals, loadOperations, pageNumber, pageSize, setPagingParams, setDealSearchParams, ticker, operation])
+    }, [id, loadDeals, dealTypesSet.length, loadDealTypes, pageNumber, pageSize, setPagingParams, setDealSearchParams, ticker, type])
 
     if (dealStore.loadingDeals && !loadingNext) return <LoadingComponent content='Loading accounts...' />
 
@@ -91,12 +90,12 @@ export default observer(function DealList() {
                         <Form.Input fluid placeholder="Тикер" value={dealSearchParams.ticker} name="ticker" onChange={handleOnChangeDelay} />
                         <Form.Select
                             fluid
-                            options={operationsSet}
-                            placeholder="Тип операции"
-                            loading={loadingOperations}
-                            value={dealSearchParams.operation}
-                            name="operation"
-                            onChange={handleOnChangeOperation}
+                            options={dealTypesSet}
+                            placeholder="Тип сделки"
+                            loading={loadingDealTypes}
+                            value={dealSearchParams.type}
+                            name="type"
+                            onChange={handleOnChangeType}
                             clearable
                         />
                         <Pagination
@@ -117,7 +116,7 @@ export default observer(function DealList() {
                         <Table.HeaderCell>Кол-во</Table.HeaderCell>
                         <Table.HeaderCell>Цена</Table.HeaderCell>
                         <Table.HeaderCell>Комиссия</Table.HeaderCell>
-                        <Table.HeaderCell>Тип операции</Table.HeaderCell>
+                        <Table.HeaderCell>Тип сделки</Table.HeaderCell>
                         <Table.HeaderCell>Действия</Table.HeaderCell>
                     </Table.Row>
                 </Table.Header>
@@ -131,7 +130,7 @@ export default observer(function DealList() {
                             <Table.Cell>{deal.quantity}</Table.Cell>
                             <Table.Cell>{deal.price.toLocaleString("ru")}</Table.Cell>
                             <Table.Cell>{deal.commission.toLocaleString("ru")}</Table.Cell>
-                            <Table.Cell>{deal.operation}</Table.Cell>
+                            <Table.Cell>{deal.type ? dealTypesRegistry.get(deal.type.toString())?.code : ""}</Table.Cell>
                             <Table.Cell>
                                 <Button
                                     as={Link}

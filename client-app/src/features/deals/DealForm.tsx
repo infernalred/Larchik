@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { useStore } from "../../app/store/store";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { DealFormValues } from "../../app/models/deal";
+import { DealFormValues, DealKind } from "../../app/models/deal";
 import * as Yup from "yup";
 import LoadingComponent from "../../app/layout/LoadingComponent";
 import { Button, Header, Segment } from "semantic-ui-react";
@@ -18,9 +18,9 @@ registerLocale("ru", ru);
 
 export default observer(function DealForm() {
     const navigate = useNavigate();
-    const { dealStore, operationStore, stockStore, accountStore, currencyStore } = useStore();
+    const { dealStore, dealTypeStore, stockStore, accountStore, currencyStore } = useStore();
     const { createDeal, updateDeal, loadDeal, loadingDeals } = dealStore;
-    const { loadOperations, loadingOperations, operationsSet } = operationStore;
+    const { loadDealTypes, loadingDealTypes, dealTypesSet } = dealTypeStore;
     const { loadStocks, loadingStocks, stocksSet } = stockStore;
     const { loadAccounts, loadingInitial, accountSet } = accountStore;
     const { loadCurrencies, loadingCurrencies, currenciesSet } = currencyStore;
@@ -32,10 +32,10 @@ export default observer(function DealForm() {
         isStock: Yup.boolean(),
         quantity: Yup.number().min(1, "Значение должно быть больше 0").required("Значение обязательно"),
         price: Yup.string().min(1, "Значение должно быть больше 0").required("Значение обязательно"),
-        operation: Yup.string().required("Тип операции обязателен"),
+        type: Yup.number().required("Тип сделки обязателен"),
         currency: Yup.string().required("Тип валюты обязателен"),
-        stock: Yup.string().when("operation", {
-            is: (value: string) => value === "Продажа" || value === "Покупка",
+        stock: Yup.string().when("type", {
+            is: (value: number) => value === DealKind.Purchase || value === DealKind.Sale,
             then: Yup.string().required("Тикер обязателен"),
             otherwise: Yup.string().nullable()
         }),
@@ -46,12 +46,12 @@ export default observer(function DealForm() {
 
     useEffect(() => {
         loadStocks();
-        loadOperations();
+        loadDealTypes();
         loadAccounts();
         loadCurrencies();
 
         if (id) loadDeal(id).then(deal => setDeal(new DealFormValues(deal)))
-    }, [id, loadDeal, loadStocks, loadOperations, loadAccounts, loadCurrencies]);
+    }, [id, loadDeal, loadStocks, loadDealTypes, loadAccounts, loadCurrencies]);
 
 
 
@@ -81,14 +81,14 @@ export default observer(function DealForm() {
                 {({ handleSubmit, isValid, isSubmitting, values }) => (
                     <Form className="ui form" onSubmit={handleSubmit} autoComplete="off">
                         <label>Тип</label>
-                        <MySelectOptions placeholder="Тип" name="operation" options={operationsSet} loading={loadingOperations} />
+                        <MySelectOptions placeholder="Тип" name="type" options={dealTypesSet} loading={loadingDealTypes} />
                         <label>Валюта</label>
                         <MySelectOptions placeholder="Валюта" name="currency" options={currenciesSet} loading={loadingCurrencies} />
                         <label>Цена</label>
                         <MyTextInput placeholder="Цена" name="price" type="number" />
                         <label>Комиссия</label>
                         <MyTextInput placeholder="Комиссия" name="commission" type="number" />
-                        {(values.operation === "Покупка" || values.operation === "Продажа") &&
+                        {(values.type === DealKind.Purchase || values.type === DealKind.Sale) &&
                             <>
                                 <label>Кол-во</label>
                                 <MyTextInput placeholder="Кол-во" name="quantity" type="number" />

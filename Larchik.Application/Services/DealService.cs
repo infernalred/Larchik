@@ -4,6 +4,7 @@ using Larchik.Application.Dtos;
 using Larchik.Application.Helpers;
 using Larchik.Application.Services.Contracts;
 using Larchik.Domain;
+using Larchik.Domain.Enum;
 using Larchik.Persistence.Context;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,7 @@ public class DealService : IDealService
     private readonly DataContext _context;
     private readonly IMapper _mapper;
     private readonly IUserAccessor _userAccessor;
-    private readonly Dictionary<string, Func<decimal, DealDto, CancellationToken, Task>> _operations;
+    private readonly Dictionary<DealKind, Func<decimal, DealDto, CancellationToken, Task>> _operations;
 
     public DealService(ILogger<DealService> logger, DataContext context, IMapper mapper, IUserAccessor userAccessor)
     {
@@ -25,15 +26,15 @@ public class DealService : IDealService
         _context = context;
         _mapper = mapper;
         _userAccessor = userAccessor;
-        _operations = new Dictionary<string, Func<decimal, DealDto, CancellationToken, Task>>
+        _operations = new Dictionary<DealKind, Func<decimal, DealDto, CancellationToken, Task>>
         {
-            {ListOperations.Add, OperationAddAsync},
-            {ListOperations.Commission, OperationAddAsync},
-            {ListOperations.Dividends, OperationAddAsync},
-            {ListOperations.Tax, OperationAddAsync},
-            {ListOperations.Withdrawal, OperationAddAsync},
-            {ListOperations.Purchase, OperationPurchaseAsync},
-            {ListOperations.Sale, OperationPurchaseAsync}
+            {DealKind.Add, OperationAddAsync},
+            {DealKind.Commission, OperationAddAsync},
+            {DealKind.Dividends, OperationAddAsync},
+            {DealKind.Tax, OperationAddAsync},
+            {DealKind.Withdrawal, OperationAddAsync},
+            {DealKind.Purchase, OperationPurchaseAsync},
+            {DealKind.Sale, OperationPurchaseAsync}
         };
     }
 
@@ -50,9 +51,9 @@ public class DealService : IDealService
         
         if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
         
-        var amount = OperationHelper.GetAmount(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
+        var amount = OperationHelper.GetAmount(dealDto.Type, dealDto.Quantity, dealDto.Price, dealDto.Commission);
         
-        await _operations[dealDto.Operation](amount, dealDto, cancellationToken);
+        await _operations[dealDto.Type](amount, dealDto, cancellationToken);
 
         var deal = _mapper.Map<Deal>(dealDto, opt => { opt.Items["Amount"] = amount; });
         deal.UserId = user.Id;
@@ -79,9 +80,9 @@ public class DealService : IDealService
         
         await RollbackAssetAsync(deal, cancellationToken);
         
-        var amount = OperationHelper.GetAmount(dealDto.Operation, dealDto.Quantity, dealDto.Price, dealDto.Commission);
+        var amount = OperationHelper.GetAmount(dealDto.Type, dealDto.Quantity, dealDto.Price, dealDto.Commission);
 
-        await _operations[dealDto.Operation](amount, dealDto, cancellationToken);
+        await _operations[dealDto.Type](amount, dealDto, cancellationToken);
 
         _mapper.Map(dealDto, deal, opt => { opt.Items["Amount"] = amount; });
         
@@ -117,7 +118,7 @@ public class DealService : IDealService
 
         if (dealDto.Stock != null)
         {
-            var quantity = OperationHelper.GetAssetQuantity(dealDto.Operation, dealDto.Quantity);
+            var quantity = OperationHelper.GetAssetQuantity(dealDto.Type, dealDto.Quantity);
             await AddOrUpdateAssetAsync(dealDto.Stock, quantity, dealDto.AccountId, cancellationToken);
         }
     }
@@ -148,9 +149,9 @@ public class DealService : IDealService
 
     private async Task RollbackAssetAsync(Deal deal, CancellationToken cancellationToken)
     {
-        if (deal.OperationId is ListOperations.Purchase or ListOperations.Sale)
+        if (deal.TypeId is (int)DealKind.Purchase or (int)DealKind.Sale)
         {
-            var quantity = OperationHelper.GetAssetQuantity(deal.OperationId, deal.Quantity);
+            var quantity = OperationHelper.GetAssetQuantity((DealKind)deal.TypeId, deal.Quantity);
             
             var asset = await _context.Assets
                 .AsTracking()

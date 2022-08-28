@@ -7,6 +7,7 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Dtos;
 using Larchik.Application.Helpers;
 using Larchik.Domain;
+using Larchik.Domain.Enum;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -32,7 +33,7 @@ public class CreateDealTests
             Id = Guid.NewGuid(),
             AccountId = Guid.NewGuid(),
             CreatedAt = DateTime.Now,
-            Operation = ListOperations.Add,
+            Type = DealKind.Add,
             Price = 500,
             Quantity = 1,
             Stock = "RUB"
@@ -68,7 +69,7 @@ public class CreateDealTests
             Id = Guid.NewGuid(),
             AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"),
             CreatedAt = DateTime.Now,
-            Operation = ListOperations.Add,
+            Type = DealKind.Add,
             Price = 500,
             Quantity = 1,
             Currency = "RUB1"
@@ -88,12 +89,12 @@ public class CreateDealTests
     }
     
     [Theory]
-    [InlineData(ListOperations.Add, 500.00, 0, 500.00)]
-    [InlineData(ListOperations.Withdrawal, 477.00, 5.55, -482.55)]
-    [InlineData(ListOperations.Tax, 898.78, 1.22, -900.00)]
-    [InlineData(ListOperations.Dividends, 898.99, 5.56, 893.43)]
-    [InlineData(ListOperations.Add, 898.99, 5.56, 893.43)]
-    public async Task CreateDeal_Success_Money(string operation, decimal price, decimal commission, decimal quantity)
+    [InlineData(DealKind.Add, 500.00, 0, 500.00)]
+    [InlineData(DealKind.Withdrawal, 477.00, 5.55, -482.55)]
+    [InlineData(DealKind.Tax, 898.78, 1.22, -900.00)]
+    [InlineData(DealKind.Dividends, 898.99, 5.56, 893.43)]
+    [InlineData(DealKind.Add, 898.99, 5.56, 893.43)]
+    public async Task CreateDeal_Success_Money(DealKind type, decimal price, decimal commission, decimal quantity)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();
@@ -107,7 +108,7 @@ public class CreateDealTests
             Id = Guid.NewGuid(),
             AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"),
             CreatedAt = DateTime.Now,
-            Operation = operation,
+            Type = type,
             Price = price,
             Quantity = 1,
             Commission = commission,
@@ -128,7 +129,7 @@ public class CreateDealTests
         Assert.Null(actual.Error);
         Assert.Single(deals);
         Assert.Equal(quantity, Math.Round(assetActual1.Quantity, 2));
-        Assert.Equal(operation, actualDeal.OperationId);
+        Assert.Equal((int)type, actualDeal.TypeId);
         Assert.Equal(price, actualDeal.Price);
         Assert.Equal(1, actualDeal.Quantity);
         Assert.Equal(commission, actualDeal.Commission);
@@ -143,9 +144,9 @@ public class CreateDealTests
     }
     
     [Theory]
-    [InlineData(ListOperations.Purchase, 236.54, 11, 56.98, 37341.08, 51.00, -2658.92)]
-    [InlineData(ListOperations.Sale, 236.54, 11, 43.71, 42558.23, 29.00, 2558.23)]
-    public async Task CreateDeal_Success_Stock(string operation, decimal price, int quantity, decimal commission, decimal assetQuantity1, decimal assetQuantity2, decimal amount)
+    [InlineData(DealKind.Purchase, 236.54, 11, 56.98, 37341.08, 51.00, -2658.92)]
+    [InlineData(DealKind.Sale, 236.54, 11, 43.71, 42558.23, 29.00, 2558.23)]
+    public async Task CreateDeal_Success_Stock(DealKind type, decimal price, int quantity, decimal commission, decimal assetQuantity1, decimal assetQuantity2, decimal amount)
     {
         var mockUserAccessor = new Mock<IUserAccessor>();
         var logger = new Mock<ILogger<Services.DealService>>();
@@ -165,7 +166,7 @@ public class CreateDealTests
             Id = Guid.NewGuid(),
             AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"),
             CreatedAt = DateTime.Now,
-            Operation = operation,
+            Type = type,
             Price = price,
             Quantity = quantity,
             Commission = commission,
@@ -189,7 +190,7 @@ public class CreateDealTests
         Assert.Single(deals);
         Assert.Equal(assetQuantity1, assetActual1.Quantity);
         Assert.Equal(assetQuantity2, assetActual2.Quantity);
-        Assert.Equal(operation, actualDeal.OperationId);
+        Assert.Equal((int)type, actualDeal.TypeId);
         Assert.Equal(price, actualDeal.Price);
         Assert.Equal(quantity, actualDeal.Quantity);
         Assert.Equal(commission, actualDeal.Commission);

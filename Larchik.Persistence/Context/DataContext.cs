@@ -13,6 +13,7 @@ public class DataContext : DataContextBase, IDataContext
     public DbSet<StockType> StockTypes { get; set; } = null!;
     public DbSet<Sector> Sectors { get; set; } = null!;
     public DbSet<Operation> Operations { get; set; } = null!;
+    public DbSet<DealType> DealTypes { get; set; } = null!;
     public DbSet<Deal> Deals { get; set; } = null!;
-    public DbSet<Exchange> Exchanges { get; set; }
+    public DbSet<Exchange> Exchanges { get; set; } = null!;
 }

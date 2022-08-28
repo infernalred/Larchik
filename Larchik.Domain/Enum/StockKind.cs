@@ -2,7 +2,7 @@
 
 public enum StockKind
 {
-    Share,
+    Share = 1,
     Bond,
     Etf,
     Money
