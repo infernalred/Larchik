@@ -13,7 +13,7 @@ public class MappingProfiles : AutoMapper.Profile
             .ForMember(d => d.Currency, o => o.MapFrom(s => s.CurrencyId))
             .ForMember(d => d.Sector, o => o.MapFrom(s => s.SectorId));
         CreateMap<DealDto, Deal>()
-            .ForMember(d => d.Amount, o => o.MapFrom((_, _, _, context) => context.Options.Items["Amount"]))
+            .ForMember(d => d.Amount, o => o.MapFrom((_, _, _, context) => context.Items["Amount"]))
             .ForMember(d => d.TypeId, o => o.MapFrom(s => s.Type))
             .ForMember(d => d.StockId, o => o.MapFrom(s => s.Stock))
             .ForMember(d => d.CurrencyId, o => o.MapFrom(s => s.Currency))

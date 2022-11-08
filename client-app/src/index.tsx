@@ -6,6 +6,7 @@ import "./app/layout/styles.css"
 import { unstable_HistoryRouter as HistoryRouter } from "react-router-dom";
 import { store, StoreContext } from "./app/store/store";
 import "react-datepicker/dist/react-datepicker.css";
+import "react-toastify/dist/ReactToastify.min.css";
 import { createBrowserHistory } from "history";
 
 export const history = createBrowserHistory();
