@@ -1,5 +1,4 @@
 import { makeAutoObservable, runInAction } from "mobx";
-import { history } from "../..";
 import agent from "../api/agent";
 import { User, UserFormValues } from "../models/user";
 import { store } from "./store";
@@ -41,7 +40,6 @@ export default class UserStore {
         store.commonStore.setToken(null);
         window.localStorage.removeItem('jwt');
         this.user = null;
-        history.push('/');
     }
 
     register = async (creds: UserFormValues) => {
@@ -51,7 +49,6 @@ export default class UserStore {
             runInAction(() => 
                 this.user = user
             );
-            history.push('/');
             store.modalStore.closeModal();
         } catch (error) {
             throw error;

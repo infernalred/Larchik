@@ -2,7 +2,7 @@ version: '3.4'
 
 services:
   larchikdb:
-    image: postgres
+    image: postgres:14.5
     container_name: larchikdb
     environment:
       - POSTGRES_USER=${POSTGRES_USER}

@@ -1,6 +1,5 @@
-import { observer } from "mobx-react-lite";
-import React, { useEffect } from "react";
-import { Route, Routes } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import { Container } from "semantic-ui-react";
 import AccountDetails from "../../features/accounts/AccountDetails";
@@ -16,6 +15,20 @@ import ModalContainer from "../common/modal/ModalContainer";
 import { useStore } from "../store/store";
 import LoadingComponent from "./LoadingComponent";
 import Navbar from "./Navbar";
+import AxiosInterceptorsSetup from "../api/AxiosInterceptorsSetup"
+import { observer } from "mobx-react-lite";
+
+function AxiosInterceptorNavigate() {
+  const navigate = useNavigate();
+  const [ran, setRan] = useState(false);
+
+  if (!ran) {
+      AxiosInterceptorsSetup(navigate);
+      setRan(true);
+  }
+  
+  return <></>;
+}
 
 function App() {
   const { commonStore, userStore } = useStore();
@@ -46,6 +59,7 @@ function App() {
     return (
       <>
         <Navbar />
+        <AxiosInterceptorNavigate/>
         <Container style={{ marginTop: "7em" }}>
           <Routes>
             <Route path="accounts" element={<AccountList />} />
