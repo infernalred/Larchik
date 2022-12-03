@@ -80,15 +80,15 @@ public class PortfolioService : IPortfolioService
             .ToDictionaryAsync(x => x.Ticker, x => x, cancellationToken);
 
         var assetsGroup =
-            (from a in assets
-                group a by a.Stock.Ticker
-                into g
-                select new Asset
-                {
-                    StockId = g.Key,
-                    Quantity = g.Sum(x => x.Quantity),
-                    Stock = g.First().Stock
-                }).OrderBy(x => x.Stock.Type);
+            from a in assets
+            group a by a.Stock.Ticker
+            into g
+            select new Asset
+            {
+                StockId = g.Key,
+                Quantity = g.Sum(x => x.Quantity),
+                Stock = g.First().Stock
+            };
 
         var portfolioAssets = new ConcurrentBag<PortfolioAsset>();
 
@@ -102,7 +102,7 @@ public class PortfolioService : IPortfolioService
             portfolioAssets.Add(GetPortfolioAsset(asset, new Queue<Deal>(dealsByTicker), currencyExchange));
         });
 
-        portfolio.Assets.AddRange(portfolioAssets);
+        portfolio.Assets.AddRange(portfolioAssets.OrderBy(x => x.Stock.Type));
 
         var inOutMoney = await GeInOutMoney(deals, "RUB");
 
