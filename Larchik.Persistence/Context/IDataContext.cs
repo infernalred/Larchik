@@ -16,4 +16,5 @@ public interface IDataContext
     DbSet<DealType> DealTypes { get; set; }
     DbSet<Deal> Deals { get; set; }
     DbSet<Exchange> Exchanges { get; set; }
+    DbSet<Log> Logs { get; set; }
 }

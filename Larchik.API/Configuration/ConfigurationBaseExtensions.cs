@@ -14,6 +14,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using NLog;
 
 namespace Larchik.API.Configuration;
 
@@ -27,6 +28,7 @@ public static class ConfigurationBaseExtensions
             opt.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
         });
 
+        LogManager.Configuration.Variables["DefaultConnection"] = configuration.GetConnectionString("DefaultConnection");
         services.AddMemoryCache();
         services.AddAutoMapper(typeof(MappingProfiles).Assembly);
         services.AddMediatR(typeof(Create).Assembly);

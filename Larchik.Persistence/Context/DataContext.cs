@@ -16,4 +16,5 @@ public class DataContext : DataContextBase, IDataContext
     public DbSet<DealType> DealTypes { get; set; } = null!;
     public DbSet<Deal> Deals { get; set; } = null!;
     public DbSet<Exchange> Exchanges { get; set; } = null!;
+    public DbSet<Log> Logs { get; set; } = null!;
 }
