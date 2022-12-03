@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.Collections.Concurrent;
+using AutoMapper;
 using Larchik.Application.Contracts;
 using Larchik.Application.Dtos;
 using Larchik.Application.Portfolios;
@@ -19,7 +20,8 @@ public class PortfolioService : IPortfolioService
     private readonly IExchangeService _exchangeService;
     private readonly IMapper _mapper;
 
-    public PortfolioService(ILogger<PortfolioService> logger, DataContext context, IUserAccessor userAccessor, IExchangeService exchangeService, IMapper mapper)
+    public PortfolioService(ILogger<PortfolioService> logger, DataContext context, IUserAccessor userAccessor,
+        IExchangeService exchangeService, IMapper mapper)
     {
         _logger = logger;
         _context = context;
@@ -70,12 +72,13 @@ public class PortfolioService : IPortfolioService
         return portfolio;
     }
 
-    private async Task CalculationPortfolio(Portfolio portfolio, IEnumerable<Asset> assets, IReadOnlyCollection<Deal> deals, CancellationToken cancellationToken)
+    private async Task CalculationPortfolio(Portfolio portfolio, IEnumerable<Asset> assets,
+        IReadOnlyCollection<Deal> deals, CancellationToken cancellationToken)
     {
         var currencyExchange = await _context.Stocks
             .Where(x => x.Type == StockKind.Money)
             .ToDictionaryAsync(x => x.Ticker, x => x, cancellationToken);
-        
+
         var assetsGroup =
             (from a in assets
                 group a by a.Stock.Ticker
@@ -87,29 +90,34 @@ public class PortfolioService : IPortfolioService
                     Stock = g.First().Stock
                 }).OrderBy(x => x.Stock.Type);
 
-        foreach (var asset in assetsGroup)
+        var portfolioAssets = new ConcurrentBag<PortfolioAsset>();
+
+        Parallel.ForEach(assetsGroup, asset =>
         {
             var dealsByTicker = deals
                 .Where(x => x.StockId == asset.StockId &&
                             x.TypeId is (int)DealKind.Purchase or (int)DealKind.Sale)
                 .OrderBy(x => x.CreatedAt);
 
-            portfolio.Assets.Add(GetPortfolioAsset(asset, new Queue<Deal>(dealsByTicker), currencyExchange));
-        }
+            portfolioAssets.Add(GetPortfolioAsset(asset, new Queue<Deal>(dealsByTicker), currencyExchange));
+        });
+
+        portfolio.Assets.AddRange(portfolioAssets);
 
         var inOutMoney = await GeInOutMoney(deals, "RUB");
 
         portfolio.Profit = portfolio.TotalBalance - inOutMoney;
     }
 
-    private PortfolioAsset GetPortfolioAsset(Asset asset, Queue<Deal> deals, IReadOnlyDictionary<string, Stock> currencyExchange)
+    private PortfolioAsset GetPortfolioAsset(Asset asset, Queue<Deal> deals,
+        IReadOnlyDictionary<string, Stock> currencyExchange)
     {
         var average = GetAveragePrice(deals);
 
         currencyExchange.TryGetValue(asset.Stock.CurrencyId, out var currencyStock);
 
-        var rate = currencyStock == null 
-            ? 1m 
+        var rate = currencyStock == null
+            ? 1m
             : new decimal(currencyStock.LastPrice);
 
         return new PortfolioAsset(_mapper.Map<StockDto>(asset.Stock), rate, asset.Quantity, Math.Round(average, 2));
@@ -138,12 +146,13 @@ public class PortfolioService : IPortfolioService
                         deals.Enqueue(deal);
                         queueData.Dequeue();
                     }
+
                     break;
             }
         }
 
         var average = 1.00m;
-        
+
         if (queueData.Any())
         {
             var totalAmount = 0m;
@@ -165,7 +174,7 @@ public class PortfolioService : IPortfolioService
     {
         var moneyDeals = deals
             .Where(x => x.TypeId != (int)DealKind.Purchase && x.TypeId != (int)DealKind.Sale);
-        
+
         var result = 0m;
 
         foreach (var deal in moneyDeals)
