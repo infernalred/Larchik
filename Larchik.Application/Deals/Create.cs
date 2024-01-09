@@ -9,7 +9,7 @@ namespace Larchik.Application.Deals;
 
 public class Create
 {
-    public class Command : IRequest<OperationResult<Unit>>
+    public class Command : IRequest<Result<Unit>>
     {
         public DealDto Deal { get; set; } = null!;
     }
@@ -22,7 +22,7 @@ public class Create
         }
     }
     
-    public class Handler : IRequestHandler<Command, OperationResult<Unit>>
+    public class Handler : IRequestHandler<Command, Result<Unit>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly IDealService _dealService;
@@ -33,7 +33,7 @@ public class Create
             _dealService = dealService;
         }
         
-        public async Task<OperationResult<Unit>> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
             return await _dealService.CreateDeal(request.Deal, cancellationToken);
         }

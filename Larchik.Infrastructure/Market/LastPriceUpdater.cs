@@ -33,7 +33,7 @@ public class LastPriceUpdater
             .Where(x => !string.IsNullOrEmpty(x.Figi) && x.Type != StockKind.Money)
             .ToList();
 
-        var moneyStocks = await _context.Stocks
+        var moneyStocks = await _context.Stock
             .AsTracking()
             .Where(x => x.Type == StockKind.Money && !string.IsNullOrEmpty(x.Figi))
             .ToListAsync(cancellationToken);

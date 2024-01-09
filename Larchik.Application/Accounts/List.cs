@@ -11,9 +11,9 @@ namespace Larchik.Application.Accounts;
 
 public class List
 {
-    public class Query : IRequest<OperationResult<List<AccountDto>>>{}
+    public class Query : IRequest<Result<List<AccountDto>>>{}
     
-    public class Handler : IRequestHandler<Query, OperationResult<List<AccountDto>>>
+    public class Handler : IRequestHandler<Query, Result<List<AccountDto>>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -28,7 +28,7 @@ public class List
             _userAccessor = userAccessor;
         }
         
-        public async Task<OperationResult<List<AccountDto>>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<Result<List<AccountDto>>> Handle(Query request, CancellationToken cancellationToken)
         {
             var accounts = await _context.Accounts
                 .Where(x => x.User.UserName == _userAccessor.GetUsername())
@@ -36,7 +36,7 @@ public class List
                 .ThenInclude(s => s.Stock)
                 .ToListAsync(cancellationToken);
             
-            return OperationResult<List<AccountDto>>.Success(_mapper.Map<List<AccountDto>>(accounts));
+            return Result<List<AccountDto>>.Success(_mapper.Map<List<AccountDto>>(accounts));
         }
     }
 }

@@ -9,9 +9,9 @@ namespace Larchik.API.Controllers;
 public class DealTypesController : BaseApiController
 {
     [HttpGet]
-    [ProducesResponseType(typeof(OperationResult<List<DealType>>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Result<List<DealType>>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
-    public async Task<ActionResult<OperationResult<List<DealType>>>> GetDealTypes()
+    public async Task<ActionResult<Result<List<DealType>>>> GetDealTypes()
     {
         return Ok(await Mediator.Send(new List.Query()));
     }

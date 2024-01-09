@@ -8,12 +8,12 @@ namespace Larchik.Application.Portfolios;
 
 public class DetailsAccount
 {
-    public class Query : IRequest<OperationResult<Portfolio>>
+    public class Query : IRequest<Result<Portfolio>>
     {
         public Guid Id { get; set; }
     }
     
-    public class Handler : IRequestHandler<Query, OperationResult<Portfolio>>
+    public class Handler : IRequestHandler<Query, Result<Portfolio>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly IPortfolioService _portfolioService;
@@ -26,7 +26,7 @@ public class DetailsAccount
             _cache = cache;
         }
         
-        public async Task<OperationResult<Portfolio>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<Result<Portfolio>> Handle(Query request, CancellationToken cancellationToken)
         {
             if (!_cache.TryGetValue(request.Id, out Portfolio portfolio))
             {
@@ -35,7 +35,7 @@ public class DetailsAccount
                 _cache.Set(request.Id, portfolio, new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromSeconds(90)));
             }
             
-            return OperationResult<Portfolio>.Success(portfolio);
+            return Result<Portfolio>.Success(portfolio);
         }
     }
 }

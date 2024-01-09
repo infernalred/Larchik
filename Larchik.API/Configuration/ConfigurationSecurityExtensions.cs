@@ -3,6 +3,7 @@ using Larchik.API.Services;
 using Larchik.Domain;
 using Larchik.Infrastructure.Security;
 using Larchik.Persistence.Context;
+using Larchik.Persistence.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -27,8 +28,10 @@ public static class ConfigurationSecurityExtensions
         // services.AddIdentity<AppUser, AppRole>()
         //     .AddEntityFrameworkStores<DataContext>()
         //     .AddDefaultTokenProviders();;
-            
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["TokenKey"]));
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8
+            .GetBytes(configuration["TokenKey"] ?? throw new InvalidOperationException("TokenKey not found")));
+
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(opt =>
             {
@@ -41,21 +44,17 @@ public static class ConfigurationSecurityExtensions
                     ValidateLifetime = true
                 };
             });
-        services.AddAuthorization(opt =>
-        {
-            opt.AddPolicy("IsAccountOwner", policy =>
-            {
-                policy.Requirements.Add(new IsAccountOwnerRequirement());
-            });
-            opt.AddPolicy("IsDealOwner", policy =>
-            {
-                policy.Requirements.Add(new IsDealOwnerRequirement());
-            });
-        });
+
+        services.AddAuthorizationBuilder()
+            .AddPolicy("IsAccountOwner", policy => 
+                { policy.Requirements.Add(new IsAccountOwnerRequirement()); })
+            .AddPolicy("IsDealOwner", policy => 
+                { policy.Requirements.Add(new IsDealOwnerRequirement()); });
+
         services.AddTransient<IAuthorizationHandler, IsAccountOwnerRequirementHandler>();
         services.AddTransient<IAuthorizationHandler, IsDealOwnerRequirementRequirementHandler>();
         services.AddScoped<ITokenService, TokenService>();
-        
+
         return services;
     }
 }

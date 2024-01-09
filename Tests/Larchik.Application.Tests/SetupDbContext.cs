@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Larchik.Domain;
 using Larchik.Domain.Enum;
 using Larchik.Persistence.Context;
+using Larchik.Persistence.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,7 +48,7 @@ public static class SetupDbContext
         context.Accounts.AddRange(accounts);
     }
 
-    private static void CreateCurrency(IDataContext context)
+    private static void CreateCurrency(DataContext context)
     {
         var rub = new Currency { Code = "RUB" };
         var usd = new Currency { Code = "USD" };
@@ -61,7 +62,7 @@ public static class SetupDbContext
         context.Currencies.AddRange(currencies);
     }
     
-    private static void CreateStockTypes(IDataContext context)
+    private static void CreateStockTypes(DataContext context)
     {
         var type1 = new StockType { Id = 1, Code = "SHARE" };
         var type2 = new StockType { Id = 2, Code = "BOND" };
@@ -76,7 +77,7 @@ public static class SetupDbContext
         context.StockTypes.AddRange(stockTypes);
     }
     
-    private static void CreateSectors(IDataContext context)
+    private static void CreateSectors(DataContext context)
     {
         var sector1 = new Sector { Code = "Energy" };
         var sector2 = new Sector { Code = "Materials" };
@@ -105,7 +106,7 @@ public static class SetupDbContext
         context.Sectors.AddRange(sectors);
     }
     
-    private static void CreateDealTypes(IDataContext context)
+    private static void CreateDealTypes(DataContext context)
     {
         var dealType1 = new DealType { Id = 1, Code = "Пополнение" };
         var dealType2 = new DealType { Id = 2, Code = "Вывод" };
@@ -123,7 +124,7 @@ public static class SetupDbContext
         context.DealTypes.AddRange(dealTypes);
     }
     
-    private static void CreateStocks(IDataContext context)
+    private static void CreateStocks(DataContext context)
     {
         var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта", Figi = "RUB", LastPrice = 1, Type = StockKind.Money };
         var money2 = new Stock { Ticker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта", Figi = "USD", LastPrice = 121, Type = StockKind.Money };
@@ -136,10 +137,10 @@ public static class SetupDbContext
             money1, money2, money3, stock1, stock2
         };
             
-        context.Stocks.AddRange(stocks);
+        context.Stock.AddRange(stocks);
     }
 
-    private static void CreateExchanges(IDataContext context)
+    private static void CreateExchanges(DataContext context)
     {
         var exchanges = new List<Exchange>
         {

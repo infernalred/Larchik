@@ -9,9 +9,9 @@ namespace Larchik.Application.DealTypes;
 
 public class List
 {
-    public class Query : IRequest<OperationResult<List<DealType>>>{}
+    public class Query : IRequest<Result<List<DealType>>>{}
 
-    public class Handler : IRequestHandler<Query, OperationResult<List<DealType>>>
+    public class Handler : IRequestHandler<Query, Result<List<DealType>>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -22,11 +22,11 @@ public class List
             _context = context;
         }
         
-        public async Task<OperationResult<List<DealType>>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<Result<List<DealType>>> Handle(Query request, CancellationToken cancellationToken)
         {
             var dealTypes = await _context.DealTypes.ToListAsync(cancellationToken);
             
-            return OperationResult<List<DealType>>.Success(dealTypes);
+            return Result<List<DealType>>.Success(dealTypes);
         }
     }
 }

@@ -3,7 +3,7 @@ using Larchik.Domain.Enum;
 
 namespace Larchik.Application.Deals;
 
-public class DealParams : PagingParams
+public class DealParams : PageFilter
 {
     public string? Ticker { get; set; }
     public DealKind? Type { get; set; }

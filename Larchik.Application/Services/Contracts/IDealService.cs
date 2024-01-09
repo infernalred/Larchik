@@ -6,7 +6,7 @@ namespace Larchik.Application.Services.Contracts;
 
 public interface IDealService
 {
-    Task<OperationResult<Unit>> CreateDeal(DealDto deal, CancellationToken cancellationToken);
-    Task<OperationResult<Unit>> EditDeal(DealDto deal, CancellationToken cancellationToken);
-    Task<OperationResult<Unit>> DeleteDeal(Guid id, CancellationToken cancellationToken);
+    Task<Result<Unit>> CreateDeal(DealDto deal, CancellationToken cancellationToken);
+    Task<Result<Unit>> EditDeal(DealDto deal, CancellationToken cancellationToken);
+    Task<Result<Unit>> DeleteDeal(Guid id, CancellationToken cancellationToken);
 }

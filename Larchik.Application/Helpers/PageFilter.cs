@@ -1,6 +1,6 @@
 ﻿namespace Larchik.Application.Helpers;
 
-public class PagingParams
+public class PageFilter
 {
     private const int MaxPageSize = 50;
     public int PageNumber { get; set; } = 1;

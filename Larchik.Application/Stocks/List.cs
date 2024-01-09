@@ -12,9 +12,9 @@ namespace Larchik.Application.Stocks;
 
 public class List
 {
-    public class Query : IRequest<OperationResult<List<StockDto>>>{}
+    public class Query : IRequest<Result<List<StockDto>>>{}
     
-    public class Handler : IRequestHandler<Query, OperationResult<List<StockDto>>>
+    public class Handler : IRequestHandler<Query, Result<List<StockDto>>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -27,14 +27,14 @@ public class List
             _mapper = mapper;
         }
         
-        public async Task<OperationResult<List<StockDto>>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<Result<List<StockDto>>> Handle(Query request, CancellationToken cancellationToken)
         {
-            var stock = await _context.Stocks
+            var stock = await _context.Stock
                 .OrderBy(x => x.TypeId)
                 .ProjectTo<StockDto>(_mapper.ConfigurationProvider)
                 .ToListAsync(cancellationToken);
             
-            return OperationResult<List<StockDto>>.Success(stock);
+            return Result<List<StockDto>>.Success(stock);
         }
     }
 }

@@ -2,6 +2,7 @@
 using Larchik.API.Dtos;
 using Larchik.API.Services;
 using Larchik.Domain;
+using Larchik.Persistence.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

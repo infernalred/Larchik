@@ -13,7 +13,7 @@ namespace Larchik.Application.Accounts;
 
 public class Create
 {
-    public class Command : IRequest<OperationResult<Unit>>
+    public class Command : IRequest<Result<Unit>>
     {
         public AccountCreateDto Account { get; set; } = null!;
     }
@@ -26,7 +26,7 @@ public class Create
         }
     }
 
-    public class Handler : IRequestHandler<Command, OperationResult<Unit>>
+    public class Handler : IRequestHandler<Command, Result<Unit>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -41,7 +41,7 @@ public class Create
             _userAccessor = userAccessor;
         }
         
-        public async Task<OperationResult<Unit>> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
             var user = await _context.Users
                 .AsTracking()
@@ -57,7 +57,7 @@ public class Create
             _context.Accounts.Add(account);
             await _context.SaveChangesAsync(cancellationToken);
             
-            return OperationResult<Unit>.Success(Unit.Value);
+            return Result<Unit>.Success(Unit.Value);
         }
     }
 }

@@ -9,9 +9,9 @@ namespace Larchik.Application.Portfolios;
 
 public class Details
 {
-    public class Query : IRequest<OperationResult<Portfolio>> { }
+    public class Query : IRequest<Result<Portfolio>> { }
 
-    public class Handler : IRequestHandler<Query, OperationResult<Portfolio>>
+    public class Handler : IRequestHandler<Query, Result<Portfolio>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly IPortfolioService _portfolioService;
@@ -26,7 +26,7 @@ public class Details
             _userAccessor = userAccessor;
         }
         
-        public async Task<OperationResult<Portfolio>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<Result<Portfolio>> Handle(Query request, CancellationToken cancellationToken)
         {
             var key = _userAccessor.GetUsername();
             
@@ -37,7 +37,7 @@ public class Details
                 _cache.Set(key, portfolio, new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromSeconds(90)));
             }
             
-            return OperationResult<Portfolio>.Success(portfolio);
+            return Result<Portfolio>.Success(portfolio);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Larchik.Domain;
 using Larchik.Domain.Enum;
 using Larchik.Persistence.Context;
+using Larchik.Persistence.Models;
 using Microsoft.AspNetCore.Identity;
 
 namespace Larchik.Persistence;
@@ -79,7 +80,7 @@ public class Seed
             await context.SaveChangesAsync();
         }
 
-        if (!context.Stocks.Any())
+        if (!context.Stock.Any())
         {
             var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта", Figi = "RUB", LastPrice = 1, Type = StockKind.Money};
             var money2 = new Stock { Ticker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта", Figi = "USD", LastPrice = 121, Type = StockKind.Money };

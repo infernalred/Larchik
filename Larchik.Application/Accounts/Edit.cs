@@ -10,7 +10,7 @@ namespace Larchik.Application.Accounts;
 
 public class Edit
 {
-    public class Command : IRequest<OperationResult<Unit>>
+    public class Command : IRequest<Result<Unit>>
     {
         public AccountCreateDto Account { get; set; } = null!;
     }
@@ -23,7 +23,7 @@ public class Edit
         }
     }
     
-    public class Handler : IRequestHandler<Command, OperationResult<Unit>>
+    public class Handler : IRequestHandler<Command, Result<Unit>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -34,7 +34,7 @@ public class Edit
             _context = context;
         }
         
-        public async Task<OperationResult<Unit>> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
             var account = await _context.Accounts
                 .AsTracking()
@@ -44,7 +44,7 @@ public class Edit
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            return OperationResult<Unit>.Success(Unit.Value);
+            return Result<Unit>.Success(Unit.Value);
         }
     }
 }

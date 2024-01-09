@@ -9,9 +9,9 @@ namespace Larchik.Application.Сurrencies;
 
 public class List
 {
-    public class Query : IRequest<OperationResult<List<Currency>>>{}
+    public class Query : IRequest<Result<List<Currency>>>{}
     
-    public class Handler : IRequestHandler<Query, OperationResult<List<Currency>>>
+    public class Handler : IRequestHandler<Query, Result<List<Currency>>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -22,12 +22,12 @@ public class List
             _context = context;
         }
         
-        public async Task<OperationResult<List<Currency>>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<Result<List<Currency>>> Handle(Query request, CancellationToken cancellationToken)
         {
             var currency = await _context.Currencies
                 .ToListAsync(cancellationToken);
 
-            return OperationResult<List<Currency>>.Success(currency);
+            return Result<List<Currency>>.Success(currency);
         }
     }
 }

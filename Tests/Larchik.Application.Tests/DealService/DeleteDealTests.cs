@@ -73,7 +73,7 @@ public class DeleteDealTests
         var asset = await context.Assets.FirstAsync(x => x.Id == asset1.Id);
     
         Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
+        Assert.Equal(Unit.Value, actual.Value);
         Assert.Null(actual.Error);
         Assert.Single(deals);
         Assert.Equal(expectQuantity, asset.Quantity);
@@ -92,7 +92,7 @@ public class DeleteDealTests
         var mapper = new Mock<IMapper>();
     
         var currency = context.Currencies.First(x => x.Code == "RUB");
-        var stock2 = context.Stocks.First(x => x.Ticker == "MTSS");
+        var stock2 = context.Stock.First(x => x.Ticker == "MTSS");
         var user = await context.Users.FirstAsync(x => x.UserName == "admin");
         var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40000, StockId = currency.Code};
         var asset2 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40, StockId = stock2.Ticker};
@@ -138,7 +138,7 @@ public class DeleteDealTests
         var assetActual2 = await context.Assets.FirstAsync(x => x.Id == asset2.Id);
     
         Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
+        Assert.Equal(Unit.Value, actual.Value);
         Assert.Null(actual.Error);
         Assert.Single(deals);
         Assert.Equal(44403.44m, assetActual1.Quantity);
@@ -158,7 +158,7 @@ public class DeleteDealTests
         var mapper = new Mock<IMapper>();
 
         var currency = context.Currencies.First(x => x.Code == "RUB");
-        var stock2 = context.Stocks.First(x => x.Ticker == "MTSS");
+        var stock2 = context.Stock.First(x => x.Ticker == "MTSS");
         var user = await context.Users.FirstAsync(x => x.UserName == "admin");
         var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40000, StockId = currency.Code};
         var asset2 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 20, StockId = stock2.Ticker};
@@ -204,7 +204,7 @@ public class DeleteDealTests
         var assetActual2 = await context.Assets.FirstAsync(x => x.Id == asset2.Id);
 
         Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
+        Assert.Equal(Unit.Value, actual.Value);
         Assert.Null(actual.Error);
         Assert.Single(deals);
         Assert.Equal(35602.89m, assetActual1.Quantity);

@@ -10,13 +10,13 @@ namespace Larchik.Application.Deals;
 
 public class List
 {
-    public class Query : IRequest<OperationResult<PagedList<DealDto>>>
+    public class Query : IRequest<Result<PagedList<DealDto>>>
     {
         public Guid Id { get; set; }
         public DealParams Params { get; set; } = null!;
     }
     
-    public class Handler : IRequestHandler<Query, OperationResult<PagedList<DealDto>>>
+    public class Handler : IRequestHandler<Query, Result<PagedList<DealDto>>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -29,7 +29,7 @@ public class List
             _mapper = mapper;
         }
         
-        public async Task<OperationResult<PagedList<DealDto>>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<Result<PagedList<DealDto>>> Handle(Query request, CancellationToken cancellationToken)
         {
             var query = _context.Deals
                 .Where(x => x.AccountId == request.Id)
@@ -48,7 +48,7 @@ public class List
                 query = query.Where(x => x.Type == request.Params.Type);
             }
             
-            return OperationResult<PagedList<DealDto>>.Success(
+            return Result<PagedList<DealDto>>.Success(
                 await PagedList<DealDto>.CreateAsync(query, request.Params.PageNumber, request.Params.PageSize));
         }
     }

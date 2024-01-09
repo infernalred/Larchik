@@ -82,7 +82,7 @@ public class EditDealTests
         var deals = await context.Deals.ToListAsync();
         
         Assert.False(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
+        Assert.Equal(Unit.Value, actual.Value);
         Assert.NotNull(actual.Error);
         Assert.Equal("Счет не найден", actual.Error);
         Assert.Equal(2, deals.Count);
@@ -229,7 +229,7 @@ public class EditDealTests
         var dealActual = deals.First(x => x.Id == deal2.Id);
         
         Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
+        Assert.Equal(Unit.Value, actual.Value);
         Assert.Null(actual.Error);
         Assert.Equal(2, deals.Count);
         Assert.Equal(quantity, assetActual1.Quantity);
@@ -256,8 +256,8 @@ public class EditDealTests
         var mapper = new Mapper(_mapperConfiguration);
         
         var currency = context.Currencies.First(x => x.Code == "RUB");
-        var stock2 = context.Stocks.First(x => x.Ticker == "MTSS");
-        var stock3 = context.Stocks.First(x => x.Ticker == "SBER");
+        var stock2 = context.Stock.First(x => x.Ticker == "MTSS");
+        var stock3 = context.Stock.First(x => x.Ticker == "SBER");
         var user = await context.Users.FirstAsync(x => x.UserName == "admin");
         var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40000, StockId = currency.Code};
         var asset2 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40, StockId = stock2.Ticker};
@@ -322,7 +322,7 @@ public class EditDealTests
         var actualDeal = deals.First(x => x.Id == deal2.Id);
         
         Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
+        Assert.Equal(Unit.Value, actual.Value);
         Assert.Null(actual.Error);
         Assert.Equal(2, deals.Count);
         Assert.Equal(assetQuantity1, assetActual1.Quantity);
@@ -408,7 +408,7 @@ public class EditDealTests
         var dealActual = deals.First(x => x.Id == deal2.Id);
         
         Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
+        Assert.Equal(Unit.Value, actual.Value);
         Assert.Null(actual.Error);
         Assert.Equal(2, deals.Count);
         Assert.Equal(382.99m, assetActual1.Quantity);

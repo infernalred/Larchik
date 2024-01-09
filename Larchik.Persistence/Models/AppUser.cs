@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace Larchik.Domain;
+namespace Larchik.Persistence.Models;
 
-public class AppUser : IdentityUser
+public class AppUser : IdentityUser<Guid>
 {
     public string DisplayName { get; set; } = string.Empty;
 }

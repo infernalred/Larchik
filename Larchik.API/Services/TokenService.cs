@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Text;
 using Larchik.Domain;
+using Larchik.Persistence.Models;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Larchik.API.Services;

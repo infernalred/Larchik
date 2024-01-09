@@ -7,6 +7,7 @@ using Larchik.Application.Services.Contracts;
 using Larchik.Domain;
 using Larchik.Domain.Enum;
 using Larchik.Persistence.Context;
+using Larchik.Persistence.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -75,7 +76,7 @@ public class PortfolioService : IPortfolioService
     private async Task CalculationPortfolio(Portfolio portfolio, IEnumerable<Asset> assets,
         IReadOnlyCollection<Deal> deals, CancellationToken cancellationToken)
     {
-        var currencyExchange = await _context.Stocks
+        var currencyExchange = await _context.Stock
             .Where(x => x.Type == StockKind.Money)
             .ToDictionaryAsync(x => x.Ticker, x => x, cancellationToken);
 

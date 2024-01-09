@@ -1,5 +1,6 @@
 ﻿using Larchik.Application.Dtos;
 using Larchik.Domain;
+using Larchik.Persistence.Models;
 
 namespace Larchik.Application.Helpers;
 

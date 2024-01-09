@@ -8,12 +8,12 @@ namespace Larchik.Application.Deals;
 
 public class Delete
 {
-    public class Command : IRequest<OperationResult<Unit>>
+    public class Command : IRequest<Result<Unit>>
     {
         public Guid Id { get; set; }
     }
     
-    public class Handler : IRequestHandler<Command, OperationResult<Unit>>
+    public class Handler : IRequestHandler<Command, Result<Unit>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly IDealService _dealService;
@@ -24,7 +24,7 @@ public class Delete
             _dealService = dealService;
         }
         
-        public async Task<OperationResult<Unit>> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
             return await _dealService.DeleteDeal(request.Id, cancellationToken);
         }

@@ -1,4 +1,6 @@
-﻿namespace Larchik.Domain;
+﻿using Larchik.Persistence.Models;
+
+namespace Larchik.Domain;
 
 public class Deal
 {

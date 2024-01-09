@@ -46,7 +46,7 @@ public class CreateDealTests
         var actual = await dealService.CreateDeal(deal, CancellationToken.None);
         
         Assert.False(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
+        Assert.Equal(Unit.Value, actual.Value);
         Assert.NotNull(actual.Error);
         Assert.Equal("Счет не найден", actual.Error);
         mockUserAccessor.Verify(x => x.GetUsername());
@@ -125,7 +125,7 @@ public class CreateDealTests
         var actualDeal = await context.Deals.FirstAsync(x => x.Id == deal.Id);
         
         Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
+        Assert.Equal(Unit.Value, actual.Value);
         Assert.Null(actual.Error);
         Assert.Single(deals);
         Assert.Equal(quantity, Math.Round(assetActual1.Quantity, 2));
@@ -154,7 +154,7 @@ public class CreateDealTests
         var mapper = new Mapper(_mapperConfiguration);
         
         var currency = context.Currencies.First(x => x.Code == "RUB");
-        var stock2 = context.Stocks.First(x => x.Ticker == "MTSS");
+        var stock2 = context.Stock.First(x => x.Ticker == "MTSS");
         var asset1 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40000, StockId = currency.Code};
         var asset2 = new Asset{AccountId = Guid.Parse("f1fe6744-86a6-4293-b469-64404511840f"), Id = Guid.NewGuid(), Quantity = 40, StockId = stock2.Ticker};
         context.Assets.Add(asset1);
@@ -185,7 +185,7 @@ public class CreateDealTests
         var actualDeal = await context.Deals.FirstAsync(x => x.Id == deal.Id);
         
         Assert.True(actual.IsSuccess);
-        Assert.Equal(Unit.Value, actual.Result);
+        Assert.Equal(Unit.Value, actual.Value);
         Assert.Null(actual.Error);
         Assert.Single(deals);
         Assert.Equal(assetQuantity1, assetActual1.Quantity);

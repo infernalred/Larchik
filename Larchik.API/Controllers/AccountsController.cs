@@ -12,19 +12,19 @@ namespace Larchik.API.Controllers;
 public class AccountsController : BaseApiController
 {
     [HttpGet]
-    [ProducesResponseType(typeof(OperationResult<List<AccountDto>>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Result<List<AccountDto>>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
-    public async Task<ActionResult<OperationResult<List<AccountDto>>>> GetAccounts()
+    public async Task<ActionResult<Result<List<AccountDto>>>> GetAccounts()
     {
         return Ok(await Mediator.Send(new List.Query()));
     }
     
     [Authorize(Policy = "IsAccountOwner")]
     [HttpGet("{id:guid}", Name = nameof(GetAccount))]
-    [ProducesResponseType(typeof(OperationResult<AccountDto>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Result<AccountDto>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<Account>>> GetAccount(Guid id)
+    public async Task<ActionResult<Result<Account>>> GetAccount(Guid id)
     {
         var result = await Mediator.Send(new Details.Query { Id = id });
         
@@ -32,9 +32,9 @@ public class AccountsController : BaseApiController
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(OperationResult<Unit>), (int)HttpStatusCode.Created)]
+    [ProducesResponseType(typeof(Result<Unit>), (int)HttpStatusCode.Created)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
-    public async Task<ActionResult<OperationResult<Unit>>> CreateAccount(AccountCreateDto account)
+    public async Task<ActionResult<Result<Unit>>> CreateAccount(AccountCreateDto account)
     {
         var result = await Mediator.Send(new Create.Command { Account = account });
 
@@ -43,10 +43,10 @@ public class AccountsController : BaseApiController
     
     [Authorize(Policy = "IsAccountOwner")]
     [HttpPut("{id:guid}")]
-    [ProducesResponseType(typeof(OperationResult<Unit>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Result<Unit>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<Unit>>> UpdateAccount(Guid id, AccountCreateDto account)
+    public async Task<ActionResult<Result<Unit>>> UpdateAccount(Guid id, AccountCreateDto account)
     {
         account.Id = id;
         var result = await Mediator.Send(new Edit.Command { Account = account });

@@ -11,12 +11,12 @@ namespace Larchik.Application.Accounts;
 
 public class Details
 {
-    public class Query : IRequest<OperationResult<AccountDto>>
+    public class Query : IRequest<Result<AccountDto>>
     {
         public Guid Id { get; set; }
     }
 
-    public class Handler : IRequestHandler<Query, OperationResult<AccountDto>>
+    public class Handler : IRequestHandler<Query, Result<AccountDto>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -31,14 +31,14 @@ public class Details
             _userAccessor = userAccessor;
         }
         
-        public async Task<OperationResult<AccountDto>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<Result<AccountDto>> Handle(Query request, CancellationToken cancellationToken)
         {
             var account = await _context.Accounts
                 .Include(x => x.Assets.Where(a => a.Quantity != 0))
                 .ThenInclude(a => a.Stock)
                 .SingleOrDefaultAsync(x => x.Id == request.Id && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
             
-            return OperationResult<AccountDto>.Success(_mapper.Map<AccountDto>(account));
+            return Result<AccountDto>.Success(_mapper.Map<AccountDto>(account));
         }
     }
 }

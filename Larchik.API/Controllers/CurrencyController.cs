@@ -9,9 +9,9 @@ namespace Larchik.API.Controllers;
 public class CurrencyController : BaseApiController
 {
     [HttpGet]
-    [ProducesResponseType(typeof(OperationResult<List<Currency>>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Result<List<Currency>>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
-    public async Task<ActionResult<OperationResult<List<Currency>>>> GetStocks()
+    public async Task<ActionResult<Result<List<Currency>>>> GetStocks()
     {
         return Ok(await Mediator.Send(new List.Query()));
     }

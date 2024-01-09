@@ -10,12 +10,12 @@ namespace Larchik.Application.Deals;
 
 public class Details
 {
-    public class Query : IRequest<OperationResult<DealDto>>
+    public class Query : IRequest<Result<DealDto>>
     {
         public Guid Id { get; set; }
     }
     
-    public class Handler : IRequestHandler<Query, OperationResult<DealDto>>
+    public class Handler : IRequestHandler<Query, Result<DealDto>>
     {
         private readonly ILogger<Handler> _logger;
         private readonly DataContext _context;
@@ -28,12 +28,12 @@ public class Details
             _mapper = mapper;
         }
         
-        public async Task<OperationResult<DealDto>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<Result<DealDto>> Handle(Query request, CancellationToken cancellationToken)
         {
             var deal = await _context.Deals
                 .SingleOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
             
-            return OperationResult<DealDto>.Success(_mapper.Map<DealDto>(deal));
+            return Result<DealDto>.Success(_mapper.Map<DealDto>(deal));
         }
     }
 }

@@ -38,7 +38,7 @@ public class DealService : IDealService
         };
     }
 
-    public async Task<OperationResult<Unit>> CreateDeal(DealDto dealDto, CancellationToken cancellationToken)
+    public async Task<Result<Unit>> CreateDeal(DealDto dealDto, CancellationToken cancellationToken)
     {
         var user = await _context.Users
             .AsTracking()
@@ -49,7 +49,7 @@ public class DealService : IDealService
             .Include(x => x.User)
             .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId && x.User == user, cancellationToken);
         
-        if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
+        if (account == null) return Result<Unit>.Failure("Счет не найден");
         
         var amount = OperationHelper.GetAmount(dealDto.Type, dealDto.Quantity, dealDto.Price, dealDto.Commission);
         
@@ -61,10 +61,10 @@ public class DealService : IDealService
         _context.Deals.Add(deal);
         await _context.SaveChangesAsync(cancellationToken);
         
-        return OperationResult<Unit>.Success(Unit.Value);
+        return Result<Unit>.Success(Unit.Value);
     }
 
-    public async Task<OperationResult<Unit>> EditDeal(DealDto dealDto, CancellationToken cancellationToken)
+    public async Task<Result<Unit>> EditDeal(DealDto dealDto, CancellationToken cancellationToken)
     {
         var deal = await _context.Deals
             .AsTracking()
@@ -76,7 +76,7 @@ public class DealService : IDealService
             .FirstOrDefaultAsync(x => x.Id == dealDto.AccountId 
                                       && x.User.UserName == _userAccessor.GetUsername(), cancellationToken);
         
-        if (account == null) return OperationResult<Unit>.Failure("Счет не найден");
+        if (account == null) return Result<Unit>.Failure("Счет не найден");
         
         await RollbackAssetAsync(deal, cancellationToken);
         
@@ -88,10 +88,10 @@ public class DealService : IDealService
         
         await _context.SaveChangesAsync(cancellationToken);
         
-        return OperationResult<Unit>.Success(Unit.Value);
+        return Result<Unit>.Success(Unit.Value);
     }
 
-    public async Task<OperationResult<Unit>> DeleteDeal(Guid id, CancellationToken cancellationToken)
+    public async Task<Result<Unit>> DeleteDeal(Guid id, CancellationToken cancellationToken)
     {
         var deal = await _context.Deals
             .AsTracking()
@@ -104,7 +104,7 @@ public class DealService : IDealService
 
         await _context.SaveChangesAsync(cancellationToken);
         
-        return OperationResult<Unit>.Success(Unit.Value);
+        return Result<Unit>.Success(Unit.Value);
     }
 
     private async Task OperationAddAsync(decimal amount, DealDto dealDto, CancellationToken cancellationToken)

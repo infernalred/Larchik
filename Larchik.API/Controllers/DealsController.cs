@@ -12,10 +12,10 @@ namespace Larchik.API.Controllers;
 public class DealsController : BaseApiController
 {
     [HttpPost]
-    [ProducesResponseType(typeof(OperationResult<Unit>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Result<Unit>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<Unit>>> Create(DealDto deal)
+    public async Task<ActionResult<Result<Unit>>> Create(DealDto deal)
     {
         var result = await Mediator.Send(new Create.Command { Deal = deal});
 
@@ -24,10 +24,10 @@ public class DealsController : BaseApiController
     
     [Authorize(Policy = "IsDealOwner")]
     [HttpPut("{id:guid}")]
-    [ProducesResponseType(typeof(OperationResult<Unit>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Result<Unit>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<Unit>>> Edit(Guid id, DealDto deal)
+    public async Task<ActionResult<Result<Unit>>> Edit(Guid id, DealDto deal)
     {
         deal.Id = id;
         var result = await Mediator.Send(new Edit.Command { Deal = deal});
@@ -37,10 +37,10 @@ public class DealsController : BaseApiController
     
     [Authorize(Policy = "IsDealOwner")]
     [HttpDelete("{id:guid}")]
-    [ProducesResponseType(typeof(OperationResult<Unit>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Result<Unit>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<Unit>>> Delete(Guid id)
+    public async Task<ActionResult<Result<Unit>>> Delete(Guid id)
     {
         var result = await Mediator.Send(new Delete.Command { Id = id});
 
@@ -49,24 +49,24 @@ public class DealsController : BaseApiController
     
     [Authorize(Policy = "IsAccountOwner")]
     [HttpGet("accounts/{id:guid}")]
-    [ProducesResponseType(typeof(OperationResult<PagedList<DealDto>>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Result<PagedList<DealDto>>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<PagedList<DealDto>>>> GetAccountDeals(Guid id, [FromQuery]DealParams param)
+    public async Task<ActionResult<Result<PagedList<DealDto>>>> GetAccountDeals(Guid id, [FromQuery]DealParams param)
     {
         var result = await Mediator.Send(new List.Query { Id = id, Params = param });
         
-        Response.AddPaginationHeader(result.Result.CurrentPage, result.Result.PageSize, result.Result.TotalCount, result.Result.TotalPages);
+        Response.AddPaginationHeader(result.Value.CurrentPage, result.Value.PageSize, result.Value.TotalCount, result.Value.TotalPages);
 
         return Ok(result);
     }
     
     [Authorize(Policy = "IsDealOwner")]
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(typeof(OperationResult<DealDto>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Result<DealDto>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<OperationResult<DealDto>>> GetDeal(Guid id)
+    public async Task<ActionResult<Result<DealDto>>> GetDeal(Guid id)
     {
         var result = await Mediator.Send(new Details.Query { Id = id});
 
