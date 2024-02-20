@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Larchik.Application.Stocks.GetStock;
 
-public class GetStockQuery(string ticker) : IRequest<Result<StockDto?>>
+public class GetStockQuery(Guid id) : IRequest<Result<StockDto?>>
 {
-    public string Ticker { get; } = ticker;
+    public Guid Id { get; } = id;
 }

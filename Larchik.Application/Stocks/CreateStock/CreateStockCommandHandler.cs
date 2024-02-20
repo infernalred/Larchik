@@ -15,17 +15,18 @@ public class CreateStockCommandHandler(DataContext context, IUserAccessor userAc
 
         var stock = new Stock
         {
+            Id = Guid.NewGuid(),
             Ticker = request.Stock.Ticker,
-            Figi = request.Stock.Figi,
-            CompanyName = request.Stock.CompanyName,
-            TypeId = request.Stock.Type,
-            CurrencyId = request.Stock.Currency,
-            SectorId = request.Stock.Sector,
+            Isin = request.Stock.Isin,
+            Name = request.Stock.Name,
+            Kind = request.Stock.Kind,
+            CurrencyId = request.Stock.CurrencyId,
+            SectorId = request.Stock.SectorId,
             CreatedBy = userId,
             UpdatedBy = userId
         };
 
-        await context.Stock.AddAsync(stock, cancellationToken);
+        await context.Stocks.AddAsync(stock, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
         return Result<Unit>.Success(Unit.Value);

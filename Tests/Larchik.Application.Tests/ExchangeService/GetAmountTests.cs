@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Larchik.Domain;
+using Larchik.Persistence.Models;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using Xunit;
@@ -19,7 +20,7 @@ public class GetAmountTests
         var cache = new Mock<IMemoryCache>();
         var cacheEntry = new Mock<ICacheEntry>();
 
-        var deal = new Deal
+        var deal = new Operation
         {
             CreatedAt = new DateTime(2022, 05, 01),
             Amount = 65.78m
@@ -51,7 +52,7 @@ public class GetAmountTests
         var cache = new Mock<IMemoryCache>();
         var cacheEntry = new Mock<ICacheEntry>();
 
-        var deal = new Deal
+        var deal = new Operation
         {
             CreatedAt = new DateTime(2022, 05, 01),
             Amount = 65.78m
@@ -87,7 +88,7 @@ public class GetAmountTests
         var cache = new Mock<IMemoryCache>();
         var cacheEntry = new Mock<ICacheEntry>();
 
-        var deal = new Deal
+        var deal = new Operation
         {
             CreatedAt = new DateTime(2022, 05, 04),
             Amount = 65.78m
@@ -120,7 +121,7 @@ public class GetAmountTests
         var cache = new Mock<IMemoryCache>();
         var cacheEntry = new Mock<ICacheEntry>();
 
-        var deal = new Deal
+        var deal = new Operation
         {
             CreatedAt = new DateTime(2022, 05, 01),
             Amount = 65.78m

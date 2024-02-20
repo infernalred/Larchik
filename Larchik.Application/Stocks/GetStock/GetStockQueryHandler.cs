@@ -13,9 +13,9 @@ public class GetStockQueryHandler(DataContext context, IMapper mapper)
 {
     public async Task<Result<StockDto?>> Handle(GetStockQuery request, CancellationToken cancellationToken)
     {
-        var stock = await context.Stock
+        var stock = await context.Stocks
             .ProjectTo<StockDto>(mapper.ConfigurationProvider)
-            .FirstOrDefaultAsync(x => x.Ticker == request.Ticker, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
 
         return Result<StockDto?>.Success(stock);
     }

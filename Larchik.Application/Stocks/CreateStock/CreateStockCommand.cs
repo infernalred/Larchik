@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Larchik.Application.Stocks.CreateStock;
 
-public class CreateStockCommand : IRequest<Result<Unit>>
+public class CreateStockCommand(StockDto model) : IRequest<Result<Unit>>
 {
-    public StockDto Stock { get; set; } = null!;
+    public StockDto Stock { get; set; } = model;
 }

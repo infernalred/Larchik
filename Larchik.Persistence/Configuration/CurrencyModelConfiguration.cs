@@ -1,4 +1,4 @@
-﻿using Larchik.Domain;
+﻿using Larchik.Persistence.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,8 +8,6 @@ public class CurrencyModelConfiguration : IEntityTypeConfiguration<Currency>
 {
     public void Configure(EntityTypeBuilder<Currency> builder)
     {
-        builder.HasKey(x => x.Code);
-
-        builder.Property(x => x.Code).IsRequired().HasMaxLength(5);
+        builder.Property(x => x.Id).HasMaxLength(3);
     }
 }

@@ -2,6 +2,7 @@
 using Larchik.Application.Helpers;
 using Larchik.Application.Сurrencies;
 using Larchik.Domain;
+using Larchik.Persistence.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Larchik.API.Controllers;

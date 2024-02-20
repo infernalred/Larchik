@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using Larchik.Application.Contracts;
 using Larchik.Application.Dtos;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
@@ -29,8 +28,8 @@ public class List
         
         public async Task<Result<List<StockDto>>> Handle(Query request, CancellationToken cancellationToken)
         {
-            var stock = await _context.Stock
-                .OrderBy(x => x.TypeId)
+            var stock = await _context.Stocks
+                .OrderBy(x => x.Kind)
                 .ProjectTo<StockDto>(_mapper.ConfigurationProvider)
                 .ToListAsync(cancellationToken);
             

@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Headers;
+using FluentValidation;
 using FluentValidation.AspNetCore;
 using Larchik.API.Configuration.Models;
 using Larchik.Application.Contracts;
@@ -36,10 +37,20 @@ public static class ConfigurationBaseExtensions
             {
                 var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
                 opt.Filters.Add(new AuthorizeFilter(policy));
-            })
-            .AddFluentValidation(cfg => { cfg.RegisterValidatorsFromAssemblyContaining<Create>(); });
+            });
+
+        services
+            .AddValidatorsFromAssemblyContaining(typeof(Create))
+            .AddFluentValidationAutoValidation()
+            .AddFluentValidationClientsideAdapters();
 
         var marketConfig = configuration.GetSection(nameof(MarketSettings)).Get<MarketSettings>();
+
+        if (string.IsNullOrEmpty(marketConfig?.BaseAddress))
+            throw new ArgumentException($"{nameof(MarketSettings.BaseAddress)} is null");
+
+        if (string.IsNullOrEmpty(marketConfig.Token))
+            throw new ArgumentException($"{nameof(MarketSettings.Token)} is null");
 
         services.AddHttpClient("Market", client =>
         {
@@ -50,16 +61,16 @@ public static class ConfigurationBaseExtensions
 
         services.Configure<CbrSettings>(configuration.GetSection(nameof(CbrSettings)));
         services.AddScoped<IUserAccessor, UserAccessor>();
-        services.AddScoped<IDealService, DealService>();
+        //services.AddScoped<IDealService, DealService>();
         services.AddSingleton<IMarketAccessor, MarketAccessor>();
 
-        services.AddScoped<LastPriceUpdater>();
+        //services.AddScoped<LastPriceUpdater>();
         services.AddScoped<CbrExchangeRates>();
-        services.AddHostedService<LastPriceWorker>();
+        //services.AddHostedService<LastPriceWorker>();
         services.AddHostedService<CbrExchangeWorker>();
 
         services.AddScoped<IExchangeService, ExchangeService>();
-        services.AddScoped<IPortfolioService, PortfolioService>();
+        //services.AddScoped<IPortfolioService, PortfolioService>();
 
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 

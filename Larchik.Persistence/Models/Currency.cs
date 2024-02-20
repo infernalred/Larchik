@@ -1,6 +1,6 @@
-﻿namespace Larchik.Domain;
+﻿namespace Larchik.Persistence.Models;
 
 public class Currency
 {
-    public string Code { get; set; } = string.Empty;
+    public string Id { get; set; } = null!;
 }

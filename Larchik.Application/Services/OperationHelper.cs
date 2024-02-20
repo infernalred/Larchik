@@ -1,28 +1,29 @@
 ﻿using Larchik.Application.Helpers;
 using Larchik.Domain.Enum;
+using Larchik.Persistence.Enum;
 
 namespace Larchik.Application.Services;
 
 public static class OperationHelper
 {
-    private static readonly Dictionary<DealKind, Func<int, decimal, decimal, decimal>> CurrencyOperations = new()
+    private static readonly Dictionary<OperationKind, Func<int, decimal, decimal, decimal>> CurrencyOperations = new()
     {
-        { DealKind.Add, (count, price, commission) => count * price - commission },
-        { DealKind.Withdrawal, (count, price, commission) => -(count * price + commission) },
-        { DealKind.Tax, (count, price, commission) => -(count * price + commission) },
-        { DealKind.Dividends, (count, price, commission) => count * price - commission },
-        { DealKind.Purchase, (count, price, commission) => -(count * price + commission) },
-        { DealKind.Sale, (count, price, commission) => count * price - commission },
-        { DealKind.Commission, (count, price, commission) => -(count * price) }
+        { OperationKind.Add, (count, price, commission) => count * price - commission },
+        { OperationKind.Withdrawal, (count, price, commission) => -(count * price + commission) },
+        { OperationKind.Tax, (count, price, commission) => -(count * price + commission) },
+        { OperationKind.Dividends, (count, price, commission) => count * price - commission },
+        { OperationKind.Purchase, (count, price, commission) => -(count * price + commission) },
+        { OperationKind.Sale, (count, price, commission) => count * price - commission },
+        { OperationKind.Commission, (count, price, commission) => -(count * price) }
     };
     
-    private static readonly Dictionary<DealKind, Func<int, int>> MakeAssetOperations = new()
+    private static readonly Dictionary<OperationKind, Func<int, int>> MakeAssetOperations = new()
     {
-        { DealKind.Purchase, quantity => quantity },
-        { DealKind.Sale, quantity => -quantity }
+        { OperationKind.Purchase, quantity => quantity },
+        { OperationKind.Sale, quantity => -quantity }
     };
 
-    public static decimal GetAmount(DealKind type, int count, decimal price, decimal commission) => Math.Round(CurrencyOperations[type](count, price, commission), 2);
+    public static decimal GetAmount(OperationKind type, int count, decimal price, decimal commission) => Math.Round(CurrencyOperations[type](count, price, commission), 2);
     
-    public static int GetAssetQuantity(DealKind type, int quantity) => MakeAssetOperations[type](quantity);
+    public static int GetAssetQuantity(OperationKind type, int quantity) => MakeAssetOperations[type](quantity);
 }

@@ -3,6 +3,7 @@ using Larchik.Application.Accounts;
 using Larchik.Application.Dtos;
 using Larchik.Application.Helpers;
 using Larchik.Domain;
+using Larchik.Persistence.Models;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

@@ -1,4 +1,4 @@
-﻿using Larchik.Domain;
+﻿using Larchik.Persistence.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,9 +8,6 @@ public class AccountModelConfiguration : IEntityTypeConfiguration<Account>
 {
     public void Configure(EntityTypeBuilder<Account> builder)
     {
-        builder.HasKey(x => x.Id);
-        
-        builder.Property(x => x.UserId).IsRequired();
-        builder.Property(x => x.Name).IsRequired().HasMaxLength(15);
+        builder.Property(x => x.Name).HasMaxLength(15);
     }
 }

@@ -12,10 +12,12 @@ public class UpdateStockCommandHandler(DataContext context, IUserAccessor userAc
 {
     public async Task<Result<Unit>?> Handle(UpdateStockCommand request, CancellationToken cancellationToken)
     {
-        var stock = await context.Stock
-            .FirstOrDefaultAsync(x => x.Ticker == request.Stock.Ticker, cancellationToken);
+        var stock = await context.Stocks
+            .FirstOrDefaultAsync(x => x.Id == request.Stock.Id, cancellationToken);
 
         if (stock is null) return null;
+
+        request.Stock.Id = request.Id;
 
         mapper.Map(request.Stock, stock);
 

@@ -1,4 +1,4 @@
-﻿using Larchik.Domain;
+﻿using Larchik.Persistence.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -10,6 +10,6 @@ public class SectorModelConfiguration : IEntityTypeConfiguration<Sector>
     {
         builder.HasKey(x => x.Code);
 
-        builder.Property(x => x.Code).IsRequired().HasMaxLength(25);
+        builder.Property(x => x.Code).HasMaxLength(25);
     }
 }

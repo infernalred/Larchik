@@ -13,7 +13,7 @@ public class SearchStocksQueryHandler(DataContext context, IMapper mapper)
 {
     public async Task<Result<StockDto[]>> Handle(SearchStocksQuery request, CancellationToken cancellationToken)
     {
-        var result = await context.Stock
+        var result = await context.Stocks
             .Where(x => x.Ticker.Contains(request.Ticker))
             .Take(20)
             .ProjectTo<StockDto>(mapper.ConfigurationProvider)

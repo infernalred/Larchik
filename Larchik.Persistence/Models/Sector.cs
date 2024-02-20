@@ -1,6 +1,6 @@
-﻿namespace Larchik.Domain;
+﻿namespace Larchik.Persistence.Models;
 
 public class Sector
 {
-    public string Code { get; set; } = string.Empty;
+    public string Code { get; set; } = null!;
 }

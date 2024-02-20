@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.API", "Larchik.API\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.Application", "Larchik.Application\Larchik.Application.csproj", "{3F396E24-EFB2-4DD8-BE8F-D39D28BF61A9}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.Domain", "Larchik.Domain\Larchik.Domain.csproj", "{CD3736AB-5265-4CC6-A2D2-C9FF51F2E5CD}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.Persistence", "Larchik.Persistence\Larchik.Persistence.csproj", "{5EF80251-3C79-4D33-9215-87FFDA0CA6F2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Larchik.Infrastructure", "Larchik.Infrastructure\Larchik.Infrastructure.csproj", "{F93FF001-AA14-46F7-9974-77657E482C59}"
@@ -33,10 +31,6 @@ Global
 		{3F396E24-EFB2-4DD8-BE8F-D39D28BF61A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3F396E24-EFB2-4DD8-BE8F-D39D28BF61A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3F396E24-EFB2-4DD8-BE8F-D39D28BF61A9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CD3736AB-5265-4CC6-A2D2-C9FF51F2E5CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CD3736AB-5265-4CC6-A2D2-C9FF51F2E5CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CD3736AB-5265-4CC6-A2D2-C9FF51F2E5CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CD3736AB-5265-4CC6-A2D2-C9FF51F2E5CD}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5EF80251-3C79-4D33-9215-87FFDA0CA6F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5EF80251-3C79-4D33-9215-87FFDA0CA6F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5EF80251-3C79-4D33-9215-87FFDA0CA6F2}.Release|Any CPU.ActiveCfg = Release|Any CPU

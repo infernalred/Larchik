@@ -4,7 +4,8 @@ using MediatR;
 
 namespace Larchik.Application.Stocks.UpdateStock;
 
-public class UpdateStockCommand : IRequest<Result<Unit>?>
+public class UpdateStockCommand(Guid id, StockDto model) : IRequest<Result<Unit>?>
 {
-    public StockDto Stock { get; set; } = null!;
+    public Guid Id { get; } = id;
+    public StockDto Stock { get; } = model;
 }

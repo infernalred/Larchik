@@ -27,7 +27,7 @@ public class CbrExchangeRates
         Thread.CurrentThread.CurrentCulture = new CultureInfo("ru-RU");
         
         var currency = await _context.Currencies
-            .ToDictionaryAsync(x => x.Code, cancellationToken);
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
         
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         

@@ -1,4 +1,5 @@
-﻿using Larchik.Domain;
+﻿using Larchik.Persistence.Enum;
+using Larchik.Persistence.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,8 +9,7 @@ public class OperationModelConfiguration : IEntityTypeConfiguration<Operation>
 {
     public void Configure(EntityTypeBuilder<Operation> builder)
     {
-        builder.HasKey(x => x.Code);
-
-        builder.Property(x => x.Code).IsRequired().HasMaxLength(25);
+        builder.Property(x => x.Kind).HasDefaultValue(OperationKind.Add);
+        builder.Property(x => x.CurrencyId).HasMaxLength(3);
     }
 }

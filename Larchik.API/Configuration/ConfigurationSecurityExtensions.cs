@@ -45,14 +45,14 @@ public static class ConfigurationSecurityExtensions
                 };
             });
 
-        services.AddAuthorizationBuilder()
-            .AddPolicy("IsAccountOwner", policy => 
-                { policy.Requirements.Add(new IsAccountOwnerRequirement()); })
-            .AddPolicy("IsDealOwner", policy => 
-                { policy.Requirements.Add(new IsDealOwnerRequirement()); });
+        // services.AddAuthorizationBuilder()
+        //     .AddPolicy("IsAccountOwner", policy => 
+        //         { policy.Requirements.Add(new IsAccountOwnerRequirement()); })
+        //     .AddPolicy("IsDealOwner", policy => 
+        //         { policy.Requirements.Add(new IsDealOwnerRequirement()); });
 
         services.AddTransient<IAuthorizationHandler, IsAccountOwnerRequirementHandler>();
-        services.AddTransient<IAuthorizationHandler, IsDealOwnerRequirementRequirementHandler>();
+        //services.AddTransient<IAuthorizationHandler, IsDealOwnerRequirementRequirementHandler>();
         services.AddScoped<ITokenService, TokenService>();
 
         return services;

@@ -1,12 +1,11 @@
-﻿using Larchik.Domain;
-using Larchik.Domain.Enum;
+﻿using Larchik.Domain.Enum;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Models;
 using Microsoft.AspNetCore.Identity;
 
 namespace Larchik.Persistence;
 
-public class Seed
+public static class Seed
 {
     public static async Task SeedData(DataContext context, UserManager<AppUser> userManager)
     {
@@ -21,9 +20,9 @@ public class Seed
 
         if (!context.Currencies.Any())
         {
-            var rub = new Currency { Code = "RUB" };
-            var usd = new Currency { Code = "USD" };
-            var eur = new Currency { Code = "EUR" };
+            var rub = new Currency { Id = "RUB" };
+            var usd = new Currency { Id = "USD" };
+            var eur = new Currency { Id = "EUR" };
 
             var currencies = new List<Currency>
             {
@@ -31,22 +30,6 @@ public class Seed
             };
             
             await context.AddRangeAsync(currencies);
-            await context.SaveChangesAsync();
-        }
-        
-        if (!context.StockTypes.Any())
-        {
-            var type1 = new StockType { Id = 1, Code = "Share" };
-            var type2 = new StockType { Id = 2, Code = "Bond" };
-            var type3 = new StockType { Id = 3, Code = "Etf" };
-            var type4 = new StockType { Id = 4, Code = "Money" };
-
-            var stockTypes = new List<StockType>
-            {
-                type1, type2, type3, type4
-            };
-            
-            await context.AddRangeAsync(stockTypes);
             await context.SaveChangesAsync();
         }
         
@@ -80,11 +63,11 @@ public class Seed
             await context.SaveChangesAsync();
         }
 
-        if (!context.Stock.Any())
+        if (!context.Stocks.Any())
         {
-            var money1 = new Stock { Ticker = "RUB", CompanyName = "", CurrencyId = "RUB", TypeId = "MONEY", SectorId = "Валюта", Figi = "RUB", LastPrice = 1, Type = StockKind.Money};
-            var money2 = new Stock { Ticker = "USD", CompanyName = "", CurrencyId = "USD", TypeId = "MONEY", SectorId = "Валюта", Figi = "USD", LastPrice = 121, Type = StockKind.Money };
-            var money3 = new Stock { Ticker = "EUR", CompanyName = "", CurrencyId = "EUR", TypeId = "MONEY", SectorId = "Валюта", Figi = "EUR", LastPrice = 134, Type = StockKind.Money };
+            var money1 = new Stock { Ticker = "RUB", Name = "Рубль", CurrencyId = "RUB", SectorId = "Валюта", Isin = "RUB", LastPrice = 1, Kind = StockKind.Money};
+            var money2 = new Stock { Ticker = "USD", Name = "Доллар США", CurrencyId = "USD", SectorId = "Валюта", Isin = "USD", LastPrice = 121, Kind = StockKind.Money };
+            var money3 = new Stock { Ticker = "EUR", Name = "Евро", CurrencyId = "EUR", SectorId = "Валюта", Isin = "EUR", LastPrice = 134, Kind = StockKind.Money };
 
             var stocks = new List<Stock>
             {
@@ -95,24 +78,24 @@ public class Seed
             await context.SaveChangesAsync();
         }
 
-        if (!context.DealTypes.Any())
-        {
-            var dealType1 = new DealType { Id = 1, Code = "Пополнение" };
-            var dealType2 = new DealType { Id = 2, Code = "Вывод" };
-            var dealType3 = new DealType { Id = 3, Code = "Покупка" };
-            var dealType4 = new DealType { Id = 4, Code = "Продажа" };
-            var dealType5 = new DealType { Id = 5, Code = "Комиссия" };
-            var dealType6 = new DealType { Id = 6, Code = "Налог" };
-            var dealType7 = new DealType { Id = 7, Code = "Дивиденды" };
-
-            var dealTypes = new List<DealType>
-            {
-                dealType1, dealType2, dealType3, dealType4, dealType5, dealType6, dealType7
-            };
-
-            await context.AddRangeAsync(dealTypes);
-            await context.SaveChangesAsync();
-        }
+        // if (!context.DealTypes.Any())
+        // {
+        //     var dealType1 = new DealType { Id = 1, Code = "Пополнение" };
+        //     var dealType2 = new DealType { Id = 2, Code = "Вывод" };
+        //     var dealType3 = new DealType { Id = 3, Code = "Покупка" };
+        //     var dealType4 = new DealType { Id = 4, Code = "Продажа" };
+        //     var dealType5 = new DealType { Id = 5, Code = "Комиссия" };
+        //     var dealType6 = new DealType { Id = 6, Code = "Налог" };
+        //     var dealType7 = new DealType { Id = 7, Code = "Дивиденды" };
+        //
+        //     var dealTypes = new List<DealType>
+        //     {
+        //         dealType1, dealType2, dealType3, dealType4, dealType5, dealType6, dealType7
+        //     };
+        //
+        //     await context.AddRangeAsync(dealTypes);
+        //     await context.SaveChangesAsync();
+        // }
 
         if (!context.Accounts.Any())
         {

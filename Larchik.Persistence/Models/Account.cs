@@ -1,13 +1,12 @@
-﻿using Larchik.Persistence.Models;
-
-namespace Larchik.Domain;
+﻿namespace Larchik.Persistence.Models;
 
 public class Account
 {
     public Guid Id { get; set; }
-    public AppUser User { get; set; } = null!;
-    public string UserId { get; set; } = null!;
+    public Guid UserId { get; set; }
     public string Name { get; set; } = null!;
+
+    public AppUser? User { get; set; }
     public ICollection<Asset> Assets { get; set; } = new List<Asset>();
-    public ICollection<Deal> Deals { get; set; } = new List<Deal>();
+    public ICollection<Operation> Operations { get; set; } = new List<Operation>();
 }

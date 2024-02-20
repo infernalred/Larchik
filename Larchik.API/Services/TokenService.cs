@@ -7,25 +7,20 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Larchik.API.Services;
 
-public class TokenService : ITokenService
+public class TokenService(IConfiguration configuration) : ITokenService
 {
-    private readonly IConfiguration _configuration;
-
-    public TokenService(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
-    
     public string CreateToken(AppUser user)
     {
         var claims = new List<Claim>
         {
-            new(ClaimTypes.Name, user.UserName),
-            new(ClaimTypes.NameIdentifier, user.Id),
-            new(ClaimTypes.Email, user.Email)
+            new(ClaimTypes.Name, user.UserName ?? throw new InvalidOperationException()),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Email, user.Email ?? throw new InvalidOperationException())
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["TokenKey"]));
+        var key = new SymmetricSecurityKey(Encoding.UTF8
+            .GetBytes(configuration["TokenKey"] ??
+                      throw new InvalidOperationException($"{nameof(TokenService)}: TokenKey not found")));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
 
         var tokenDescriptor = new SecurityTokenDescriptor

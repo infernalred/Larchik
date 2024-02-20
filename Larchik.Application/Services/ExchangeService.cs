@@ -1,6 +1,7 @@
 ﻿using Larchik.Application.Services.Contracts;
 using Larchik.Domain;
 using Larchik.Persistence.Context;
+using Larchik.Persistence.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -17,9 +18,9 @@ public class ExchangeService : IExchangeService
         _cache = cache;
     }
 
-    public async Task<decimal> GetAmountAsync(Deal deal, string code)
+    public async Task<decimal> GetAmountAsync(Operation operation, string code)
     {
-        var date = DateOnly.FromDateTime(deal.CreatedAt);
+        var date = DateOnly.FromDateTime(operation.CreatedAt);
         var key = $"{code}_{date}";
 
         if (!_cache.TryGetValue(key, out Exchange exchange))
@@ -31,6 +32,6 @@ public class ExchangeService : IExchangeService
             _cache.Set(key, exchange, new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromHours(1)));
         }
 
-        return deal.Amount * (decimal)exchange.Rate / exchange.Nominal;
+        return operation.Amount * (decimal)exchange.Rate / exchange.Nominal;
     }
 }

@@ -1,8 +1,9 @@
 ﻿using Larchik.Domain;
+using Larchik.Persistence.Models;
 
 namespace Larchik.Application.Services.Contracts;
 
 public interface IExchangeService
 {
-    Task<decimal> GetAmountAsync(Deal deal, string code);
+    Task<decimal> GetAmountAsync(Operation operation, string code);
 }
