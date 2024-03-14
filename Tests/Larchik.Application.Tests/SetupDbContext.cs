@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Larchik.Domain;
-using Larchik.Domain.Enum;
 using Larchik.Persistence.Context;
-using Larchik.Persistence.Models;
+using Larchik.Persistence.Entity;
+using Larchik.Persistence.Enum;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 

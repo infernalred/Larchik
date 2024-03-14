@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 using Larchik.Application.Dtos;
-using Larchik.Domain.Enum;
 using Larchik.Persistence.Enum;
 
 namespace Larchik.Application.Deals;

@@ -1,9 +1,8 @@
 ﻿using System.Text;
 using Larchik.API.Services;
-using Larchik.Domain;
 using Larchik.Infrastructure.Security;
 using Larchik.Persistence.Context;
-using Larchik.Persistence.Models;
+using Larchik.Persistence.Entity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;

@@ -1,6 +1,6 @@
 ﻿using Larchik.Persistence.Enum;
 
-namespace Larchik.Persistence.Models;
+namespace Larchik.Persistence.Entity;
 
 public class Operation
 {

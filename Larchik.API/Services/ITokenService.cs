@@ -1,5 +1,4 @@
-﻿using Larchik.Domain;
-using Larchik.Persistence.Models;
+﻿using Larchik.Persistence.Entity;
 
 namespace Larchik.API.Services;
 

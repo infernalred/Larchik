@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Larchik.Domain;
-using Larchik.Persistence.Models;
+using Larchik.Persistence.Entity;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using Xunit;

@@ -1,4 +1,4 @@
-﻿namespace Larchik.Domain.Enum;
+﻿namespace Larchik.Persistence.Enum;
 
 public enum StockKind
 {

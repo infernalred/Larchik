@@ -1,13 +1,13 @@
-using AutoMapper;
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
+using Mapster;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.UpdateStock;
 
-public class UpdateStockCommandHandler(DataContext context, IUserAccessor userAccessor, IMapperBase mapper)
+public class UpdateStockCommandHandler(DataContext context, IUserAccessor userAccessor)
     : IRequestHandler<UpdateStockCommand, Result<Unit>?>
 {
     public async Task<Result<Unit>?> Handle(UpdateStockCommand request, CancellationToken cancellationToken)
@@ -19,7 +19,7 @@ public class UpdateStockCommandHandler(DataContext context, IUserAccessor userAc
 
         request.Stock.Id = request.Id;
 
-        mapper.Map(request.Stock, stock);
+        request.Stock.Adapt(stock);
 
         stock.UpdatedBy = userAccessor.GetUserId();
 

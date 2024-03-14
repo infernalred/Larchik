@@ -1,7 +1,7 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
-using Larchik.Persistence.Models;
+using Larchik.Persistence.Entity;
 using MediatR;
 
 namespace Larchik.Application.Stocks.CreateStock;

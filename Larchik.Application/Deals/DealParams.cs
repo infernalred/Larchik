@@ -1,5 +1,4 @@
 ﻿using Larchik.Application.Helpers;
-using Larchik.Domain.Enum;
 using Larchik.Persistence.Enum;
 
 namespace Larchik.Application.Deals;

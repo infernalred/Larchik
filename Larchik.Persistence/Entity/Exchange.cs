@@ -1,4 +1,4 @@
-﻿namespace Larchik.Domain;
+﻿namespace Larchik.Persistence.Entity;
 
 public class Exchange
 {

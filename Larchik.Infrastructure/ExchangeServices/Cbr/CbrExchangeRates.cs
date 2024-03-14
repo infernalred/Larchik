@@ -1,8 +1,8 @@
 ﻿using System.Data;
 using System.Globalization;
 using System.Text;
-using Larchik.Domain;
 using Larchik.Persistence.Context;
+using Larchik.Persistence.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

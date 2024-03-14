@@ -1,8 +1,7 @@
 ﻿using System.Security.Claims;
 using Larchik.API.Dtos;
 using Larchik.API.Services;
-using Larchik.Domain;
-using Larchik.Persistence.Models;
+using Larchik.Persistence.Entity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

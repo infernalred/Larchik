@@ -1,6 +1,6 @@
-﻿using Larchik.Domain.Enum;
+﻿using Larchik.Persistence.Enum;
 
-namespace Larchik.Persistence.Models;
+namespace Larchik.Persistence.Entity;
 
 public class Stock
 {

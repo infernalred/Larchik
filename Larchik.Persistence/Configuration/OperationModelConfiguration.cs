@@ -1,5 +1,5 @@
-﻿using Larchik.Persistence.Enum;
-using Larchik.Persistence.Models;
+﻿using Larchik.Persistence.Entity;
+using Larchik.Persistence.Enum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

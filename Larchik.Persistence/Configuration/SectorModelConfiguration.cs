@@ -1,4 +1,4 @@
-﻿using Larchik.Persistence.Models;
+﻿using Larchik.Persistence.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

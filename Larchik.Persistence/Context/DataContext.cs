@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
-using Larchik.Domain;
-using Larchik.Persistence.Models;
+using Larchik.Persistence.Entity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 

@@ -1,7 +1,6 @@
 ﻿using Larchik.Application.Helpers;
-using Larchik.Domain;
 using Larchik.Persistence.Context;
-using Larchik.Persistence.Models;
+using Larchik.Persistence.Entity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

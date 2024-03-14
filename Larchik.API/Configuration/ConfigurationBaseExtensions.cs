@@ -4,7 +4,6 @@ using FluentValidation.AspNetCore;
 using Larchik.API.Configuration.Models;
 using Larchik.Application.Contracts;
 using Larchik.Application.Deals;
-using Larchik.Application.Helpers;
 using Larchik.Application.Services;
 using Larchik.Application.Services.Contracts;
 using Larchik.Infrastructure.ExchangeServices.Cbr;
@@ -31,7 +30,6 @@ public static class ConfigurationBaseExtensions
 
         LogManager.Configuration.Variables["DefaultConnection"] = configuration.GetConnectionString("DefaultConnection");
         services.AddMemoryCache();
-        services.AddAutoMapper(typeof(MappingProfiles).Assembly);
         services.AddMediatR(typeof(Create).Assembly);
         services.AddControllers(opt =>
             {

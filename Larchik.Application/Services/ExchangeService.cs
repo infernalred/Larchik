@@ -1,7 +1,6 @@
 ﻿using Larchik.Application.Services.Contracts;
-using Larchik.Domain;
 using Larchik.Persistence.Context;
-using Larchik.Persistence.Models;
+using Larchik.Persistence.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 

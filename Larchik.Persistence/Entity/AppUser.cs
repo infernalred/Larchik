@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace Larchik.Persistence.Models;
+namespace Larchik.Persistence.Entity;
 
 public class AppUser : IdentityUser<Guid>
 {

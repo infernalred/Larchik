@@ -1,6 +1,6 @@
-﻿using Larchik.Domain.Enum;
-using Larchik.Persistence.Context;
-using Larchik.Persistence.Models;
+﻿using Larchik.Persistence.Context;
+using Larchik.Persistence.Entity;
+using Larchik.Persistence.Enum;
 using Microsoft.AspNetCore.Identity;
 
 namespace Larchik.Persistence;

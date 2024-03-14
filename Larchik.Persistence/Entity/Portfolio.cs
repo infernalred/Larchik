@@ -1,4 +1,4 @@
-﻿namespace Larchik.Persistence.Models;
+﻿namespace Larchik.Persistence.Entity;
 
 public class Portfolio
 {

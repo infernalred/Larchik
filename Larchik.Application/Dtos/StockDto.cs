@@ -1,4 +1,4 @@
-﻿using Larchik.Domain.Enum;
+﻿using Larchik.Persistence.Enum;
 
 namespace Larchik.Application.Dtos;
 

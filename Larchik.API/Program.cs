@@ -1,9 +1,8 @@
 using Larchik.API.Configuration;
 using Larchik.API.Middleware;
-using Larchik.Domain;
 using Larchik.Persistence;
 using Larchik.Persistence.Context;
-using Larchik.Persistence.Models;
+using Larchik.Persistence.Entity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using NLog;
