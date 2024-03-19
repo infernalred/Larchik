@@ -5,12 +5,36 @@ VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{7BF0CAAB-542E-42F8-856D-643DC7E2F5D9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.API", "Larchik.API\Larchik.API.csproj", "{1E0A2278-C750-4E87-98ED-3A7996D8B34E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.Application", "Larchik.Application\Larchik.Application.csproj", "{8B2CBCB8-37E8-432B-AD59-BAF7BEB4EFF1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.Infrastructure", "Larchik.Infrastructure\Larchik.Infrastructure.csproj", "{146DF5DE-78B8-433A-B154-2E4881F1A904}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.Persistence", "Larchik.Persistence\Larchik.Persistence.csproj", "{51247121-08AD-4365-AB36-9574AECD0F19}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1E0A2278-C750-4E87-98ED-3A7996D8B34E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E0A2278-C750-4E87-98ED-3A7996D8B34E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E0A2278-C750-4E87-98ED-3A7996D8B34E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E0A2278-C750-4E87-98ED-3A7996D8B34E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B2CBCB8-37E8-432B-AD59-BAF7BEB4EFF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B2CBCB8-37E8-432B-AD59-BAF7BEB4EFF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B2CBCB8-37E8-432B-AD59-BAF7BEB4EFF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B2CBCB8-37E8-432B-AD59-BAF7BEB4EFF1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{146DF5DE-78B8-433A-B154-2E4881F1A904}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{146DF5DE-78B8-433A-B154-2E4881F1A904}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{146DF5DE-78B8-433A-B154-2E4881F1A904}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{146DF5DE-78B8-433A-B154-2E4881F1A904}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51247121-08AD-4365-AB36-9574AECD0F19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51247121-08AD-4365-AB36-9574AECD0F19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51247121-08AD-4365-AB36-9574AECD0F19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51247121-08AD-4365-AB36-9574AECD0F19}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
