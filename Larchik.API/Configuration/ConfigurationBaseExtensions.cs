@@ -6,6 +6,7 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Deals;
 using Larchik.Application.Services;
 using Larchik.Application.Services.Contracts;
+using Larchik.Application.Stocks.CreateStock;
 using Larchik.Infrastructure.ExchangeServices.Cbr;
 using Larchik.Infrastructure.Market;
 using Larchik.Infrastructure.Security;
@@ -28,9 +29,8 @@ public static class ConfigurationBaseExtensions
             opt.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
         });
 
-        LogManager.Configuration.Variables["DefaultConnection"] = configuration.GetConnectionString("DefaultConnection");
         services.AddMemoryCache();
-        services.AddMediatR(typeof(Create).Assembly);
+        services.AddMediatR(typeof(CreateStockCommand).Assembly);
         services.AddControllers(opt =>
             {
                 var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
@@ -38,36 +38,36 @@ public static class ConfigurationBaseExtensions
             });
 
         services
-            .AddValidatorsFromAssemblyContaining(typeof(Create))
+            .AddValidatorsFromAssemblyContaining(typeof(StockValidator))
             .AddFluentValidationAutoValidation()
             .AddFluentValidationClientsideAdapters();
 
-        var marketConfig = configuration.GetSection(nameof(MarketSettings)).Get<MarketSettings>();
-
-        if (string.IsNullOrEmpty(marketConfig?.BaseAddress))
-            throw new ArgumentException($"{nameof(MarketSettings.BaseAddress)} is null");
-
-        if (string.IsNullOrEmpty(marketConfig.Token))
-            throw new ArgumentException($"{nameof(MarketSettings.Token)} is null");
-
-        services.AddHttpClient("Market", client =>
-        {
-            client.BaseAddress = new Uri(marketConfig.BaseAddress);
-
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", marketConfig.Token);
-        });
+        // var marketConfig = configuration.GetSection(nameof(MarketSettings)).Get<MarketSettings>();
+        //
+        // if (string.IsNullOrEmpty(marketConfig?.BaseAddress))
+        //     throw new ArgumentException($"{nameof(MarketSettings.BaseAddress)} is null");
+        //
+        // if (string.IsNullOrEmpty(marketConfig.Token))
+        //     throw new ArgumentException($"{nameof(MarketSettings.Token)} is null");
+        //
+        // services.AddHttpClient("Market", client =>
+        // {
+        //     client.BaseAddress = new Uri(marketConfig.BaseAddress);
+        //
+        //     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", marketConfig.Token);
+        // });
 
         services.Configure<CbrSettings>(configuration.GetSection(nameof(CbrSettings)));
         services.AddScoped<IUserAccessor, UserAccessor>();
         //services.AddScoped<IDealService, DealService>();
-        services.AddSingleton<IMarketAccessor, MarketAccessor>();
+        //services.AddSingleton<IMarketAccessor, MarketAccessor>();
 
         //services.AddScoped<LastPriceUpdater>();
-        services.AddScoped<CbrExchangeRates>();
+        //services.AddScoped<CbrExchangeRates>();
         //services.AddHostedService<LastPriceWorker>();
-        services.AddHostedService<CbrExchangeWorker>();
+        //services.AddHostedService<CbrExchangeWorker>();
 
-        services.AddScoped<IExchangeService, ExchangeService>();
+        //services.AddScoped<IExchangeService, ExchangeService>();
         //services.AddScoped<IPortfolioService, PortfolioService>();
 
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);

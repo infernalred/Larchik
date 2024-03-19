@@ -14,42 +14,46 @@ namespace Larchik.API.Controllers;
 public class StocksController : BaseApiController
 {
     [HttpGet]
-    [ProducesResponseType(typeof(Result<StockDto[]>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(StockDto[]), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
-    public async Task<ActionResult<Result<StockDto[]>>> SearchStocks([FromQuery] string ticker)
+    public async Task<ActionResult<StockDto[]>> SearchStocks([FromQuery] string ticker)
     {
-        return Ok(await Mediator.Send(new SearchStocksQuery(ticker), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new SearchStocksQuery(ticker), HttpContext.RequestAborted));
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(Result<StockDto[]>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(StockDto[]), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     public async Task<ActionResult<Result<StockDto[]>>> GetPagedStocks([FromQuery] StockFilter filter)
     {
-        return Ok(await Mediator.Send(new GetPagedQuery(filter), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new GetPagedQuery(filter), HttpContext.RequestAborted));
     }
 
-    [HttpGet("{id}")]
-    [ProducesResponseType(typeof(Result<StockDto>), (int)HttpStatusCode.OK)]
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(StockDto), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<Result<StockDto>>> GetStock(Guid id)
     {
-        return Ok(await Mediator.Send(new GetStockQuery(id), HttpContext.RequestAborted));
-    }
-    
-    [HttpPost]
-    [ProducesResponseType(typeof(Result<Unit>), (int)HttpStatusCode.OK)]
-    [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
-    public async Task<ActionResult<Result<Unit>>> CreateStock(StockDto model)
-    {
-        return Ok(await Mediator.Send(new CreateStockCommand(model), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new GetStockQuery(id), HttpContext.RequestAborted));
     }
 
-    [HttpPut("{id}")]
+    [HttpPost]
+    [ProducesResponseType(typeof(Guid), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    public async Task<ActionResult<Guid>> CreateStock(StockDto model)
+    {
+        var result = await Mediator.Send(new CreateStockCommand(model), HttpContext.RequestAborted);
+
+        return CreatedAtRoute(nameof(GetStock), new {id = result.Value});
+    }
+
+    [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(Result<Unit>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<Result<Unit>>> UpdateStock(Guid id, StockDto model)
     {
-        return Ok(await Mediator.Send(new UpdateStockCommand(id, model), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new UpdateStockCommand(id, model), HttpContext.RequestAborted));
     }
 }

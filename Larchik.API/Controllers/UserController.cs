@@ -86,7 +86,7 @@ public class UserController : ControllerBase
         {
             DisplayName = user.DisplayName,
             Token = _tokenService.CreateToken(user),
-            UserName = user.UserName
+            UserName = user.UserName!
         };
     }
 }
