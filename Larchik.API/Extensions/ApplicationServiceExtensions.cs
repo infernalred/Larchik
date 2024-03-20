@@ -23,6 +23,10 @@ public static class ApplicationServiceExtensions
             opt.Filters.Add(new AuthorizeFilter(policy));
         });
 
+        services.AddHttpContextAccessor();
+
+        services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
+
         return services;
     }
 }
