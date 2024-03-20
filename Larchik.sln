@@ -13,8 +13,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.Infrastructure", "L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Larchik.Persistence", "Larchik.Persistence\Larchik.Persistence.csproj", "{51247121-08AD-4365-AB36-9574AECD0F19}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApplication1", "WebApplication1\WebApplication1.csproj", "{49CDA664-4220-428F-ADA4-0E4C3304A20F}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,10 +35,6 @@ Global
 		{51247121-08AD-4365-AB36-9574AECD0F19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{51247121-08AD-4365-AB36-9574AECD0F19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{51247121-08AD-4365-AB36-9574AECD0F19}.Release|Any CPU.Build.0 = Release|Any CPU
-		{49CDA664-4220-428F-ADA4-0E4C3304A20F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{49CDA664-4220-428F-ADA4-0E4C3304A20F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{49CDA664-4220-428F-ADA4-0E4C3304A20F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{49CDA664-4220-428F-ADA4-0E4C3304A20F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -10,7 +10,7 @@ public static class ServicesSwaggerExtensions
         {
             c.CustomSchemaIds(x => x.FullName);
             c.ResolveConflictingActions(x => x.First());
-            c.SwaggerDoc("v2", new OpenApiInfo { Title = "Larchik API v2.0", Version = "v2" });
+            c.SwaggerDoc("v1", new OpenApiInfo { Title = "Larchik API v2.0", Version = "v2" });
  
             c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
