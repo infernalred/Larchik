@@ -1,4 +1,5 @@
 using System.Text;
+using Larchik.API.Services;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -32,6 +33,8 @@ public static class SecurityServiceExtensions
                     ValidateLifetime = true
                 };
             });
+
+        services.AddScoped<ITokenService, TokenService>();
 
         return services;
     }

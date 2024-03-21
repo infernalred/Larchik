@@ -6,7 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Persistence.Context;
 
-public class LarchikContext(DbContextOptions<LarchikContext> options) : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
+public class LarchikContext(DbContextOptions<LarchikContext> options)
+    : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)
 {
     protected override void OnModelCreating(ModelBuilder builder)
     {

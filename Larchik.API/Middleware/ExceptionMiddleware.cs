@@ -6,6 +6,7 @@ namespace Larchik.API.Middleware;
 
 public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger, IHostEnvironment env)
 {
+    private static readonly JsonSerializerOptions Options = new() {PropertyNamingPolicy = JsonNamingPolicy.CamelCase};
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -22,9 +23,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
                 ? new AppException(context.Response.StatusCode, ex.Message, ex.StackTrace)
                 : new AppException(context.Response.StatusCode, "Server Error");
 
-            var options = new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase};
-
-            var json = JsonSerializer.Serialize(response, options);
+            var json = JsonSerializer.Serialize(response, Options);
 
             await context.Response.WriteAsync(json);
         }
