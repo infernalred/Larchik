@@ -22,8 +22,6 @@ public class AppUserModelConfiguration : IEntityTypeConfiguration<AppUser>
         var ph = new PasswordHasher<AppUser>();
         user.PasswordHash = ph.HashPassword(user, "Password!!!123");
 
-        builder.HasData(
-            user
-        );
+        builder.HasData(user);
     }
 }

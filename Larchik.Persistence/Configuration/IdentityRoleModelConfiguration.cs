@@ -16,8 +16,6 @@ public class IdentityRoleModelConfiguration : IEntityTypeConfiguration<IdentityR
             NormalizedName = Roles.Admin.ToUpper()
         };
 
-        builder.HasData(
-            admin
-        );
+        builder.HasData(admin);
     }
 }

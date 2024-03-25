@@ -3,6 +3,7 @@ using Larchik.API.Services;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Larchik.API.Extensions;
@@ -16,6 +17,7 @@ public static class SecurityServiceExtensions
                 opt.Password.RequireNonAlphanumeric = false;
                 opt.User.RequireUniqueEmail = true;
             })
+            .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<LarchikContext>();
 
         var key = new SymmetricSecurityKey(Encoding.UTF8

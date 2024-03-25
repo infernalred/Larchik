@@ -3,6 +3,7 @@ using System;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Larchik.Persistence.Migrations
 {
     [DbContext(typeof(LarchikContext))]
-    partial class LarchikContextModelSnapshot : ModelSnapshot
+    [Migration("20240324173015_AddCurrencyCategoryStock")]
+    partial class AddCurrencyCategoryStock
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -160,17 +163,12 @@ namespace Larchik.Persistence.Migrations
                         new
                         {
                             Id = 8,
-                            Name = "Валюта"
+                            Name = "Сырьевая промышленность"
                         },
                         new
                         {
                             Id = 9,
                             Name = "Электроэнергетика"
-                        },
-                        new
-                        {
-                            Id = 10,
-                            Name = "Сырьевая промышленность"
                         });
                 });
 

@@ -14,8 +14,6 @@ public class IdentityUserRoleModelConfiguration : IEntityTypeConfiguration<Ident
             RoleId = Guid.Parse("e5165cd8-4c41-4cc2-8aad-47b879f9da38")
         };
 
-        builder.HasData(
-            userRole
-        );
+        builder.HasData(userRole);
     }
 }

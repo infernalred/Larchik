@@ -1,3 +1,4 @@
+using Larchik.Application.Currencies.GetCurrencies;
 using Larchik.Persistence.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -16,6 +17,8 @@ public static class ApplicationServiceExtensions
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
             opt.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
         });
+
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetCurrenciesQuery).Assembly));
 
         services.AddControllers(opt =>
         {
