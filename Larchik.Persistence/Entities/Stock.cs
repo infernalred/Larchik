@@ -10,9 +10,9 @@ public class Stock
     public string CurrencyId { get; set; } = null!;
     public int CategoryId { get; set; }
     public double Price { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public Guid CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public Guid UpdatedBy { get; set; }
 
     public Currency? Currency { get; set; }
