@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Larchik.Application\Larchik.Application.csproj" />
+      <ProjectReference Include="..\Larchik.Infrastructure\Larchik.Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>

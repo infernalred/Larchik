@@ -1,5 +1,7 @@
 using System.Text;
 using Larchik.API.Services;
+using Larchik.Application.Contracts;
+using Larchik.Infrastructure.Security;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -37,6 +39,7 @@ public static class SecurityServiceExtensions
             });
 
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IUserAccessor, UserAccessor>();
 
         return services;
     }
