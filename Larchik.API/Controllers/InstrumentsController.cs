@@ -1,8 +1,8 @@
 using System.Net;
+using Larchik.Application.Instruments.CreateInstrument;
+using Larchik.Application.Instruments.EditInstrument;
+using Larchik.Application.Instruments.GetInstrument;
 using Larchik.Application.Models;
-using Larchik.Application.Stocks.CreateStock;
-using Larchik.Application.Stocks.EditStock;
-using Larchik.Application.Stocks.GetStock;
 using Larchik.Persistence.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -10,16 +10,16 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Larchik.API.Controllers;
 
-public class StocksController : BaseApiController
+public class InstrumentsController : BaseApiController
 {
     [Authorize(Roles = $"{Roles.Admin}")]
     [HttpPost]
     [ProducesResponseType(typeof(Unit), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
-    public async Task<ActionResult<Unit>> CreateStock([FromBody] StockModel model)
+    public async Task<ActionResult<Unit>> CreateInstrument([FromBody] InstrumentModel model)
     {
-        return HandleResult(await Mediator.Send(new CreateStockCommand(model), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new CreateInstrumentCommand(model), HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:guid}")]
@@ -27,9 +27,9 @@ public class StocksController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<ActionResult<StockDto>> GetStock(Guid id)
+    public async Task<ActionResult<InstrumentDto>> GetInstrument(Guid id)
     {
-        return HandleResult(await Mediator.Send(new GetStockQuery(id), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new GetInstrumentQuery(id), HttpContext.RequestAborted));
     }
 
     [Authorize(Roles = $"{Roles.Admin}")]
@@ -38,8 +38,8 @@ public class StocksController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<ActionResult<Unit>> EditStock(Guid id, [FromBody] StockModel model)
+    public async Task<ActionResult<Unit>> EditInstrument(Guid id, [FromBody] InstrumentModel model)
     {
-        return HandleResult(await Mediator.Send(new EditStockCommand(id, model), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new EditInstrumentCommand(id, model), HttpContext.RequestAborted));
     }
 }
