@@ -33,11 +33,8 @@ app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Larchik API v2.0");
-    });
+    app.UseOpenApi();
+    app.UseSwaggerUi(c => { c.DocumentPath = "/swagger/v1/swagger.json"; });
 }
 app.UseHttpsRedirection();
 

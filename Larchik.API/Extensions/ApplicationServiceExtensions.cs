@@ -3,6 +3,7 @@ using Larchik.Persistence.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 namespace Larchik.API.Extensions;
 
@@ -16,6 +17,7 @@ public static class ApplicationServiceExtensions
             opt.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
             opt.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+            opt.UseSnakeCaseNamingConvention();
         });
 
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetCurrenciesQuery).Assembly));

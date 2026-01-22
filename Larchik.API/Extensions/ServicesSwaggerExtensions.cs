@@ -1,4 +1,5 @@
-using Microsoft.OpenApi.Models;
+using NSwag;
+using NSwag.Generation.Processors.Security;
 
 namespace Larchik.API.Extensions;
 
@@ -6,35 +7,18 @@ public static class ServicesSwaggerExtensions
 {
     public static IServiceCollection AddSwaggerServices(this IServiceCollection services)
     {
-        services.AddSwaggerGen(c =>
+        services.AddOpenApiDocument(options =>
         {
-            c.CustomSchemaIds(x => x.FullName);
-            c.ResolveConflictingActions(x => x.First());
-            c.SwaggerDoc("v1", new OpenApiInfo { Title = "Larchik API v2.0", Version = "v2" });
- 
-            c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            options.Title = "Larchik API v2.0";
+            options.Version = "v2";
+            options.AddSecurity("Bearer", Enumerable.Empty<string>(), new()
             {
-                Description = "Please insert JWT token into field",
-                In = ParameterLocation.Header,
-                Type = SecuritySchemeType.Http,
+                Type = OpenApiSecuritySchemeType.Http,
+                Scheme = "bearer",
                 BearerFormat = "JWT",
-                Scheme = "bearer"
+                Description = "JWT Authorization header using the Bearer scheme."
             });
-                
-            c.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                    Array.Empty<string>()
-                }
-            });
+            options.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("Bearer"));
         });
 
         return services;
