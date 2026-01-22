@@ -1,5 +1,6 @@
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
+using Larchik.Application.Valuations;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
@@ -126,6 +127,9 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             }
         }
 
+        var valuationStrategy = new AdjustingAverageValuationStrategy();
+        var positionCosts = valuationStrategy.Compute(operations);
+
         var cashDtos = new List<CashBalanceDto>();
         decimal cashBase = 0;
         foreach (var kvp in cashByCurrency)
@@ -147,6 +151,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             if (kvp.Value == 0) continue;
             if (!instruments.TryGetValue(kvp.Key, out var instrument)) continue;
 
+            positionCosts.TryGetValue(kvp.Key, out var cost);
             var lastPrice = priceByInstrument.TryGetValue(kvp.Key, out var price) ? price.Value : (decimal?)null;
             var marketValueBase = lastPrice.HasValue
                 ? ConvertToBase(kvp.Value * lastPrice.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, fxMap)
@@ -159,7 +164,8 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
                 CurrencyId = instrument.CurrencyId,
                 Quantity = kvp.Value,
                 LastPrice = lastPrice,
-                MarketValueBase = marketValueBase
+                MarketValueBase = marketValueBase,
+                AverageCost = cost?.AverageCost ?? 0
             });
 
             positionsValueBase += marketValueBase;

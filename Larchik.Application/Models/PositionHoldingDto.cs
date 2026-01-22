@@ -10,4 +10,5 @@ public class PositionHoldingDto
     public decimal Quantity { get; set; }
     public decimal? LastPrice { get; set; }
     public decimal MarketValueBase { get; set; }
+    public decimal AverageCost { get; set; }
 }
