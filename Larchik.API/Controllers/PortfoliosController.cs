@@ -10,8 +10,8 @@ public class PortfoliosController : BaseApiController
     [HttpGet("{id:guid}/summary")]
     [ProducesResponseType(typeof(PortfolioSummaryDto), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<ActionResult<PortfolioSummaryDto>> GetSummary(Guid id)
+    public async Task<ActionResult<PortfolioSummaryDto>> GetSummary(Guid id, [FromQuery] string? method)
     {
-        return HandleResult(await Mediator.Send(new GetPortfolioSummaryQuery(id), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new GetPortfolioSummaryQuery(id, method), HttpContext.RequestAborted));
     }
 }

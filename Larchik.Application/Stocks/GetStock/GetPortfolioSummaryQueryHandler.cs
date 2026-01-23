@@ -127,8 +127,9 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             }
         }
 
-        var valuationStrategy = new AdjustingAverageValuationStrategy();
-        var positionCosts = valuationStrategy.Compute(operations);
+        var valuationService = new ValuationService();
+        var valuation = valuationService.Evaluate(operations, request.Method);
+        var positionCosts = valuation.Positions;
 
         var cashDtos = new List<CashBalanceDto>();
         decimal cashBase = 0;
@@ -146,6 +147,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
 
         var positionDtos = new List<PositionHoldingDto>();
         decimal positionsValueBase = 0;
+        decimal costBasisBase = 0;
         foreach (var kvp in positions)
         {
             if (kvp.Value == 0) continue;
@@ -156,6 +158,8 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             var marketValueBase = lastPrice.HasValue
                 ? ConvertToBase(kvp.Value * lastPrice.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, fxMap)
                 : 0;
+            var avgCost = cost?.AverageCost ?? 0;
+            var costBase = ConvertToBase(avgCost * kvp.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, fxMap);
 
             positionDtos.Add(new PositionHoldingDto
             {
@@ -165,10 +169,24 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
                 Quantity = kvp.Value,
                 LastPrice = lastPrice,
                 MarketValueBase = marketValueBase,
-                AverageCost = cost?.AverageCost ?? 0
+                AverageCost = avgCost
             });
 
             positionsValueBase += marketValueBase;
+            costBasisBase += costBase;
+        }
+
+        var realizedBase = 0m;
+        foreach (var kvp in valuation.RealizedByInstrument)
+        {
+            if (instruments.TryGetValue(kvp.Key, out var instrument))
+            {
+                realizedBase += ConvertToBase(kvp.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, fxMap);
+            }
+            else
+            {
+                realizedBase += kvp.Value;
+            }
         }
 
         var summary = new PortfolioSummaryDto
@@ -179,7 +197,10 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             NetInflowBase = netInflowBase,
             CashBase = cashBase,
             PositionsValueBase = positionsValueBase,
+            RealizedBase = realizedBase,
+            UnrealizedBase = positionsValueBase - costBasisBase,
             NavBase = cashBase + positionsValueBase,
+            ValuationMethod = request.Method ?? "adjustingAvg",
             Cash = cashDtos,
             Positions = positionDtos
         };

@@ -4,4 +4,4 @@ using MediatR;
 
 namespace Larchik.Application.Portfolios.GetPortfolioSummary;
 
-public record GetPortfolioSummaryQuery(Guid Id) : IRequest<Result<PortfolioSummaryDto>>;
+public record GetPortfolioSummaryQuery(Guid Id, string? Method = null) : IRequest<Result<PortfolioSummaryDto>>;

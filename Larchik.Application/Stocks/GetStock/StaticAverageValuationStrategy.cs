@@ -2,7 +2,7 @@ using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Valuations;
 
-public class AdjustingAverageValuationStrategy : IValuationStrategy
+public class StaticAverageValuationStrategy : IValuationStrategy
 {
     public ValuationResult Evaluate(IEnumerable<Operation> operations)
     {
@@ -11,7 +11,6 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
         foreach (var op in operations.OrderBy(o => o.TradeDate).ThenBy(o => o.CreatedAt))
         {
             if (op.InstrumentId is null) continue;
-
             var instrumentId = op.InstrumentId.Value;
             if (!result.Positions.TryGetValue(instrumentId, out var position))
             {
@@ -19,34 +18,29 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
                 result.Positions[instrumentId] = position;
             }
 
-            var qtyChange = 0m;
-            var costChange = 0m;
             var realized = 0m;
 
             switch (op.Type)
             {
                 case OperationType.Buy:
-                    qtyChange = op.Quantity;
-                    costChange = -(op.Quantity * op.Price + op.Fee);
+                    position.RollingCost -= op.Quantity * op.Price + op.Fee;
+                    position.Quantity += op.Quantity;
                     break;
                 case OperationType.Sell:
-                    qtyChange = -op.Quantity;
-                    var avgBefore = position.Quantity != 0 ? -position.RollingCost / position.Quantity : 0;
-                    realized = op.Quantity * op.Price - op.Fee - avgBefore * op.Quantity;
-                    costChange = op.Quantity * op.Price - op.Fee;
+                    var avg = position.Quantity != 0 ? -position.RollingCost / position.Quantity : 0;
+                    realized = op.Quantity * op.Price - op.Fee - avg * op.Quantity;
+                    position.Quantity -= op.Quantity;
+                    position.RollingCost = -avg * position.Quantity;
                     break;
                 case OperationType.TransferIn:
-                    qtyChange = op.Quantity;
+                    position.Quantity += op.Quantity;
                     break;
                 case OperationType.TransferOut:
-                    qtyChange = -op.Quantity;
+                    position.Quantity -= op.Quantity;
                     break;
                 default:
                     continue;
             }
-
-            position.Quantity += qtyChange;
-            position.RollingCost += costChange;
 
             if (realized != 0)
             {
