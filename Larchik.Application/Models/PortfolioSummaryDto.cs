@@ -16,4 +16,5 @@ public class PortfolioSummaryDto
     public decimal NavBase { get; set; }
     public IReadOnlyCollection<CashBalanceDto> Cash { get; set; } = Array.Empty<CashBalanceDto>();
     public IReadOnlyCollection<PositionHoldingDto> Positions { get; set; } = Array.Empty<PositionHoldingDto>();
+    public IReadOnlyCollection<RealizedPnlDto> RealizedByInstrument { get; set; } = Array.Empty<RealizedPnlDto>();
 }

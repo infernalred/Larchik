@@ -189,6 +189,27 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             }
         }
 
+        var realizedDtos = new List<RealizedPnlDto>();
+        foreach (var kvp in valuation.RealizedByInstrument)
+        {
+            var instrumentName = instruments.TryGetValue(kvp.Key, out var instrument)
+                ? instrument.Name
+                : kvp.Key.ToString();
+            var instrumentCurrency = instruments.TryGetValue(kvp.Key, out var inst2)
+                ? inst2.CurrencyId
+                : portfolio.ReportingCurrencyId;
+            var realizedBaseValue = ConvertToBase(kvp.Value, instrumentCurrency, portfolio.ReportingCurrencyId, fxMap);
+
+            realizedDtos.Add(new RealizedPnlDto
+            {
+                InstrumentId = kvp.Key,
+                InstrumentName = instrumentName,
+                CurrencyId = instrumentCurrency,
+                Realized = kvp.Value,
+                RealizedBase = realizedBaseValue
+            });
+        }
+
         var summary = new PortfolioSummaryDto
         {
             Id = portfolio.Id,
@@ -202,7 +223,8 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             NavBase = cashBase + positionsValueBase,
             ValuationMethod = request.Method ?? "adjustingAvg",
             Cash = cashDtos,
-            Positions = positionDtos
+            Positions = positionDtos,
+            RealizedByInstrument = realizedDtos
         };
 
         return Result<PortfolioSummaryDto>.Success(summary);
