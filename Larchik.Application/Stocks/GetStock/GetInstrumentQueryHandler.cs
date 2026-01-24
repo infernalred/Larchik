@@ -5,7 +5,7 @@ using Mapster;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Larchik.Application.Instruments.GetInstrument;
+namespace Larchik.Application.Stocks.GetStock;
 
 public class GetInstrumentQueryHandler(LarchikContext context) : IRequestHandler<GetInstrumentQuery, Result<InstrumentDto?>>
 {

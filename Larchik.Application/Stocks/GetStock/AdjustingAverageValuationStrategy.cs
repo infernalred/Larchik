@@ -1,18 +1,16 @@
 using Larchik.Persistence.Entities;
 
-namespace Larchik.Application.Valuations;
+namespace Larchik.Application.Stocks.GetStock;
 
 public class AdjustingAverageValuationStrategy : IValuationStrategy
 {
-    public ValuationResult Evaluate(IEnumerable<Operation> operations)
+    public ValuationResult Evaluate(IEnumerable<ValuationOperation> operations)
     {
         var result = new ValuationResult();
 
         foreach (var op in operations.OrderBy(o => o.TradeDate).ThenBy(o => o.CreatedAt))
         {
-            if (op.InstrumentId is null) continue;
-
-            var instrumentId = op.InstrumentId.Value;
+            var instrumentId = op.InstrumentId;
             if (!result.Positions.TryGetValue(instrumentId, out var position))
             {
                 position = new PositionCost { InstrumentId = instrumentId };

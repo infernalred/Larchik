@@ -4,4 +4,4 @@ using MediatR;
 
 namespace Larchik.Application.Stocks.GetStock;
 
-public record GetInstrumentQuery(Guid Id) : IRequest<Result<InstrumentDto?>>;
+public record EditPortfolioCommand(Guid Id, PortfolioModel Model) : IRequest<Result<Unit>>;

@@ -11,6 +11,7 @@ builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddCorsServices(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 

@@ -1,8 +1,8 @@
 using System.Net;
-using Larchik.Application.Instruments.CreateInstrument;
-using Larchik.Application.Instruments.EditInstrument;
-using Larchik.Application.Instruments.GetInstrument;
 using Larchik.Application.Models;
+using Larchik.Application.Stocks.CreateStock;
+using Larchik.Application.Stocks.EditStock;
+using Larchik.Application.Stocks.GetStock;
 using Larchik.Persistence.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;

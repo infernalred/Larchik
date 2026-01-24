@@ -1,7 +1,7 @@
 using FluentValidation;
 using Larchik.Application.Models;
 
-namespace Larchik.Application.Instruments.CreateInstrument;
+namespace Larchik.Application.Stocks.CreateStock;
 
 public class InstrumentValidator : AbstractValidator<InstrumentModel>
 {

@@ -5,7 +5,7 @@ using Larchik.Persistence.Entities;
 using Mapster;
 using MediatR;
 
-namespace Larchik.Application.Instruments.CreateInstrument;
+namespace Larchik.Application.Stocks.CreateStock;
 
 public class CreateInstrumentCommandHandler(LarchikContext context, IUserAccessor userAccessor)
     : IRequestHandler<CreateInstrumentCommand, Result<Unit>?>

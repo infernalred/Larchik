@@ -2,7 +2,7 @@ using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Stocks.GetStock;
 
-public class FifoValuationStrategy : IValuationStrategy
+public class LifoValuationStrategy : IValuationStrategy
 {
     private class Lot
     {
@@ -13,7 +13,7 @@ public class FifoValuationStrategy : IValuationStrategy
     public ValuationResult Evaluate(IEnumerable<ValuationOperation> operations)
     {
         var result = new ValuationResult();
-        var lotsByInstrument = new Dictionary<Guid, Queue<Lot>>();
+        var lotsByInstrument = new Dictionary<Guid, Stack<Lot>>();
 
         foreach (var op in operations.OrderBy(o => o.TradeDate).ThenBy(o => o.CreatedAt))
         {
@@ -27,7 +27,7 @@ public class FifoValuationStrategy : IValuationStrategy
 
             if (!lotsByInstrument.TryGetValue(instrumentId, out var lots))
             {
-                lots = new Queue<Lot>();
+                lots = new Stack<Lot>();
                 lotsByInstrument[instrumentId] = lots;
             }
 
@@ -37,7 +37,7 @@ public class FifoValuationStrategy : IValuationStrategy
                 {
                     var totalCost = op.Quantity * op.Price + op.Fee;
                     var costPerUnit = totalCost / op.Quantity;
-                    lots.Enqueue(new Lot { Quantity = op.Quantity, CostPerUnit = costPerUnit });
+                    lots.Push(new Lot { Quantity = op.Quantity, CostPerUnit = costPerUnit });
                     position.Quantity += op.Quantity;
                     position.RollingCost -= totalCost;
                     break;
@@ -48,12 +48,15 @@ public class FifoValuationStrategy : IValuationStrategy
                     var costOut = 0m;
                     while (remaining > 0 && lots.Count > 0)
                     {
-                        var lot = lots.Peek();
+                        var lot = lots.Pop();
                         var take = Math.Min(remaining, lot.Quantity);
                         costOut += take * lot.CostPerUnit;
-                        lot.Quantity -= take;
                         remaining -= take;
-                        if (lot.Quantity == 0) lots.Dequeue();
+                        var leftover = lot.Quantity - take;
+                        if (leftover > 0)
+                        {
+                            lots.Push(new Lot { Quantity = leftover, CostPerUnit = lot.CostPerUnit });
+                        }
                     }
                     if (remaining > 0)
                     {

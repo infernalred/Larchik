@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-
-namespace Larchik.Application.Valuations;
+namespace Larchik.Application.Stocks.GetStock;
 
 public class ValuationResult
 {

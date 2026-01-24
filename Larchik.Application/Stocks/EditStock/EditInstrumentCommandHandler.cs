@@ -5,7 +5,7 @@ using Mapster;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Larchik.Application.Instruments.EditInstrument;
+namespace Larchik.Application.Stocks.EditStock;
 
 public class EditInstrumentCommandHandler(LarchikContext context, IUserAccessor userAccessor)
     : IRequestHandler<EditInstrumentCommand, Result<Unit>?>

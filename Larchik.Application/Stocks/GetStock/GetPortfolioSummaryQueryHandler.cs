@@ -1,12 +1,11 @@
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
-using Larchik.Application.Valuations;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Larchik.Application.Portfolios.GetPortfolioSummary;
+namespace Larchik.Application.Stocks.GetStock;
 
 public class GetPortfolioSummaryQueryHandler(LarchikContext context)
     : IRequestHandler<GetPortfolioSummaryQuery, Result<PortfolioSummaryDto>?>
@@ -127,8 +126,27 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             }
         }
 
+        var valuationOperations = new List<ValuationOperation>();
+        foreach (var op in operations)
+        {
+            if (op.InstrumentId is null) continue;
+            var instrument = instruments.GetValueOrDefault(op.InstrumentId.Value);
+            var instrumentCurrency = instrument?.CurrencyId ?? op.CurrencyId;
+            var priceInInstrument = ConvertCurrency(op.Price, op.CurrencyId, instrumentCurrency, fxMap);
+            var feeInInstrument = ConvertCurrency(op.Fee, op.CurrencyId, instrumentCurrency, fxMap);
+
+            valuationOperations.Add(new ValuationOperation(
+                op.InstrumentId.Value,
+                op.Type,
+                op.Quantity,
+                priceInInstrument,
+                feeInInstrument,
+                op.TradeDate,
+                op.CreatedAt));
+        }
+
         var valuationService = new ValuationService();
-        var valuation = valuationService.Evaluate(operations, request.Method);
+        var valuation = valuationService.Evaluate(valuationOperations, request.Method);
         var positionCosts = valuation.Positions;
 
         var cashDtos = new List<CashBalanceDto>();
@@ -266,6 +284,25 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
         }
 
         var inverseKey = (fromCurrency.ToUpperInvariant(), baseCurrency.ToUpperInvariant());
+        if (fx.TryGetValue(inverseKey, out var inverseRate) && inverseRate != 0)
+        {
+            return amount / inverseRate;
+        }
+
+        return amount;
+    }
+
+    private static decimal ConvertCurrency(decimal amount, string fromCurrency, string toCurrency,
+        IReadOnlyDictionary<(string Base, string Quote), decimal> fx)
+    {
+        if (string.Equals(fromCurrency, toCurrency, StringComparison.OrdinalIgnoreCase)) return amount;
+        var key = (toCurrency.ToUpperInvariant(), fromCurrency.ToUpperInvariant());
+        if (fx.TryGetValue(key, out var rate) && rate != 0)
+        {
+            return amount * rate;
+        }
+
+        var inverseKey = (fromCurrency.ToUpperInvariant(), toCurrency.ToUpperInvariant());
         if (fx.TryGetValue(inverseKey, out var inverseRate) && inverseRate != 0)
         {
             return amount / inverseRate;

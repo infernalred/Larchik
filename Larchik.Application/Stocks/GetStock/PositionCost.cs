@@ -1,6 +1,4 @@
-using System;
-
-namespace Larchik.Application.Valuations;
+namespace Larchik.Application.Stocks.GetStock;
 
 public class PositionCost
 {

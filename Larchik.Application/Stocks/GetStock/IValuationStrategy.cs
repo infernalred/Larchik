@@ -1,8 +1,6 @@
-using Larchik.Persistence.Entities;
-
-namespace Larchik.Application.Valuations;
+namespace Larchik.Application.Stocks.GetStock;
 
 public interface IValuationStrategy
 {
-    ValuationResult Evaluate(IEnumerable<Operation> operations);
+    ValuationResult Evaluate(IEnumerable<ValuationOperation> operations);
 }
