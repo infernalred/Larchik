@@ -1,5 +1,5 @@
 using System.Net;
-using Larchik.Application.Stocks.GetStock;
+using Larchik.Application.FxRates.SyncCbrFxRates;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

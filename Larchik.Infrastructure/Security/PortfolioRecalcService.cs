@@ -1,5 +1,5 @@
 using Larchik.Application.Contracts;
-using Larchik.Application.Stocks.GetStock;
+using Larchik.Application.Portfolios.Valuation;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;

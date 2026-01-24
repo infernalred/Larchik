@@ -1,6 +1,10 @@
 using System.Net;
 using Larchik.Application.Models;
-using Larchik.Application.Stocks.GetStock;
+using Larchik.Application.Operations.CreateOperation;
+using Larchik.Application.Operations.DeleteOperation;
+using Larchik.Application.Operations.EditOperation;
+using Larchik.Application.Operations.GetOperation;
+using Larchik.Application.Operations.GetOperations;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,6 +1,12 @@
 using System.Net;
 using Larchik.Application.Models;
-using Larchik.Application.Stocks.GetStock;
+using Larchik.Application.Portfolios.CreatePortfolio;
+using Larchik.Application.Portfolios.DeletePortfolio;
+using Larchik.Application.Portfolios.EditPortfolio;
+using Larchik.Application.Portfolios.GetPortfolio;
+using Larchik.Application.Portfolios.GetPortfolioPerformance;
+using Larchik.Application.Portfolios.GetPortfolios;
+using Larchik.Application.Portfolios.GetPortfolioSummary;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
