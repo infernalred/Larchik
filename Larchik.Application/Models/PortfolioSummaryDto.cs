@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Larchik.Application.Models;
 
 public class PortfolioSummaryDto

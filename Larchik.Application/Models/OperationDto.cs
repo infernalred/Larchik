@@ -1,4 +1,3 @@
-using System;
 using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Models;

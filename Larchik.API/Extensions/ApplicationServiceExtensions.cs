@@ -4,7 +4,6 @@ using Larchik.Persistence.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Larchik.Infrastructure.Recalculation;
 
 namespace Larchik.API.Extensions;

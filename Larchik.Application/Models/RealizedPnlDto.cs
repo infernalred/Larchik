@@ -1,5 +1,3 @@
-using System;
-
 namespace Larchik.Application.Models;
 
 public class RealizedPnlDto

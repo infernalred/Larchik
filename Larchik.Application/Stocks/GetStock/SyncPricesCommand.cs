@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using MediatR;
