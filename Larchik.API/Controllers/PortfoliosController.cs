@@ -53,4 +53,18 @@ public class PortfoliosController : BaseApiController
     {
         return HandleResult(await Mediator.Send(new GetPortfolioSummaryQuery(id, method), HttpContext.RequestAborted));
     }
+
+    [HttpGet("{id:guid}/performance")]
+    [ProducesResponseType(typeof(IEnumerable<PortfolioPerformanceDto>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<ActionResult<IEnumerable<PortfolioPerformanceDto>>> GetPerformance(
+        Guid id,
+        [FromQuery] string? method,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null)
+    {
+        return HandleResult(await Mediator.Send(
+            new GetPortfolioPerformanceQuery(id, method, from, to),
+            HttpContext.RequestAborted));
+    }
 }

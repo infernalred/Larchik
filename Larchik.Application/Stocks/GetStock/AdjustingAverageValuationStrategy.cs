@@ -8,7 +8,7 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
     {
         var result = new ValuationResult();
 
-        foreach (var op in operations.OrderBy(o => o.TradeDate).ThenBy(o => o.CreatedAt))
+        foreach (var op in operations)
         {
             var instrumentId = op.InstrumentId;
             if (!result.Positions.TryGetValue(instrumentId, out var position))

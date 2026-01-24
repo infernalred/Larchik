@@ -30,7 +30,7 @@ public static class ApplicationServiceExtensions
         });
 
         services.AddHttpContextAccessor();
-        services.AddScoped<IPortfolioRecalcService, NoOpPortfolioRecalcService>();
+        services.AddScoped<IPortfolioRecalcService, PortfolioRecalcService>();
 
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 

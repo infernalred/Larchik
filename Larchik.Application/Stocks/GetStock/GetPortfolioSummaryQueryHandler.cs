@@ -1,3 +1,4 @@
+using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
@@ -7,20 +8,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.GetStock;
 
-public class GetPortfolioSummaryQueryHandler(LarchikContext context)
+public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccessor userAccessor)
     : IRequestHandler<GetPortfolioSummaryQuery, Result<PortfolioSummaryDto>?>
 {
     public async Task<Result<PortfolioSummaryDto>?> Handle(GetPortfolioSummaryQuery request, CancellationToken cancellationToken)
     {
+        var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == request.Id && x.UserId == userId, cancellationToken);
 
         if (portfolio is null) return null;
 
+        var asOfDate = DateTime.UtcNow.Date;
+
         var operations = await context.Operations
             .AsNoTracking()
-            .Where(x => x.PortfolioId == request.Id)
+            .Where(x => x.PortfolioId == request.Id && x.TradeDate <= asOfDate)
+            .OrderBy(x => x.TradeDate)
+            .ThenBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
         var instrumentIds = operations
@@ -34,14 +40,10 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             .AsNoTracking()
             .ToDictionaryAsync(x => x.Id, cancellationToken);
 
-        var latestPrices = await context.Prices
+        var prices = await context.Prices
             .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.InstrumentId))
-            .GroupBy(x => x.InstrumentId)
-            .Select(g => g.OrderByDescending(p => p.Date).First())
             .ToListAsync(cancellationToken);
-
-        var priceByInstrument = latestPrices.ToDictionary(x => x.InstrumentId);
 
         var neededCurrencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -63,16 +65,13 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             .Where(x => neededCurrencies.Contains(x.BaseCurrencyId) && neededCurrencies.Contains(x.QuoteCurrencyId))
             .ToListAsync(cancellationToken);
 
-        var fxLookup = fxRates
-            .GroupBy(x => (x.BaseCurrencyId.ToUpperInvariant(), x.QuoteCurrencyId.ToUpperInvariant()))
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderByDescending(r => r.Date).ToList());
+        var data = new HistoricalDataLookup(prices, fxRates);
 
         var cashByCurrency = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         var positions = new Dictionary<Guid, decimal>();
         decimal netInflowBase = 0;
 
+        var valuationOperations = new List<ValuationOperation>();
         foreach (var op in operations)
         {
             var amount = op.Price != 0 ? op.Price : op.Quantity;
@@ -95,11 +94,11 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
                     break;
                 case OperationType.Deposit:
                     AddCash(op.CurrencyId, amount, cashByCurrency);
-                    netInflowBase += ConvertToBase(amount, op.CurrencyId, portfolio.ReportingCurrencyId, op.TradeDate, fxLookup);
+                    netInflowBase += data.Convert(amount, op.CurrencyId, portfolio.ReportingCurrencyId, op.TradeDate);
                     break;
                 case OperationType.Withdraw:
                     AddCash(op.CurrencyId, -amount, cashByCurrency);
-                    netInflowBase -= ConvertToBase(amount, op.CurrencyId, portfolio.ReportingCurrencyId, op.TradeDate, fxLookup);
+                    netInflowBase -= data.Convert(amount, op.CurrencyId, portfolio.ReportingCurrencyId, op.TradeDate);
                     break;
                 case OperationType.TransferIn:
                     if (op.InstrumentId != null)
@@ -109,8 +108,9 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
                     else
                     {
                         AddCash(op.CurrencyId, amount, cashByCurrency);
-                        netInflowBase += ConvertToBase(amount, op.CurrencyId, portfolio.ReportingCurrencyId, op.TradeDate, fxLookup);
+                        netInflowBase += data.Convert(amount, op.CurrencyId, portfolio.ReportingCurrencyId, op.TradeDate);
                     }
+
                     break;
                 case OperationType.TransferOut:
                     if (op.InstrumentId != null)
@@ -120,20 +120,19 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
                     else
                     {
                         AddCash(op.CurrencyId, -amount, cashByCurrency);
-                        netInflowBase -= ConvertToBase(amount, op.CurrencyId, portfolio.ReportingCurrencyId, op.TradeDate, fxLookup);
+                        netInflowBase -= data.Convert(amount, op.CurrencyId, portfolio.ReportingCurrencyId, op.TradeDate);
                     }
+
                     break;
             }
-        }
 
-        var valuationOperations = new List<ValuationOperation>();
-        foreach (var op in operations)
-        {
             if (op.InstrumentId is null) continue;
-            var instrument = instruments.GetValueOrDefault(op.InstrumentId.Value);
-            var instrumentCurrency = instrument?.CurrencyId ?? op.CurrencyId;
-            var priceInInstrument = ConvertCurrency(op.Price, op.CurrencyId, instrumentCurrency, op.TradeDate, fxLookup);
-            var feeInInstrument = ConvertCurrency(op.Fee, op.CurrencyId, instrumentCurrency, op.TradeDate, fxLookup);
+
+            var instrumentCurrency = instruments.TryGetValue(op.InstrumentId.Value, out var instrument)
+                ? instrument.CurrencyId
+                : op.CurrencyId;
+            var priceInInstrument = data.Convert(op.Price, op.CurrencyId, instrumentCurrency, op.TradeDate);
+            var feeInInstrument = data.Convert(op.Fee, op.CurrencyId, instrumentCurrency, op.TradeDate);
 
             valuationOperations.Add(new ValuationOperation(
                 op.InstrumentId.Value,
@@ -146,14 +145,14 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
         }
 
         var valuationService = new ValuationService();
-        var valuation = valuationService.Evaluate(valuationOperations, request.Method);
+        var valuation = valuationService.Evaluate(valuationOperations, request.Method, assumeSorted: true);
         var positionCosts = valuation.Positions;
 
         var cashDtos = new List<CashBalanceDto>();
         decimal cashBase = 0;
         foreach (var kvp in cashByCurrency)
         {
-            var amountBase = ConvertToBase(kvp.Value, kvp.Key, portfolio.ReportingCurrencyId, DateTime.UtcNow, fxLookup);
+            var amountBase = data.Convert(kvp.Value, kvp.Key, portfolio.ReportingCurrencyId, asOfDate);
             cashDtos.Add(new CashBalanceDto
             {
                 CurrencyId = kvp.Key.ToUpperInvariant(),
@@ -172,12 +171,13 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             if (!instruments.TryGetValue(kvp.Key, out var instrument)) continue;
 
             positionCosts.TryGetValue(kvp.Key, out var cost);
-            var lastPrice = priceByInstrument.TryGetValue(kvp.Key, out var price) ? price.Value : (decimal?)null;
+            var price = data.GetPrice(kvp.Key, asOfDate);
+            var lastPrice = price?.Value;
             var marketValueBase = lastPrice.HasValue
-                ? ConvertToBase(kvp.Value * lastPrice.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, DateTime.UtcNow, fxLookup)
+                ? data.Convert(kvp.Value * lastPrice.Value, price!.CurrencyId, portfolio.ReportingCurrencyId, asOfDate)
                 : 0;
             var avgCost = cost?.AverageCost ?? 0;
-            var costBase = ConvertToBase(avgCost * kvp.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, DateTime.UtcNow, fxLookup);
+            var costBase = data.Convert(avgCost * kvp.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, asOfDate);
 
             positionDtos.Add(new PositionHoldingDto
             {
@@ -199,7 +199,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
         {
             if (instruments.TryGetValue(kvp.Key, out var instrument))
             {
-                realizedBase += ConvertToBase(kvp.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, DateTime.UtcNow, fxLookup);
+                realizedBase += data.Convert(kvp.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, asOfDate);
             }
             else
             {
@@ -216,7 +216,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
             var instrumentCurrency = instruments.TryGetValue(kvp.Key, out var inst2)
                 ? inst2.CurrencyId
                 : portfolio.ReportingCurrencyId;
-            var realizedBaseValue = ConvertToBase(kvp.Value, instrumentCurrency, portfolio.ReportingCurrencyId, DateTime.UtcNow, fxLookup);
+            var realizedBaseValue = data.Convert(kvp.Value, instrumentCurrency, portfolio.ReportingCurrencyId, asOfDate);
 
             realizedDtos.Add(new RealizedPnlDto
             {
@@ -272,31 +272,4 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context)
         }
     }
 
-    private static decimal ConvertToBase(decimal amount, string fromCurrency, string baseCurrency, DateTime date,
-        IReadOnlyDictionary<(string Base, string Quote), List<FxRate>> fxLookup)
-    {
-        return ConvertCurrency(amount, fromCurrency, baseCurrency, date, fxLookup);
-    }
-
-    private static decimal ConvertCurrency(decimal amount, string fromCurrency, string toCurrency, DateTime date,
-        IReadOnlyDictionary<(string Base, string Quote), List<FxRate>> fxLookup)
-    {
-        if (string.Equals(fromCurrency, toCurrency, StringComparison.OrdinalIgnoreCase)) return amount;
-
-        var key = (toCurrency.ToUpperInvariant(), fromCurrency.ToUpperInvariant());
-        if (fxLookup.TryGetValue(key, out var list))
-        {
-            var rate = list.FirstOrDefault(r => r.Date.Date <= date.Date)?.Rate ?? list.First().Rate;
-            if (rate != 0) return amount * rate;
-        }
-
-        var inverseKey = (fromCurrency.ToUpperInvariant(), toCurrency.ToUpperInvariant());
-        if (fxLookup.TryGetValue(inverseKey, out var invList))
-        {
-            var rate = invList.FirstOrDefault(r => r.Date.Date <= date.Date)?.Rate ?? invList.First().Rate;
-            if (rate != 0) return amount / rate;
-        }
-
-        return amount;
-    }
 }

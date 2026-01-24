@@ -15,7 +15,7 @@ public class LifoValuationStrategy : IValuationStrategy
         var result = new ValuationResult();
         var lotsByInstrument = new Dictionary<Guid, Stack<Lot>>();
 
-        foreach (var op in operations.OrderBy(o => o.TradeDate).ThenBy(o => o.CreatedAt))
+        foreach (var op in operations)
         {
             var instrumentId = op.InstrumentId;
 

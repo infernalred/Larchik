@@ -2,8 +2,12 @@ namespace Larchik.Application.Stocks.GetStock;
 
 public class ValuationService
 {
-    public ValuationResult Evaluate(IEnumerable<ValuationOperation> operations, string? method)
+    public ValuationResult Evaluate(IEnumerable<ValuationOperation> operations, string? method, bool assumeSorted = false)
     {
+        var ordered = assumeSorted
+            ? operations
+            : operations.OrderBy(o => o.TradeDate).ThenBy(o => o.CreatedAt);
+
         IValuationStrategy strategy = method?.ToLowerInvariant() switch
         {
             "fifo" => new FifoValuationStrategy(),
@@ -12,6 +16,6 @@ public class ValuationService
             _ => new AdjustingAverageValuationStrategy()
         };
 
-        return strategy.Evaluate(operations);
+        return strategy.Evaluate(ordered);
     }
 }
