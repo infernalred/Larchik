@@ -1,9 +1,11 @@
 using Larchik.Application.Currencies.GetCurrencies;
+using Larchik.Application.Contracts;
 using Larchik.Persistence.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
+using Larchik.Infrastructure.Recalculation;
 
 namespace Larchik.API.Extensions;
 
@@ -29,6 +31,7 @@ public static class ApplicationServiceExtensions
         });
 
         services.AddHttpContextAccessor();
+        services.AddScoped<IPortfolioRecalcService, NoOpPortfolioRecalcService>();
 
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.GetStock;
 
-public class EditOperationCommandHandler(LarchikContext context, IUserAccessor userAccessor)
+public class EditOperationCommandHandler(LarchikContext context, IUserAccessor userAccessor, IPortfolioRecalcService recalc)
     : IRequestHandler<EditOperationCommand, Result<Unit>?>
 {
     public async Task<Result<Unit>?> Handle(EditOperationCommand request, CancellationToken cancellationToken)
@@ -17,6 +17,8 @@ public class EditOperationCommandHandler(LarchikContext context, IUserAccessor u
             .FirstOrDefaultAsync(o => o.Id == request.Id && o.Portfolio != null && o.Portfolio.UserId == userId, cancellationToken);
 
         if (op is null) return null;
+
+        var originalTradeDate = op.TradeDate;
 
         op.InstrumentId = request.Model.InstrumentId;
         op.Type = request.Model.Type;
@@ -31,7 +33,8 @@ public class EditOperationCommandHandler(LarchikContext context, IUserAccessor u
 
         await context.SaveChangesAsync(cancellationToken);
 
-        // TODO: trigger snapshot/valuation recalculation for this portfolio.
+        var fromDate = originalTradeDate < op.TradeDate ? originalTradeDate : op.TradeDate;
+        await recalc.ScheduleRebuild(op.PortfolioId, fromDate, cancellationToken);
 
         return Result<Unit>.Success(Unit.Value);
     }

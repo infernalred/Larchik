@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.GetStock;
 
-public class DeleteOperationCommandHandler(LarchikContext context, IUserAccessor userAccessor)
+public class DeleteOperationCommandHandler(LarchikContext context, IUserAccessor userAccessor, IPortfolioRecalcService recalc)
     : IRequestHandler<DeleteOperationCommand, Result<Unit>>
 {
     public async Task<Result<Unit>> Handle(DeleteOperationCommand request, CancellationToken cancellationToken)
@@ -21,7 +21,7 @@ public class DeleteOperationCommandHandler(LarchikContext context, IUserAccessor
         context.Operations.Remove(op);
         await context.SaveChangesAsync(cancellationToken);
 
-        // TODO: trigger snapshot/valuation recalculation for this portfolio.
+        await recalc.ScheduleRebuild(op.PortfolioId, op.TradeDate, cancellationToken);
 
         return Result<Unit>.Success(Unit.Value);
     }
