@@ -35,7 +35,7 @@ public static class SecurityServiceExtensions
             })
             .AddIdentityCookies(o =>
             {
-                o.ApplicationCookie.Configure(cookie =>
+                o.ApplicationCookie?.Configure(cookie =>
                 {
                     cookie.Cookie.Name = "__Host-larchik-auth";
                     cookie.Cookie.HttpOnly = true;

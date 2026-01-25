@@ -11,9 +11,12 @@ export type OperationType =
   | 'TransferOut';
 
 export interface User {
+  id: string;
   email: string;
   username: string;
-  token: string;
+  emailConfirmed: boolean;
+  roles: string[];
+  isAdmin: boolean;
 }
 
 export interface Portfolio {

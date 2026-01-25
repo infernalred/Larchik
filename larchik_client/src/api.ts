@@ -2,23 +2,44 @@ import { Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSu
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5000';
 
-function getAuthToken() {
-  return localStorage.getItem('token');
+let csrfToken: string | null = null;
+let csrfPromise: Promise<string> | null = null;
+
+async function ensureCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  if (!csrfPromise) {
+    csrfPromise = fetch(`${API_BASE}/api/account/antiforgery`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Не удалось получить CSRF токен');
+        const data = await res.json();
+        csrfToken = data.token;
+        return csrfToken!;
+      })
+      .finally(() => {
+        csrfPromise = null;
+      });
+  }
+  return csrfPromise;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  };
+  const headers = new Headers(options.headers || undefined);
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
 
-  const token = getAuthToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  const method = (options.method ?? 'GET').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const token = await ensureCsrfToken();
+    headers.set('X-XSRF-TOKEN', token);
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
+    credentials: 'include',
     headers,
   });
 
@@ -36,6 +57,21 @@ export const api = {
     return request<User>('/api/account/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    });
+  },
+
+  async me(): Promise<User> {
+    return request<User>('/api/account/me', { method: 'GET' });
+  },
+
+  async logout(): Promise<void> {
+    return request<void>('/api/account/logout', { method: 'POST' });
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return request<void>('/api/account/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
     });
   },
 

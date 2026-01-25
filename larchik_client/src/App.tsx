@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, CssBaseline, Stack, ThemeProvider, createTheme } from '@mui/material';
 import { api } from './api';
 import { AuthForm } from './AuthForm';
@@ -42,29 +42,46 @@ const theme = createTheme({
 });
 
 export function App() {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? (JSON.parse(saved) as User) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
+  const [booting, setBooting] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const me = await api.me();
+        setUser(me);
+      } catch {
+        setUser(null);
+      } finally {
+        setBooting(false);
+      }
+    })();
+  }, []);
 
   const handleLogin = async (email: string, password: string) => {
     setAuthLoading(true);
-    const logged = await api.login(email, password);
-    localStorage.setItem('token', logged.token);
-    localStorage.setItem('user', JSON.stringify(logged));
-    setUser(logged);
-    setAuthLoading(false);
+    try {
+      const logged = await api.login(email, password);
+      setUser(logged);
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
+    setAuthLoading(true);
+    api
+      .logout()
+      .catch(() => {})
+      .finally(() => {
+        setUser(null);
+        setAuthLoading(false);
+      });
   };
 
   const content = useMemo(() => {
-    if (authLoading) {
+    if (booting || authLoading) {
       return (
         <Stack alignItems="center" justifyContent="center" minHeight="100vh">
           <CircularProgress />
@@ -81,7 +98,7 @@ export function App() {
     }
 
     return <Dashboard onLogout={handleLogout} />;
-  }, [authLoading, user]);
+  }, [authLoading, booting, user]);
 
   return (
     <ThemeProvider theme={theme}>
