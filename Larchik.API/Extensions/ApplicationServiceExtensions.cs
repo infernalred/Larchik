@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Larchik.Infrastructure.Recalculation;
+using Larchik.Application.Operations.ImportBroker;
 
 namespace Larchik.API.Extensions;
 
@@ -31,6 +32,7 @@ public static class ApplicationServiceExtensions
 
         services.AddHttpContextAccessor();
         services.AddScoped<IPortfolioRecalcService, PortfolioRecalcService>();
+        services.AddSingleton<IBrokerReportParser, TbankReportParser>();
 
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
