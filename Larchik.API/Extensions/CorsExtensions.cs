@@ -4,7 +4,8 @@ public static class CorsExtensions
 {
     public static IServiceCollection AddCorsServices(this IServiceCollection services, IConfiguration configuration)
     {
-        var origins = configuration.GetSection("Cors")?.GetSection("Origins")?.Value?.Split(",");
+        var origins = configuration.GetSection("Cors")?.GetSection("Origins")?.Value?
+            .Split(",", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         services.AddCors(opt =>
         {
@@ -12,22 +13,23 @@ public static class CorsExtensions
             {
                 builder.AllowAnyHeader();
                 builder.AllowAnyMethod();
-                if (origins != null && origins.Length > 0)
+
+                if (origins is { Length: > 0 })
                 {
                     if (origins.Contains("*"))
                     {
-                        builder.AllowAnyHeader();
-                        builder.AllowAnyMethod();
-                        builder.AllowCredentials();
+                        builder.AllowAnyOrigin();
                     }
                     else
                     {
-                        foreach (var origin in origins)
-                        {
-                            builder.WithOrigins(origin);
-                        }
+                        builder.WithOrigins(origins).AllowCredentials();
                     }
                 }
+                else
+                {
+                    builder.AllowAnyOrigin();
+                }
+
                 builder.WithExposedHeaders("WWW-Authenticate", "Pagination", "Content-Disposition");
             });
         });

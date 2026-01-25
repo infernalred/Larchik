@@ -1,12 +1,9 @@
-using System.Text;
-using Larchik.API.Services;
 using Larchik.Application.Contracts;
 using Larchik.Infrastructure.Security;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
+using Larchik.API.Services;
 
 namespace Larchik.API.Extensions;
 
@@ -17,29 +14,49 @@ public static class SecurityServiceExtensions
         services.AddIdentityCore<AppUser>(opt =>
             {
                 opt.Password.RequireNonAlphanumeric = false;
+                opt.Password.RequiredLength = 8;
+                opt.Password.RequireUppercase = true;
+                opt.SignIn.RequireConfirmedEmail = true;
                 opt.User.RequireUniqueEmail = true;
+                opt.Lockout.AllowedForNewUsers = true;
+                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+                opt.Lockout.MaxFailedAccessAttempts = 5;
             })
             .AddRoles<IdentityRole<Guid>>()
-            .AddEntityFrameworkStores<LarchikContext>();
+            .AddEntityFrameworkStores<LarchikContext>()
+            .AddSignInManager()
+            .AddDefaultTokenProviders();
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8
-            .GetBytes(configuration["TokenKey"] ?? throw new InvalidOperationException("TokenKey not found")));
-
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(opt =>
+        services.AddAuthentication(options =>
             {
-                opt.TokenValidationParameters = new TokenValidationParameters
+                options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+                options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+                options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
+            })
+            .AddIdentityCookies(o =>
+            {
+                o.ApplicationCookie.Configure(cookie =>
                 {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = key,
-                    ValidateAudience = false,
-                    ValidateIssuer = false,
-                    ValidateLifetime = true
-                };
+                    cookie.Cookie.Name = "__Host-larchik-auth";
+                    cookie.Cookie.HttpOnly = true;
+                    cookie.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    cookie.Cookie.SameSite = SameSiteMode.Lax;
+                    cookie.SlidingExpiration = true;
+                    cookie.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+                });
             });
 
-        services.AddScoped<ITokenService, TokenService>();
+        services.AddAntiforgery(options =>
+        {
+            options.Cookie.Name = "__Host-larchik-af";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.HeaderName = "X-XSRF-TOKEN";
+        });
+
         services.AddScoped<IUserAccessor, UserAccessor>();
+        services.AddScoped<IEmailSender, LoggingEmailSender>();
 
         return services;
     }

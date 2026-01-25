@@ -1,6 +1,7 @@
 using System.Net;
 using Larchik.Application.Models;
 using Larchik.Application.Prices.SyncPrices;
+using Larchik.Persistence.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,7 +9,7 @@ namespace Larchik.API.Controllers;
 
 public class PricesController : BaseApiController
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.Admin)]
     [HttpPost("sync")]
     [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]

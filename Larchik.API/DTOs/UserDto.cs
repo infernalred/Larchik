@@ -2,7 +2,10 @@ namespace Larchik.API.DTOs;
 
 public record UserDto
 {
-    public string? Email { get; set; }
-    public string Token { get; set; } = null!;
-    public string? Username { get; set; }
+    public Guid Id { get; init; }
+    public string? Email { get; init; }
+    public string? Username { get; init; }
+    public bool EmailConfirmed { get; init; }
+    public IReadOnlyCollection<string> Roles { get; init; } = Array.Empty<string>();
+    public bool IsAdmin => Roles.Contains(Persistence.Constants.Roles.Admin);
 };

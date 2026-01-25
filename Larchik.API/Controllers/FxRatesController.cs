@@ -2,12 +2,13 @@ using System.Net;
 using Larchik.Application.FxRates.SyncCbrFxRates;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Larchik.Persistence.Constants;
 
 namespace Larchik.API.Controllers;
 
 public class FxRatesController : BaseApiController
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = Roles.Admin)]
     [HttpPost("sync/cbr")]
     [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]

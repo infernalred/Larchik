@@ -1,6 +1,9 @@
 using Larchik.API.Extensions;
+using Larchik.API.Services;
 using Larchik.API.Middleware;
 using Larchik.Persistence.Context;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +12,12 @@ builder.Services.AddSwaggerServices();
 builder.Services.AddSecurityServices(builder.Configuration);
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddCorsServices(builder.Configuration);
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.HttpOnly = HttpOnlyPolicy.Always;
+    options.Secure = CookieSecurePolicy.Always;
+    options.MinimumSameSitePolicy = SameSiteMode.Lax;
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpClient();
@@ -23,6 +32,7 @@ try
 {
     var context = services.GetRequiredService<LarchikContext>();
     await context.Database.MigrateAsync();
+    await IdentitySeeder.SeedAsync(services, builder.Configuration);
 }
 catch (Exception e)
 {
@@ -40,8 +50,22 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("CorsPolicy");
+app.UseCookiePolicy();
 
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    if (HttpMethods.IsPost(context.Request.Method) ||
+        HttpMethods.IsPut(context.Request.Method) ||
+        HttpMethods.IsDelete(context.Request.Method) ||
+        HttpMethods.IsPatch(context.Request.Method))
+    {
+        var antiforgery = context.RequestServices.GetRequiredService<IAntiforgery>();
+        await antiforgery.ValidateRequestAsync(context);
+    }
+
+    await next(context);
+});
 app.UseAuthorization();
 
 app.MapControllers();
