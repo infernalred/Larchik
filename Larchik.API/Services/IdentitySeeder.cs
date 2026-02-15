@@ -6,14 +6,14 @@ namespace Larchik.API.Services;
 
 public static class IdentitySeeder
 {
-    public static async Task SeedAsync(IServiceProvider services, IConfiguration configuration, CancellationToken cancellationToken = default)
+    public static async Task SeedAsync(IServiceProvider services, IConfiguration configuration)
     {
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(IdentitySeeder));
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
         var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-        await EnsureRoleAsync(roleManager, Roles.Admin, logger, cancellationToken);
-        await EnsureRoleAsync(roleManager, Roles.User, logger, cancellationToken);
+        await EnsureRoleAsync(roleManager, Roles.Admin, logger);
+        await EnsureRoleAsync(roleManager, Roles.User, logger);
 
         var adminEmail = configuration["Admin:Email"];
         var adminPassword = configuration["Admin:Password"];
@@ -51,8 +51,7 @@ public static class IdentitySeeder
     private static async Task EnsureRoleAsync(
         RoleManager<IdentityRole<Guid>> roleManager,
         string roleName,
-        ILogger logger,
-        CancellationToken cancellationToken)
+        ILogger logger)
     {
         if (await roleManager.RoleExistsAsync(roleName)) return;
 
