@@ -19,6 +19,8 @@ public class LarchikContext(DbContextOptions<LarchikContext> options)
     public DbSet<Price> Prices { get; set; } = null!;
     public DbSet<FxRate> FxRates { get; set; } = null!;
     public DbSet<Lot> Lots { get; set; } = null!;
+    public DbSet<JobDefinition> JobDefinitions { get; set; } = null!;
+    public DbSet<JobRun> JobRuns { get; set; } = null!;
     public DbSet<PositionSnapshot> PositionSnapshots { get; set; } = null!;
     public DbSet<PortfolioSnapshot> PortfolioSnapshots { get; set; } = null!;
     protected override void OnModelCreating(ModelBuilder builder)

@@ -46,6 +46,7 @@ Required keys:
 - `Cors:Origins` - comma-separated allowed frontend origins
 - `Frontend:BaseUrl` - used in email confirmation/reset links
 - `Admin:Email`, `Admin:Password` - optional admin seeding on startup
+- `BackgroundJobs:*` - built-in scheduler/executor settings (FX sync job, retries, polling)
 
 `TokenKey`/`DaysTokenLife` are currently not used in the codebase.
 
@@ -94,7 +95,13 @@ Default Vite URL `http://localhost:5173` is included in development CORS config.
 - `POST /api/fxrates/sync/cbr?date=YYYY-MM-DD` - sync CBR FX rates (admin)
 - `GET /api/portfolios/{id}/summary?method=adjustingAvg|staticAvg|fifo|lifo`
 
+Operation types include bond redemption flows:
+
+- `BondPartialRedemption` - partial redemption of nominal
+- `BondMaturity` - full bond maturity
+
 ## Notes
 
 - On startup API runs EF migrations automatically and seeds roles.
 - If `Admin` credentials are configured, admin user is created/updated automatically.
+- Background jobs are DB-backed (`job_definitions`, `job_runs`) with dedup keys, retries, and lock timeout recovery.

@@ -1,5 +1,6 @@
 using Larchik.Application.Currencies.GetCurrencies;
 using Larchik.Application.Contracts;
+using Larchik.Infrastructure.Jobs;
 using Larchik.Persistence.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -33,6 +34,7 @@ public static class ApplicationServiceExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<IPortfolioRecalcService, PortfolioRecalcService>();
         services.AddSingleton<IBrokerReportParser, TbankReportParser>();
+        services.AddBackgroundJobs(configuration);
 
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
