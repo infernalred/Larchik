@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Larchik.Persistence.Migrations
 {
     [DbContext(typeof(LarchikContext))]
-    [Migration("20260124140006_Initial")]
+    [Migration("20260215151402_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -421,26 +421,26 @@ namespace Larchik.Persistence.Migrations
                         .HasColumnName("updated_by");
 
                     b.HasKey("Id")
-                        .HasName("pk_stocks");
+                        .HasName("pk_instruments");
 
                     b.HasIndex("CategoryId")
-                        .HasDatabaseName("ix_stocks_category_id");
+                        .HasDatabaseName("ix_instruments_category_id");
 
                     b.HasIndex("CurrencyId")
-                        .HasDatabaseName("ix_stocks_currency_id");
+                        .HasDatabaseName("ix_instruments_currency_id");
 
                     b.HasIndex("Figi")
                         .IsUnique()
-                        .HasDatabaseName("ix_stocks_figi");
+                        .HasDatabaseName("ix_instruments_figi");
 
                     b.HasIndex("Isin")
                         .IsUnique()
-                        .HasDatabaseName("ix_stocks_isin");
+                        .HasDatabaseName("ix_instruments_isin");
 
                     b.HasIndex("Ticker")
-                        .HasDatabaseName("ix_stocks_ticker");
+                        .HasDatabaseName("ix_instruments_ticker");
 
-                    b.ToTable("Stocks", (string)null);
+                    b.ToTable("instruments", (string)null);
                 });
 
             modelBuilder.Entity("Larchik.Persistence.Entities.Lot", b =>
@@ -1019,14 +1019,14 @@ namespace Larchik.Persistence.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_stocks_categories_category_id");
+                        .HasConstraintName("fk_instruments_categories_category_id");
 
                     b.HasOne("Larchik.Persistence.Entities.Currency", "Currency")
                         .WithMany()
                         .HasForeignKey("CurrencyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_stocks_currencies_currency_id");
+                        .HasConstraintName("fk_instruments_currencies_currency_id");
 
                     b.Navigation("Category");
 

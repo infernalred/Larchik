@@ -254,7 +254,7 @@ namespace Larchik.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Stocks",
+                name: "instruments",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -275,15 +275,15 @@ namespace Larchik.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_stocks", x => x.id);
+                    table.PrimaryKey("pk_instruments", x => x.id);
                     table.ForeignKey(
-                        name: "fk_stocks_categories_category_id",
+                        name: "fk_instruments_categories_category_id",
                         column: x => x.category_id,
                         principalTable: "categories",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "fk_stocks_currencies_currency_id",
+                        name: "fk_instruments_currencies_currency_id",
                         column: x => x.currency_id,
                         principalTable: "currencies",
                         principalColumn: "id",
@@ -368,7 +368,7 @@ namespace Larchik.Persistence.Migrations
                     table.ForeignKey(
                         name: "fk_lots_instruments_instrument_id",
                         column: x => x.instrument_id,
-                        principalTable: "Stocks",
+                        principalTable: "instruments",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -409,7 +409,7 @@ namespace Larchik.Persistence.Migrations
                     table.ForeignKey(
                         name: "fk_operations_instruments_instrument_id",
                         column: x => x.instrument_id,
-                        principalTable: "Stocks",
+                        principalTable: "instruments",
                         principalColumn: "id");
                     table.ForeignKey(
                         name: "fk_operations_portfolios_portfolio_id",
@@ -439,7 +439,7 @@ namespace Larchik.Persistence.Migrations
                     table.ForeignKey(
                         name: "fk_position_snapshots_instruments_instrument_id",
                         column: x => x.instrument_id,
-                        principalTable: "Stocks",
+                        principalTable: "instruments",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -475,7 +475,7 @@ namespace Larchik.Persistence.Migrations
                     table.ForeignKey(
                         name: "fk_prices_instruments_instrument_id",
                         column: x => x.instrument_id,
-                        principalTable: "Stocks",
+                        principalTable: "instruments",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -588,6 +588,33 @@ namespace Larchik.Persistence.Migrations
                 column: "quote_currency_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_instruments_category_id",
+                table: "instruments",
+                column: "category_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_instruments_currency_id",
+                table: "instruments",
+                column: "currency_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_instruments_figi",
+                table: "instruments",
+                column: "figi",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_instruments_isin",
+                table: "instruments",
+                column: "isin",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_instruments_ticker",
+                table: "instruments",
+                column: "ticker");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_lots_currency_id",
                 table: "lots",
                 column: "currency_id");
@@ -655,33 +682,6 @@ namespace Larchik.Persistence.Migrations
                 table: "prices",
                 columns: new[] { "instrument_id", "date", "provider" },
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "ix_stocks_category_id",
-                table: "Stocks",
-                column: "category_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_stocks_currency_id",
-                table: "Stocks",
-                column: "currency_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_stocks_figi",
-                table: "Stocks",
-                column: "figi",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "ix_stocks_isin",
-                table: "Stocks",
-                column: "isin",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "ix_stocks_ticker",
-                table: "Stocks",
-                column: "ticker");
         }
 
         /// <inheritdoc />
@@ -730,7 +730,7 @@ namespace Larchik.Persistence.Migrations
                 name: "portfolios");
 
             migrationBuilder.DropTable(
-                name: "Stocks");
+                name: "instruments");
 
             migrationBuilder.DropTable(
                 name: "brokers");

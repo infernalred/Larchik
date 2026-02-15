@@ -1,5 +1,4 @@
 using Larchik.Persistence.Entities;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,14 +12,14 @@ public class AppUserModelConfiguration : IEntityTypeConfiguration<AppUser>
         {
             Id = Guid.Parse("7e89d7d2-21e2-40ce-bef2-58c3b9408abb"),
             UserName = "admin",
-            NormalizedUserName = "admin".ToUpper(),
+            NormalizedUserName = "ADMIN",
             Email = "admin@test.com",
-            NormalizedEmail = "admin@test.com".ToUpper(),
-            EmailConfirmed = true
+            NormalizedEmail = "ADMIN@TEST.COM",
+            EmailConfirmed = true,
+            SecurityStamp = null,
+            ConcurrencyStamp = "c53a3830-3f86-4505-bcdb-1d2d2f87c006",
+            PasswordHash = "AQAAAAIAAYagAAAAELetNQlOXe6IFms9D+H9cktwcVgon6E7yho5xMfUV8vbI8lfSldk14mcajcwvxJeBQ=="
         };
-
-        var ph = new PasswordHasher<AppUser>();
-        user.PasswordHash = ph.HashPassword(user, "Password!!!123");
 
         builder.HasData(user);
     }

@@ -10769,7 +10769,7 @@ SELECT COALESCE(
     '00000000-0000-0000-0000-000000000000'::uuid
 ) AS user_id;
 
-UPDATE "Stocks" dst
+UPDATE instruments dst
 SET
     name = src.name,
     ticker = src.ticker,
@@ -10789,7 +10789,7 @@ WHERE dst.ticker = src.ticker
    OR dst.isin = src.isin
    OR (src.figi IS NOT NULL AND dst.figi = src.figi);
 
-INSERT INTO "Stocks" (
+insert into instruments (
     id,
     name,
     ticker,
@@ -10832,7 +10832,7 @@ FROM stg_stocks_ready src
 CROSS JOIN stg_actor actor
 WHERE NOT EXISTS (
     SELECT 1
-    FROM "Stocks" dst
+    from instruments dst
     WHERE dst.ticker = src.ticker
        OR dst.isin = src.isin
        OR (src.figi IS NOT NULL AND dst.figi = src.figi)
@@ -10895,5 +10895,5 @@ SET
 
 COMMIT;
 
-SELECT COUNT(*) AS stocks_rows_after_import FROM "Stocks";
+SELECT COUNT(*) AS instruments_rows_after_import from instruments;
 SELECT COUNT(*) AS fx_rows_after_import FROM fx_rates;

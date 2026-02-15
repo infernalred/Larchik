@@ -8,8 +8,6 @@ public class InstrumentModelConfiguration : IEntityTypeConfiguration<Instrument>
 {
     public void Configure(EntityTypeBuilder<Instrument> builder)
     {
-        builder.ToTable("Stocks");
-
         builder.HasIndex(x => x.Ticker);
 
         builder.HasIndex(x => x.Isin).IsUnique();
