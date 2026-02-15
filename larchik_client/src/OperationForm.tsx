@@ -20,6 +20,8 @@ const TYPE_OPTIONS: { value: OperationType; label: string }[] = [
   { value: 'Withdraw', label: 'Вывод' },
   { value: 'TransferIn', label: 'Перевод в' },
   { value: 'TransferOut', label: 'Перевод из' },
+  { value: 'BondPartialRedemption', label: 'Частичное погашение облигации' },
+  { value: 'BondMaturity', label: 'Полное погашение облигации' },
 ];
 
 interface Props {

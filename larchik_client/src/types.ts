@@ -8,7 +8,9 @@ export type OperationType =
   | 'Deposit'
   | 'Withdraw'
   | 'TransferIn'
-  | 'TransferOut';
+  | 'TransferOut'
+  | 'BondPartialRedemption'
+  | 'BondMaturity';
 
 export interface User {
   id: string;

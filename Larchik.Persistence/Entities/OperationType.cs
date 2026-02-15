@@ -9,5 +9,7 @@ public enum OperationType
     Deposit = 5,
     Withdraw = 6,
     TransferIn = 7,
-    TransferOut = 8
+    TransferOut = 8,
+    BondPartialRedemption = 9,
+    BondMaturity = 10
 }

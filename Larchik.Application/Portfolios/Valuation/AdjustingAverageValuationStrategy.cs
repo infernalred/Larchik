@@ -28,6 +28,8 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
                     costChange = -(op.Quantity * op.Price + op.Fee);
                     break;
                 case OperationType.Sell:
+                case OperationType.BondPartialRedemption:
+                case OperationType.BondMaturity:
                     qtyChange = -op.Quantity;
                     var avgBefore = position.Quantity != 0 ? -position.RollingCost / position.Quantity : 0;
                     realized = op.Quantity * op.Price - op.Fee - avgBefore * op.Quantity;

@@ -87,6 +87,11 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
                     AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
                     AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     break;
+                case OperationType.BondPartialRedemption when op.InstrumentId != null:
+                case OperationType.BondMaturity when op.InstrumentId != null:
+                    AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
+                    AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                    break;
                 case OperationType.Dividend:
                     AddCash(op.CurrencyId, amount, cashByCurrency);
                     break;

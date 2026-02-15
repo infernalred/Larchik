@@ -43,6 +43,8 @@ public class FifoValuationStrategy : IValuationStrategy
                     break;
                 }
                 case OperationType.Sell:
+                case OperationType.BondPartialRedemption:
+                case OperationType.BondMaturity:
                 {
                     var remaining = op.Quantity;
                     var costOut = 0m;
