@@ -10,7 +10,9 @@ export type OperationType =
   | 'TransferIn'
   | 'TransferOut'
   | 'BondPartialRedemption'
-  | 'BondMaturity';
+  | 'BondMaturity'
+  | 'Split'
+  | 'ReverseSplit';
 
 export interface User {
   id: string;

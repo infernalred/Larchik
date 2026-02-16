@@ -99,6 +99,8 @@ Operation types include bond redemption flows:
 
 - `BondPartialRedemption` - partial redemption of nominal
 - `BondMaturity` - full bond maturity
+- `Split` - stock split (use `Quantity` as split factor, e.g. `10` for `1:10`)
+- `ReverseSplit` - reverse split (use `Quantity` as factor, e.g. `0.1` for `10:1`)
 
 ## Notes
 

@@ -41,6 +41,13 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
                 case OperationType.TransferOut:
                     qtyChange = -op.Quantity;
                     break;
+                case OperationType.Split:
+                case OperationType.ReverseSplit:
+                    if (position.Quantity != 0)
+                    {
+                        qtyChange = position.Quantity * (op.Quantity - 1m);
+                    }
+                    break;
                 default:
                     continue;
             }

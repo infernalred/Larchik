@@ -221,6 +221,9 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
             case OperationType.BondMaturity when op.InstrumentId != null:
                 AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                 break;
+            case OperationType.Split when op.InstrumentId != null:
+            case OperationType.ReverseSplit when op.InstrumentId != null:
+                break;
             case OperationType.Dividend:
                 AddCash(op.CurrencyId, amount, cashByCurrency);
                 break;

@@ -71,7 +71,7 @@ public class AccountController(
 
         await SendEmailConfirmationAsync(user);
 
-        return CreatedAtAction(nameof(Me), BuildUserDto(user, new[] { Roles.User }));
+        return CreatedAtAction(nameof(Me), BuildUserDto(user, [Roles.User]));
     }
 
     [AllowAnonymous]

@@ -33,7 +33,7 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
 
         if (operations.Count == 0)
         {
-            return Result<IReadOnlyCollection<PortfolioPerformanceDto>>.Success(Array.Empty<PortfolioPerformanceDto>());
+            return Result<IReadOnlyCollection<PortfolioPerformanceDto>>.Success([]);
         }
 
         var instrumentIds = operations
@@ -175,11 +175,12 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
                     break;
                 case OperationType.Sell when op.InstrumentId != null:
-                    AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
-                    break;
                 case OperationType.BondPartialRedemption when op.InstrumentId != null:
                 case OperationType.BondMaturity when op.InstrumentId != null:
                     AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                    break;
+                case OperationType.Split when op.InstrumentId != null:
+                case OperationType.ReverseSplit when op.InstrumentId != null:
                     break;
                 case OperationType.Dividend:
                     AddCash(op.CurrencyId, amount, cashByCurrency);
@@ -217,10 +218,8 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         var unrealizedBase = 0m;
         var realizedBase = 0m;
 
-        foreach (var kvp in valuation.Positions)
+        foreach (var (instrumentId, position) in valuation.Positions)
         {
-            var instrumentId = kvp.Key;
-            var position = kvp.Value;
             var qty = position.Quantity;
             var instrumentCurrency = instruments.TryGetValue(instrumentId, out var instrument)
                 ? instrument.CurrencyId

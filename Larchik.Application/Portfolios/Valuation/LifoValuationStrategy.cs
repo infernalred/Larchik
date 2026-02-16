@@ -83,6 +83,24 @@ public class LifoValuationStrategy : IValuationStrategy
                 case OperationType.TransferOut:
                     position.Quantity -= op.Quantity;
                     break;
+                case OperationType.Split:
+                case OperationType.ReverseSplit:
+                {
+                    var factor = op.Quantity;
+                    if (factor <= 0) break;
+
+                    position.Quantity *= factor;
+
+                    if (lots.Count == 0) break;
+
+                    foreach (var lot in lots)
+                    {
+                        lot.Quantity *= factor;
+                        lot.CostPerUnit /= factor;
+                    }
+
+                    break;
+                }
                 default:
                     continue;
             }

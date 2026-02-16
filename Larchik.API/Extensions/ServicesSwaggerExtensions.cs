@@ -11,7 +11,7 @@ public static class ServicesSwaggerExtensions
         {
             options.Title = "Larchik API v2.0";
             options.Version = "v2";
-            options.AddSecurity("Bearer", Enumerable.Empty<string>(), new()
+            options.AddSecurity("Bearer", [], new()
             {
                 Type = OpenApiSecuritySchemeType.Http,
                 Scheme = "bearer",

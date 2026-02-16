@@ -11,5 +11,7 @@ public enum OperationType
     TransferIn = 7,
     TransferOut = 8,
     BondPartialRedemption = 9,
-    BondMaturity = 10
+    BondMaturity = 10,
+    Split = 11,
+    ReverseSplit = 12
 }

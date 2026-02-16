@@ -22,6 +22,8 @@ const TYPE_OPTIONS: { value: OperationType; label: string }[] = [
   { value: 'TransferOut', label: 'Перевод из' },
   { value: 'BondPartialRedemption', label: 'Частичное погашение облигации' },
   { value: 'BondMaturity', label: 'Полное погашение облигации' },
+  { value: 'Split', label: 'Сплит' },
+  { value: 'ReverseSplit', label: 'Обратный сплит' },
 ];
 
 interface Props {
@@ -46,6 +48,7 @@ export function OperationForm({ open, initial, onClose, onSubmit }: Props) {
     note: initial?.note,
   }));
   const [saving, setSaving] = useState(false);
+  const isSplitType = form.type === 'Split' || form.type === 'ReverseSplit';
 
   const update = (key: keyof OperationModel, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -91,14 +94,15 @@ export function OperationForm({ open, initial, onClose, onSubmit }: Props) {
           />
           <Stack direction="row" spacing={2}>
             <TextField
-              label="Количество"
+              label={isSplitType ? 'Коэффициент' : 'Количество'}
               type="number"
               value={form.quantity}
               onChange={(e) => update('quantity', Number(e.target.value))}
+              helperText={isSplitType ? '1:10 = 10, 10:1 = 0.1' : undefined}
               fullWidth
             />
             <TextField
-              label="Цена/сумма"
+              label={isSplitType ? 'Цена/сумма (0)' : 'Цена/сумма'}
               type="number"
               value={form.price}
               onChange={(e) => update('price', Number(e.target.value))}
@@ -107,7 +111,7 @@ export function OperationForm({ open, initial, onClose, onSubmit }: Props) {
           </Stack>
           <Stack direction="row" spacing={2}>
             <TextField
-              label="Комиссия"
+              label={isSplitType ? 'Комиссия (0)' : 'Комиссия'}
               type="number"
               value={form.fee}
               onChange={(e) => update('fee', Number(e.target.value))}

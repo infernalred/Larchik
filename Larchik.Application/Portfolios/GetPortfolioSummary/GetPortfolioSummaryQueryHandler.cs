@@ -92,6 +92,10 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
                     AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
                     AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     break;
+                case OperationType.Split when op.InstrumentId != null:
+                case OperationType.ReverseSplit when op.InstrumentId != null:
+                    ApplySplitFactor(op.InstrumentId.Value, op.Quantity, positions);
+                    break;
                 case OperationType.Dividend:
                     AddCash(op.CurrencyId, amount, cashByCurrency);
                     break;
@@ -276,6 +280,13 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
         {
             positions[instrumentId] = quantity;
         }
+    }
+
+    private static void ApplySplitFactor(Guid instrumentId, decimal factor, IDictionary<Guid, decimal> positions)
+    {
+        if (factor <= 0) return;
+        if (!positions.TryGetValue(instrumentId, out var existing)) return;
+        positions[instrumentId] = existing * factor;
     }
 
 }

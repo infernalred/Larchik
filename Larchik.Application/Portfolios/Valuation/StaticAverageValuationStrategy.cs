@@ -39,6 +39,13 @@ public class StaticAverageValuationStrategy : IValuationStrategy
                 case OperationType.TransferOut:
                     position.Quantity -= op.Quantity;
                     break;
+                case OperationType.Split:
+                case OperationType.ReverseSplit:
+                    if (position.Quantity != 0)
+                    {
+                        position.Quantity *= op.Quantity;
+                    }
+                    break;
                 default:
                     continue;
             }
