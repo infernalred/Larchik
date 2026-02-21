@@ -1,4 +1,4 @@
-import { Grid, Paper, Stack, Typography } from '@mui/material';
+import { Grid, Paper, Typography } from '@mui/material';
 import { PortfolioSummary } from './types';
 
 const accents: Record<string, string> = {

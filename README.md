@@ -11,15 +11,15 @@ Larchik is an ASP.NET Core (`net10.0`) portfolio accounting API with CQRS, EF Co
 - EF Core 10 + PostgreSQL
 - Serilog
 - NSwag (`/swagger` in Development)
-- React + TypeScript client scaffold in `larchik_client/`
+- React + TypeScript client scaffold in `src/larchik_client/`
 
 ## Repository structure
 
-- `/Users/alex/Repos/Larchik/Larchik.API` - API host, controllers, middleware, DI wiring
-- `/Users/alex/Repos/Larchik/Larchik.Application` - application layer (CQRS handlers, DTOs, validation, business logic)
-- `/Users/alex/Repos/Larchik/Larchik.Persistence` - EF Core context, entities, configurations, migrations
-- `/Users/alex/Repos/Larchik/Larchik.Infrastructure` - cross-cutting services
-- `/Users/alex/Repos/Larchik/larchik_client` - React client
+- `/Users/alex/Repos/Larchik/src/Larchik.API` - API host, controllers, middleware, DI wiring
+- `/Users/alex/Repos/Larchik/src/Larchik.Application` - application layer (CQRS handlers, DTOs, validation, business logic)
+- `/Users/alex/Repos/Larchik/src/Larchik.Persistence` - EF Core context, entities, configurations, migrations
+- `/Users/alex/Repos/Larchik/src/Larchik.Infrastructure` - cross-cutting services
+- `/Users/alex/Repos/Larchik/src/larchik_client` - React client
 - `/Users/alex/Repos/Larchik/Tests` - test projects placeholder
 
 ## Prerequisites
@@ -38,7 +38,7 @@ dotnet dev-certs https --trust
 
 Main local config file:
 
-- `/Users/alex/Repos/Larchik/Larchik.API/appsettings.Development.json`
+- `/Users/alex/Repos/Larchik/src/Larchik.API/appsettings.Development.json`
 
 Required keys:
 
@@ -62,13 +62,13 @@ dotnet build Larchik.sln
 2. Apply migrations:
 
 ```bash
-dotnet ef database update --project Larchik.Persistence --startup-project Larchik.API
+dotnet ef database update --project src/Larchik.Persistence --startup-project src/Larchik.API
 ```
 
 3. Run API:
 
 ```bash
-dotnet run --project Larchik.API
+dotnet run --project src/Larchik.API
 ```
 
 4. Open Swagger (Development):
@@ -78,7 +78,7 @@ dotnet run --project Larchik.API
 ## Run frontend locally (optional)
 
 ```bash
-cd larchik_client
+cd src/larchik_client
 npm install
 npm run dev
 ```
