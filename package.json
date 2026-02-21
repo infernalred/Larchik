@@ -1,4 +1,11 @@
 {
+  "scripts": {
+    "dev": "npm --prefix larchik_client run dev",
+    "start": "npm --prefix larchik_client run dev",
+    "build": "npm --prefix larchik_client run build",
+    "lint": "npm --prefix larchik_client run lint",
+    "preview": "npm --prefix larchik_client run preview"
+  },
   "dependencies": {
     "formik": "^2.2.9"
   }

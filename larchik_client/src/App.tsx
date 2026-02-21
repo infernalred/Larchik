@@ -92,7 +92,7 @@ export function App() {
     if (!user) {
       return (
         <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2 }}>
-          <AuthForm initialEmail="admin@test.com" initialPassword="Password!!!123" onSubmit={handleLogin} />
+          <AuthForm onSubmit={handleLogin} />
         </Box>
       );
     }

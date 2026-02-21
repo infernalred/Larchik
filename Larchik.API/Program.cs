@@ -31,7 +31,7 @@ try
     {
         options.HttpOnly = HttpOnlyPolicy.Always;
         options.Secure = CookieSecurePolicy.Always;
-        options.MinimumSameSitePolicy = SameSiteMode.Lax;
+        options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
     });
 
     builder.Services.AddEndpointsApiExplorer();

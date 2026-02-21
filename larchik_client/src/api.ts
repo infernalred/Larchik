@@ -1,6 +1,6 @@
 import { Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSummary, User } from './types';
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5000';
+const API_BASE = (import.meta.env.VITE_API_BASE ?? 'https://localhost:6001').replace(/\/$/, '');
 
 let csrfToken: string | null = null;
 let csrfPromise: Promise<string> | null = null;

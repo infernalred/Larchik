@@ -2,14 +2,12 @@ import { useState } from 'react';
 import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
 
 interface Props {
-  initialEmail?: string;
-  initialPassword?: string;
   onSubmit: (email: string, password: string) => Promise<void>;
 }
 
-export function AuthForm({ initialEmail = '', initialPassword = '', onSubmit }: Props) {
-  const [email, setEmail] = useState(initialEmail);
-  const [password, setPassword] = useState(initialPassword);
+export function AuthForm({ onSubmit }: Props) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -57,9 +55,6 @@ export function AuthForm({ initialEmail = '', initialPassword = '', onSubmit }: 
             <Button type="submit" variant="contained" size="large" disabled={loading}>
               {loading ? 'Входим…' : 'Войти'}
             </Button>
-            <Typography variant="caption" color="text.secondary">
-              Демо: admin@test.com / Password!!!123
-            </Typography>
           </Stack>
         </Box>
       </CardContent>

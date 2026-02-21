@@ -40,7 +40,7 @@ public static class SecurityServiceExtensions
                     cookie.Cookie.Name = "__Host-larchik-auth";
                     cookie.Cookie.HttpOnly = true;
                     cookie.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                    cookie.Cookie.SameSite = SameSiteMode.Lax;
+                    cookie.Cookie.SameSite = SameSiteMode.None;
                     cookie.SlidingExpiration = true;
                     cookie.ExpireTimeSpan = TimeSpan.FromMinutes(30);
                 });
@@ -51,7 +51,7 @@ public static class SecurityServiceExtensions
             options.Cookie.Name = "__Host-larchik-af";
             options.Cookie.HttpOnly = true;
             options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.Cookie.SameSite = SameSiteMode.None;
             options.HeaderName = "X-XSRF-TOKEN";
         });
 

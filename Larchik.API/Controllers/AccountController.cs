@@ -33,7 +33,7 @@ public class AccountController(
             {
                 HttpOnly = false,
                 Secure = true,
-                SameSite = SameSiteMode.Lax,
+                SameSite = SameSiteMode.None,
                 Path = "/"
             });
         }
