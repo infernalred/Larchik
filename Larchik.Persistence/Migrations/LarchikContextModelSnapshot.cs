@@ -115,6 +115,7 @@ namespace Larchik.Persistence.Migrations
                             NormalizedUserName = "ADMIN",
                             PasswordHash = "AQAAAAIAAYagAAAAELetNQlOXe6IFms9D+H9cktwcVgon6E7yho5xMfUV8vbI8lfSldk14mcajcwvxJeBQ==",
                             PhoneNumberConfirmed = false,
+                            SecurityStamp = "f3359b6674a7407793f4e0371c477b60",
                             TwoFactorEnabled = false,
                             UserName = "admin"
                         });

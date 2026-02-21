@@ -18,34 +18,32 @@ public static class IdentitySeeder
         var adminEmail = configuration["Admin:Email"];
         var adminPassword = configuration["Admin:Password"];
 
-        if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+        if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
         {
-            return;
-        }
-
-        var adminUser = await userManager.FindByEmailAsync(adminEmail);
-        if (adminUser is null)
-        {
-            adminUser = new AppUser
+            var adminUser = await userManager.FindByEmailAsync(adminEmail);
+            if (adminUser is null)
             {
-                Email = adminEmail,
-                UserName = adminEmail,
-                EmailConfirmed = true
-            };
+                adminUser = new AppUser
+                {
+                    Email = adminEmail,
+                    UserName = adminEmail,
+                    EmailConfirmed = true
+                };
 
-            var createResult = await userManager.CreateAsync(adminUser, adminPassword);
-            if (!createResult.Succeeded)
+                var createResult = await userManager.CreateAsync(adminUser, adminPassword);
+                if (!createResult.Succeeded)
+                {
+                    logger.LogError("Failed to create admin user {Email}: {Errors}", adminEmail,
+                        string.Join(", ", createResult.Errors.Select(e => e.Description)));
+                }
+            }
+
+            if (adminUser is not null && !await userManager.IsInRoleAsync(adminUser, Roles.Admin))
             {
-                logger.LogError("Failed to create admin user {Email}: {Errors}", adminEmail,
-                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
-                return;
+                await userManager.AddToRoleAsync(adminUser, Roles.Admin);
             }
         }
 
-        if (!await userManager.IsInRoleAsync(adminUser, Roles.Admin))
-        {
-            await userManager.AddToRoleAsync(adminUser, Roles.Admin);
-        }
     }
 
     private static async Task EnsureRoleAsync(

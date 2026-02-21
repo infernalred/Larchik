@@ -91,6 +91,29 @@ namespace Larchik.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "job_definitions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    job_type = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    is_enabled = table.Column<bool>(type: "boolean", nullable: false),
+                    schedule_type = table.Column<int>(type: "integer", nullable: false),
+                    schedule_value = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    last_run_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    next_run_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    max_attempts = table.Column<int>(type: "integer", nullable: false, defaultValue: 5),
+                    retry_delay_minutes = table.Column<int>(type: "integer", nullable: false, defaultValue: 15),
+                    lock_timeout_minutes = table.Column<int>(type: "integer", nullable: false, defaultValue: 5),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_job_definitions", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -286,6 +309,37 @@ namespace Larchik.Persistence.Migrations
                         name: "fk_instruments_currencies_currency_id",
                         column: x => x.currency_id,
                         principalTable: "currencies",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "job_runs",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    job_definition_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    dedup_key = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    payload_json = table.Column<string>(type: "jsonb", nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    attempt = table.Column<int>(type: "integer", nullable: false),
+                    max_attempts = table.Column<int>(type: "integer", nullable: false, defaultValue: 5),
+                    available_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    locked_by = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: true),
+                    locked_until_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    completed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    last_error = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_job_runs", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_job_runs_job_definitions_job_definition_id",
+                        column: x => x.job_definition_id,
+                        principalTable: "job_definitions",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -488,7 +542,7 @@ namespace Larchik.Persistence.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "id", "access_failed_count", "concurrency_stamp", "email", "email_confirmed", "lockout_enabled", "lockout_end", "normalized_email", "normalized_user_name", "password_hash", "phone_number", "phone_number_confirmed", "security_stamp", "two_factor_enabled", "user_name" },
-                values: new object[] { new Guid("7e89d7d2-21e2-40ce-bef2-58c3b9408abb"), 0, "c53a3830-3f86-4505-bcdb-1d2d2f87c006", "admin@test.com", true, false, null, "ADMIN@TEST.COM", "ADMIN", "AQAAAAIAAYagAAAAELetNQlOXe6IFms9D+H9cktwcVgon6E7yho5xMfUV8vbI8lfSldk14mcajcwvxJeBQ==", null, false, null, false, "admin" });
+                values: new object[] { new Guid("7e89d7d2-21e2-40ce-bef2-58c3b9408abb"), 0, "c53a3830-3f86-4505-bcdb-1d2d2f87c006", "admin@test.com", true, false, null, "ADMIN@TEST.COM", "ADMIN", "AQAAAAIAAYagAAAAELetNQlOXe6IFms9D+H9cktwcVgon6E7yho5xMfUV8vbI8lfSldk14mcajcwvxJeBQ==", null, false, "f3359b6674a7407793f4e0371c477b60", false, "admin" });
 
             migrationBuilder.InsertData(
                 table: "categories",
@@ -615,6 +669,38 @@ namespace Larchik.Persistence.Migrations
                 column: "ticker");
 
             migrationBuilder.CreateIndex(
+                name: "ix_job_definitions_is_enabled_next_run_at",
+                table: "job_definitions",
+                columns: new[] { "is_enabled", "next_run_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_job_definitions_name",
+                table: "job_definitions",
+                column: "name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_job_runs_dedup_key",
+                table: "job_runs",
+                column: "dedup_key",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_job_runs_job_definition_id_created_at",
+                table: "job_runs",
+                columns: new[] { "job_definition_id", "created_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_job_runs_locked_until_at",
+                table: "job_runs",
+                column: "locked_until_at");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_job_runs_status_available_at",
+                table: "job_runs",
+                columns: new[] { "status", "available_at" });
+
+            migrationBuilder.CreateIndex(
                 name: "ix_lots_currency_id",
                 table: "lots",
                 column: "currency_id");
@@ -709,6 +795,9 @@ namespace Larchik.Persistence.Migrations
                 name: "fx_rates");
 
             migrationBuilder.DropTable(
+                name: "job_runs");
+
+            migrationBuilder.DropTable(
                 name: "lots");
 
             migrationBuilder.DropTable(
@@ -725,6 +814,9 @@ namespace Larchik.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "job_definitions");
 
             migrationBuilder.DropTable(
                 name: "portfolios");

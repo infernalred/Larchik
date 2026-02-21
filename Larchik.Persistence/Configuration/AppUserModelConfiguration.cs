@@ -16,7 +16,7 @@ public class AppUserModelConfiguration : IEntityTypeConfiguration<AppUser>
             Email = "admin@test.com",
             NormalizedEmail = "ADMIN@TEST.COM",
             EmailConfirmed = true,
-            SecurityStamp = null,
+            SecurityStamp = "f3359b6674a7407793f4e0371c477b60",
             ConcurrencyStamp = "c53a3830-3f86-4505-bcdb-1d2d2f87c006",
             PasswordHash = "AQAAAAIAAYagAAAAELetNQlOXe6IFms9D+H9cktwcVgon6E7yho5xMfUV8vbI8lfSldk14mcajcwvxJeBQ=="
         };

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Larchik.Persistence.Migrations
 {
     [DbContext(typeof(LarchikContext))]
-    [Migration("20260215172632_AddBackgroundJobs")]
-    partial class AddBackgroundJobs
+    [Migration("20260221142522_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -118,6 +118,7 @@ namespace Larchik.Persistence.Migrations
                             NormalizedUserName = "ADMIN",
                             PasswordHash = "AQAAAAIAAYagAAAAELetNQlOXe6IFms9D+H9cktwcVgon6E7yho5xMfUV8vbI8lfSldk14mcajcwvxJeBQ==",
                             PhoneNumberConfirmed = false,
+                            SecurityStamp = "f3359b6674a7407793f4e0371c477b60",
                             TwoFactorEnabled = false,
                             UserName = "admin"
                         });
@@ -451,7 +452,6 @@ namespace Larchik.Persistence.Migrations
                         .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
@@ -508,7 +508,6 @@ namespace Larchik.Persistence.Migrations
                         .HasColumnName("schedule_value");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
@@ -545,7 +544,6 @@ namespace Larchik.Persistence.Migrations
                         .HasColumnName("completed_at");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
@@ -593,7 +591,6 @@ namespace Larchik.Persistence.Migrations
                         .HasColumnName("status");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
