@@ -1,9 +1,10 @@
-import { Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSummary, User } from './types';
+import { Broker, Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSummary, User } from './types';
 
 const API_BASE = (import.meta.env.VITE_API_BASE ?? 'https://localhost:6001').replace(/\/$/, '');
 
 let csrfToken: string | null = null;
 let csrfPromise: Promise<string> | null = null;
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 async function ensureCsrfToken(): Promise<string> {
   if (csrfToken) return csrfToken;
@@ -25,23 +26,47 @@ async function ensureCsrfToken(): Promise<string> {
   return csrfPromise;
 }
 
+function resetCsrfToken(): void {
+  csrfToken = null;
+  csrfPromise = null;
+}
+
+function isClaimsMismatchError(body: string): boolean {
+  return body.includes('different claims-based user');
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const headers = new Headers(options.headers || undefined);
-  if (!headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-
   const method = (options.method ?? 'GET').toUpperCase();
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    const token = await ensureCsrfToken();
-    headers.set('X-XSRF-TOKEN', token);
-  }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers,
-  });
+  const send = async (): Promise<Response> => {
+    const headers = new Headers(options.headers || undefined);
+    if (!headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+
+    if (!SAFE_METHODS.has(method)) {
+      const token = await ensureCsrfToken();
+      headers.set('X-XSRF-TOKEN', token);
+    }
+
+    return fetch(`${API_BASE}${path}`, {
+      ...options,
+      credentials: 'include',
+      headers,
+    });
+  };
+
+  let res = await send();
+
+  if (!res.ok && !SAFE_METHODS.has(method)) {
+    const body = await res.text();
+    if (isClaimsMismatchError(body)) {
+      resetCsrfToken();
+      res = await send();
+    } else {
+      throw new Error(body || `Request failed: ${res.status}`);
+    }
+  }
 
   if (!res.ok) {
     const text = await res.text();
@@ -54,10 +79,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   async login(email: string, password: string): Promise<User> {
-    return request<User>('/api/account/login', {
+    const user = await request<User>('/api/account/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+    resetCsrfToken();
+    await ensureCsrfToken();
+    return user;
   },
 
   async me(): Promise<User> {
@@ -65,7 +93,8 @@ export const api = {
   },
 
   async logout(): Promise<void> {
-    return request<void>('/api/account/logout', { method: 'POST' });
+    await request<void>('/api/account/logout', { method: 'POST' });
+    resetCsrfToken();
   },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
@@ -79,7 +108,11 @@ export const api = {
     return request<Portfolio[]>('/api/portfolios');
   },
 
-  async createPortfolio(payload: { name: string; reportingCurrencyId: string; brokerId?: string }) {
+  async listBrokers(): Promise<Broker[]> {
+    return request<Broker[]>('/api/brokers');
+  },
+
+  async createPortfolio(payload: { name: string; reportingCurrencyId: string; brokerId: string }) {
     return request<string>('/api/portfolios', {
       method: 'POST',
       body: JSON.stringify(payload),

@@ -11,13 +11,14 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { api } from './api';
-import { Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSummary } from './types';
+import { Broker, Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSummary } from './types';
 import { SummaryCards } from './SummaryCards';
 import { PositionsTable } from './PositionsTable';
 import { PerformanceTable } from './PerformanceTable';
 import { PortfolioSidebar } from './PortfolioSidebar';
 import { QuickDeposit } from './QuickDeposit';
 import { OperationsPanel } from './OperationsPanel';
+import { CreatePortfolioDialog } from './CreatePortfolioDialog';
 
 const VALUATION_METHODS = [
   { value: 'adjustingAvg', label: 'Adjusting Avg' },
@@ -30,8 +31,19 @@ interface Props {
   onLogout: () => void;
 }
 
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) return fallback;
+  try {
+    const payload = JSON.parse(error.message) as { message?: string };
+    return payload.message || fallback;
+  } catch {
+    return error.message || fallback;
+  }
+}
+
 export function Dashboard({ onLogout }: Props) {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [brokers, setBrokers] = useState<Broker[]>([]);
   const [selectedPortfolio, setSelectedPortfolio] = useState<string | null>(null);
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [performance, setPerformance] = useState<PortfolioPerformance[]>([]);
@@ -39,9 +51,18 @@ export function Dashboard({ onLogout }: Props) {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loadingOps, setLoadingOps] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createPortfolioLoading, setCreatePortfolioLoading] = useState(false);
+  const [createPortfolioError, setCreatePortfolioError] = useState('');
 
   useEffect(() => {
-    loadPortfolios();
+    (async () => {
+      try {
+        await Promise.all([loadPortfolios(), loadBrokers()]);
+      } catch (error) {
+        console.error(error);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -51,10 +72,17 @@ export function Dashboard({ onLogout }: Props) {
     loadOperations(selectedPortfolio);
   }, [selectedPortfolio, valuationMethod]);
 
-  async function loadPortfolios() {
+  async function loadPortfolios(preferredId?: string) {
     const data = await api.listPortfolios();
     setPortfolios(data);
-    if (data.length) setSelectedPortfolio((prev) => prev ?? data[0].id);
+    if (data.length) {
+      setSelectedPortfolio((prev) => preferredId ?? prev ?? data[0].id);
+    }
+  }
+
+  async function loadBrokers() {
+    const data = await api.listBrokers();
+    setBrokers(data);
   }
 
   async function loadSummary(id: string, method: string) {
@@ -82,11 +110,32 @@ export function Dashboard({ onLogout }: Props) {
     }
   }
 
-  async function handleCreatePortfolio() {
-    const name = prompt('Название портфеля?');
-    if (!name) return;
-    await api.createPortfolio({ name, reportingCurrencyId: 'RUB' });
-    await loadPortfolios();
+  function handleOpenCreatePortfolio() {
+    setCreatePortfolioError('');
+    loadBrokers().catch(console.error);
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    setCreateDialogOpen(true);
+  }
+
+  function handleCloseCreatePortfolio() {
+    if (createPortfolioLoading) return;
+    setCreateDialogOpen(false);
+  }
+
+  async function handleCreatePortfolio(model: { name: string; brokerId: string; reportingCurrencyId: string }) {
+    setCreatePortfolioLoading(true);
+    setCreatePortfolioError('');
+    try {
+      const createdId = await api.createPortfolio(model);
+      setCreateDialogOpen(false);
+      await loadPortfolios(createdId);
+    } catch (error) {
+      setCreatePortfolioError(getApiErrorMessage(error, 'Не удалось создать счет.'));
+    } finally {
+      setCreatePortfolioLoading(false);
+    }
   }
 
   async function handleQuickDeposit({ amount, currency, note }: { amount: number; currency: string; note: string }) {
@@ -140,7 +189,7 @@ export function Dashboard({ onLogout }: Props) {
           items={portfolios}
           selectedId={selectedPortfolio}
           onSelect={setSelectedPortfolio}
-          onCreate={handleCreatePortfolio}
+          onCreate={handleOpenCreatePortfolio}
           onLogout={onLogout}
         />
       </Box>
@@ -229,6 +278,14 @@ export function Dashboard({ onLogout }: Props) {
           )}
         </Container>
       </Box>
+      <CreatePortfolioDialog
+        open={createDialogOpen}
+        brokers={brokers}
+        submitting={createPortfolioLoading}
+        error={createPortfolioError}
+        onClose={handleCloseCreatePortfolio}
+        onSubmit={handleCreatePortfolio}
+      />
     </Box>
   );
 }

@@ -31,7 +31,7 @@ export function PortfolioSidebar({ items, selectedId, onSelect, onCreate, onLogo
         onClick={onCreate}
         sx={{ textTransform: 'none' }}
       >
-        Новый портфель
+        Новый счет
       </Button>
 
       <Divider flexItem />

@@ -30,6 +30,12 @@ export interface Portfolio {
   brokerId?: string;
 }
 
+export interface Broker {
+  id: string;
+  name: string;
+  country?: string;
+}
+
 export interface PortfolioSummary {
   id: string;
   name: string;

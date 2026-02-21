@@ -12,8 +12,6 @@ public class PortfolioModelConfiguration : IEntityTypeConfiguration<Portfolio>
         builder.Property(x => x.ReportingCurrencyId).IsRequired().HasMaxLength(3);
         builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd();
 
-        builder.HasIndex(x => new { x.UserId, x.Name }).IsUnique();
-
         builder.HasOne(x => x.Broker)
             .WithMany(x => x.Portfolios)
             .HasForeignKey(x => x.BrokerId);

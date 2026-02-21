@@ -545,6 +545,33 @@ namespace Larchik.Persistence.Migrations
                 values: new object[] { new Guid("7e89d7d2-21e2-40ce-bef2-58c3b9408abb"), 0, "c53a3830-3f86-4505-bcdb-1d2d2f87c006", "admin@test.com", true, false, null, "ADMIN@TEST.COM", "ADMIN", "AQAAAAIAAYagAAAAELetNQlOXe6IFms9D+H9cktwcVgon6E7yho5xMfUV8vbI8lfSldk14mcajcwvxJeBQ==", null, false, "f3359b6674a7407793f4e0371c477b60", false, "admin" });
 
             migrationBuilder.InsertData(
+                table: "brokers",
+                columns: new[] { "id", "country", "name" },
+                values: new object[,]
+                {
+                    { new Guid("0d30ef6c-f09f-44da-8bf0-a20001c4c001"), "Россия", "СберБанк" },
+                    { new Guid("1634010e-bf7a-4e0c-89c8-643cde8d6009"), "Россия", "Райффайзенбанк" },
+                    { new Guid("1a9e3959-acf8-4936-a90d-90cb9ce98016"), "Россия", "Банк Уралсиб" },
+                    { new Guid("20237c6b-3956-4228-ab4e-a4f4c7f1c012"), "Россия", "АТОН" },
+                    { new Guid("2f54daf8-1f36-4428-9580-28c3fe307015"), "Россия", "Ак Барс Банк" },
+                    { new Guid("2f6dd2e6-c1bf-4eec-b024-f7570ab70013"), "Россия", "КИТ Финанс Брокер" },
+                    { new Guid("348c1aa0-5480-4fa1-a719-b36eb88dd020"), "Россия", "Инвестиционная палата" },
+                    { new Guid("47096031-0778-4a7e-8552-57a7f6b4d005"), "Россия", "Газпромбанк" },
+                    { new Guid("4ee304a8-6f0a-490f-bfa5-58f6f958b002"), "Россия", "ВТБ" },
+                    { new Guid("4f3178f2-218d-4802-8e38-68af3a972006"), "Россия", "Россельхозбанк" },
+                    { new Guid("65db9cc2-5f8f-4a53-a37a-6abcf217d008"), "Россия", "Совкомбанк" },
+                    { new Guid("677f0251-0b17-48c5-b14b-37f490ec2018"), "Россия", "Банк Санкт-Петербург" },
+                    { new Guid("802c7a07-532b-4c22-a8ac-05f984052007"), "Россия", "Промсвязьбанк" },
+                    { new Guid("8f3f0f71-ec6f-4f16-960b-a8440deeb010"), "Россия", "БКС Мир инвестиций" },
+                    { new Guid("935c6579-7695-43bf-8d8c-d6268bc7f019"), "Россия", "МКБ" },
+                    { new Guid("d040def8-f06d-4602-b350-5c30d9f06011"), "Россия", "ФИНАМ" },
+                    { new Guid("dc8f9da6-5d31-4dd8-a314-6fa3774e3017"), "Россия", "МТС Банк" },
+                    { new Guid("ebff8036-ab31-4e47-ae04-59071f66b014"), "Россия", "Цифра брокер" },
+                    { new Guid("f444bdaf-bcb7-41fa-b22d-5a2fd7d5e004"), "Россия", "Альфа-Банк" },
+                    { new Guid("f6f784ea-b520-4bc5-8a32-9a17f1637003"), "Россия", "Т-Банк" }
+                });
+
+            migrationBuilder.InsertData(
                 table: "categories",
                 columns: new[] { "id", "name" },
                 values: new object[,]
@@ -742,10 +769,9 @@ namespace Larchik.Persistence.Migrations
                 column: "broker_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_portfolios_user_id_name",
+                name: "ix_portfolios_user_id",
                 table: "portfolios",
-                columns: new[] { "user_id", "name" },
-                unique: true);
+                column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_position_snapshots_instrument_id",
