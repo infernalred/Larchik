@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material';
+import { Alert, Autocomplete, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material';
 import { Broker } from './types';
 
 const CURRENCIES = ['RUB', 'USD', 'EUR'];
@@ -30,14 +30,18 @@ export function CreatePortfolioDialog({ open, brokers, submitting, error, onClos
     if (!open) return;
     setForm({
       name: '',
-      brokerId: brokers[0]?.id ?? '',
+      brokerId: '',
       reportingCurrencyId: 'RUB',
     });
-  }, [open, brokers]);
+  }, [open]);
 
   const canSubmit = useMemo(
     () => form.name.trim().length > 0 && form.brokerId.length > 0 && !submitting,
     [form.brokerId, form.name, submitting],
+  );
+  const selectedBroker = useMemo(
+    () => brokers.find((x) => x.id === form.brokerId) ?? null,
+    [brokers, form.brokerId],
   );
 
   const update = <K extends keyof PortfolioForm>(key: K, value: PortfolioForm[K]) => {
@@ -70,20 +74,23 @@ export function CreatePortfolioDialog({ open, brokers, submitting, error, onClos
             autoFocus
             fullWidth
           />
-          <TextField
-            select
-            label="Брокер"
-            value={form.brokerId}
-            onChange={(e) => update('brokerId', e.target.value)}
+          <Autocomplete
+            options={brokers}
+            value={selectedBroker}
+            onChange={(_, value) => update('brokerId', value?.id ?? '')}
+            getOptionLabel={(option) => option.name}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
             disabled={submitting || !brokers.length}
+            noOptionsText="Ничего не найдено"
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Брокер"
+                placeholder="Начните вводить название"
+              />
+            )}
             fullWidth
-          >
-            {brokers.map((broker) => (
-              <MenuItem key={broker.id} value={broker.id}>
-                {broker.name}
-              </MenuItem>
-            ))}
-          </TextField>
+          />
           <TextField
             select
             label="Базовая валюта"

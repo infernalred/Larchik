@@ -2,11 +2,14 @@ using Larchik.Application.Currencies.GetCurrencies;
 using Larchik.Application.Contracts;
 using Larchik.Infrastructure.Jobs;
 using Larchik.Persistence.Context;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Larchik.Infrastructure.Recalculation;
 using Larchik.Application.Operations.ImportBroker;
+using System.Text.Json.Serialization;
 
 namespace Larchik.API.Extensions;
 
@@ -24,11 +27,17 @@ public static class ApplicationServiceExtensions
         });
 
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetCurrenciesQuery).Assembly));
+        services.AddValidatorsFromAssemblyContaining<GetCurrenciesQuery>();
+        services.AddFluentValidationAutoValidation();
 
         services.AddControllers(opt =>
         {
             var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
             opt.Filters.Add(new AuthorizeFilter(policy));
+        })
+        .AddJsonOptions(opt =>
+        {
+            opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
 
         services.AddHttpContextAccessor();

@@ -130,6 +130,7 @@ export function OperationForm({ open, initial, onClose, onSubmit }: Props) {
               type="date"
               value={form.tradeDate.slice(0, 10)}
               onChange={(e) => update('tradeDate', new Date(e.target.value).toISOString())}
+              InputLabelProps={{ shrink: true }}
               fullWidth
             />
             <TextField
@@ -139,6 +140,7 @@ export function OperationForm({ open, initial, onClose, onSubmit }: Props) {
               onChange={(e) =>
                 update('settlementDate', e.target.value ? new Date(e.target.value).toISOString() : undefined)
               }
+              InputLabelProps={{ shrink: true }}
               fullWidth
             />
           </Stack>

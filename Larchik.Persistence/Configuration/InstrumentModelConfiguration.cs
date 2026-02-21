@@ -32,6 +32,6 @@ public class InstrumentModelConfiguration : IEntityTypeConfiguration<Instrument>
 
         builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd();
 
-        builder.Property(x => x.UpdatedAt).ValueGeneratedOnAddOrUpdate();
+        builder.Property(x => x.UpdatedAt);
     }
 }

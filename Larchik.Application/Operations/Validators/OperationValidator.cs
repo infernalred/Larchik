@@ -30,5 +30,9 @@ public class OperationValidator : AbstractValidator<OperationModel>
             .WithMessage("Fee must be 0 for split operations.");
         RuleFor(x => x.CurrencyId).NotEmpty().Length(3);
         RuleFor(x => x.TradeDate).NotEmpty();
+        RuleFor(x => x.SettlementDate)
+            .GreaterThanOrEqualTo(x => x.TradeDate)
+            .When(x => x.SettlementDate.HasValue)
+            .WithMessage("SettlementDate must be greater than or equal to TradeDate.");
     }
 }

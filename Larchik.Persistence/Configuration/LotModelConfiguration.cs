@@ -12,7 +12,7 @@ public class LotModelConfiguration : IEntityTypeConfiguration<Lot>
         builder.Property(x => x.Quantity).HasPrecision(18, 6);
         builder.Property(x => x.RemainingQuantity).HasPrecision(18, 6);
         builder.Property(x => x.Cost).HasPrecision(18, 4);
-        builder.Property(x => x.UpdatedAt).ValueGeneratedOnAddOrUpdate();
+        builder.Property(x => x.UpdatedAt);
 
         builder.HasIndex(x => new { x.PortfolioId, x.InstrumentId, x.Method });
     }

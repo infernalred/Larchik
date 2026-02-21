@@ -143,7 +143,7 @@ export function Dashboard({ onLogout }: Props) {
     await api.createOperation(selectedPortfolio, {
       instrumentId: undefined,
       type: 'Deposit',
-      quantity: 0,
+      quantity: 1,
       price: amount,
       fee: 0,
       currencyId: currency,

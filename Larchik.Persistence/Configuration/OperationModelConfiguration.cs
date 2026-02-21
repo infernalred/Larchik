@@ -13,8 +13,8 @@ public class OperationModelConfiguration : IEntityTypeConfiguration<Operation>
         builder.Property(x => x.Quantity).HasPrecision(18, 6);
         builder.Property(x => x.Fee).HasPrecision(18, 4);
         builder.Property(x => x.Note).HasMaxLength(500);
-        builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd();
-        builder.Property(x => x.UpdatedAt).ValueGeneratedOnAddOrUpdate();
+        builder.Property(x => x.CreatedAt);
+        builder.Property(x => x.UpdatedAt);
 
         builder.HasIndex(x => new { x.PortfolioId, x.TradeDate });
         builder.HasIndex(x => new { x.InstrumentId, x.TradeDate });

@@ -12,7 +12,7 @@ public class PriceModelConfiguration : IEntityTypeConfiguration<Price>
         builder.Property(x => x.Provider).IsRequired().HasMaxLength(50);
         builder.Property(x => x.Value).HasPrecision(18, 4);
         builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd();
-        builder.Property(x => x.UpdatedAt).ValueGeneratedOnAddOrUpdate();
+        builder.Property(x => x.UpdatedAt);
 
         builder.HasIndex(x => new { x.InstrumentId, x.Date, x.Provider }).IsUnique();
     }

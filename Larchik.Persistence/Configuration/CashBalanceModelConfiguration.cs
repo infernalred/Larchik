@@ -10,7 +10,7 @@ public class CashBalanceModelConfiguration : IEntityTypeConfiguration<CashBalanc
     {
         builder.Property(x => x.CurrencyId).IsRequired().HasMaxLength(3);
         builder.Property(x => x.Amount).HasPrecision(18, 2);
-        builder.Property(x => x.UpdatedAt).ValueGeneratedOnAddOrUpdate();
+        builder.Property(x => x.UpdatedAt);
 
         builder.HasIndex(x => new { x.PortfolioId, x.CurrencyId }).IsUnique();
 
