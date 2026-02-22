@@ -26,7 +26,7 @@ export function AuthForm({ onSubmit }: Props) {
   };
 
   return (
-    <Card sx={{ maxWidth: 440, mx: 'auto', p: 1 }}>
+    <Card sx={{ width: '100%', maxWidth: 440, mx: 'auto', p: { xs: 0.25, sm: 1 } }}>
       <CardContent>
         <Typography variant="h5" fontWeight={700} gutterBottom>
           Larchik Investments

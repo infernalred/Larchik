@@ -11,6 +11,8 @@ import {
   MenuItem,
   Stack,
   TextField,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { InstrumentLookup, OperationModel, OperationType } from './types';
 
@@ -72,6 +74,8 @@ const createInitialForm = (initial?: Partial<OperationModel>): OperationModel =>
 });
 
 export function OperationForm({ open, initial, onClose, onSubmit, searchInstruments }: Props) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [form, setForm] = useState<OperationModel>(() => createInitialForm(initial));
   const [saving, setSaving] = useState(false);
   const [instrumentOptions, setInstrumentOptions] = useState<InstrumentLookup[]>([]);
@@ -158,7 +162,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" fullScreen={isMobile} scroll="paper">
       <DialogTitle>{initial ? 'Редактировать операцию' : 'Новая операция'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -227,7 +231,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
 
           {instrumentError && <Alert severity="warning">{instrumentError}</Alert>}
 
-          <Stack direction="row" spacing={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               label={isSplitType ? 'Коэффициент' : 'Количество'}
               type="number"
@@ -244,7 +248,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
               fullWidth
             />
           </Stack>
-          <Stack direction="row" spacing={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               label={isSplitType ? 'Комиссия (0)' : 'Комиссия'}
               type="number"
@@ -259,7 +263,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
               fullWidth
             />
           </Stack>
-          <Stack direction="row" spacing={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               label="Дата сделки"
               type="date"
@@ -286,9 +290,19 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
           />
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Отмена</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={saving}>
+      <DialogActions
+        sx={{
+          px: { xs: 2, sm: 3 },
+          pb: { xs: 2, sm: 1.5 },
+          pt: 1,
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 1,
+        }}
+      >
+        <Button onClick={onClose} fullWidth={isMobile}>
+          Отмена
+        </Button>
+        <Button onClick={handleSubmit} variant="contained" disabled={saving} fullWidth={isMobile}>
           {saving ? 'Сохраняем…' : 'Сохранить'}
         </Button>
       </DialogActions>

@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Autocomplete, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material';
+import {
+  Alert,
+  Autocomplete,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
+  Stack,
+  TextField,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
 import { Broker } from './types';
 
 const CURRENCIES = ['RUB', 'USD', 'EUR'];
@@ -20,6 +33,8 @@ interface Props {
 }
 
 export function CreatePortfolioDialog({ open, brokers, submitting, error, onClose, onSubmit }: Props) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [form, setForm] = useState<PortfolioForm>({
     name: '',
     brokerId: '',
@@ -58,7 +73,14 @@ export function CreatePortfolioDialog({ open, brokers, submitting, error, onClos
   };
 
   return (
-    <Dialog open={open} onClose={submitting ? undefined : onClose} fullWidth maxWidth="sm">
+    <Dialog
+      open={open}
+      onClose={submitting ? undefined : onClose}
+      fullWidth
+      maxWidth="sm"
+      fullScreen={isMobile}
+      scroll="paper"
+    >
       <DialogTitle>Новый счет</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -107,11 +129,19 @@ export function CreatePortfolioDialog({ open, brokers, submitting, error, onClos
           </TextField>
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={submitting}>
+      <DialogActions
+        sx={{
+          px: { xs: 2, sm: 3 },
+          pb: { xs: 2, sm: 1.5 },
+          pt: 1,
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 1,
+        }}
+      >
+        <Button onClick={onClose} disabled={submitting} fullWidth={isMobile}>
           Отмена
         </Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={!canSubmit}>
+        <Button onClick={handleSubmit} variant="contained" disabled={!canSubmit} fullWidth={isMobile}>
           {submitting ? 'Создаем…' : 'Создать'}
         </Button>
       </DialogActions>

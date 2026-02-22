@@ -9,11 +9,19 @@ interface Props {
   onSelect: (id: string) => void;
   onCreate: () => void;
   onLogout: () => void;
+  mobile?: boolean;
 }
 
-export function PortfolioSidebar({ items, selectedId, onSelect, onCreate, onLogout }: Props) {
+export function PortfolioSidebar({ items, selectedId, onSelect, onCreate, onLogout, mobile = false }: Props) {
   return (
-    <Stack spacing={2} sx={{ width: 280, p: 2 }}>
+    <Stack
+      spacing={2}
+      sx={{
+        width: mobile ? '100%' : 280,
+        minHeight: mobile ? '100%' : 'auto',
+        p: 2,
+      }}
+    >
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h6" fontWeight={800}>
           Larchik
@@ -30,6 +38,7 @@ export function PortfolioSidebar({ items, selectedId, onSelect, onCreate, onLogo
         startIcon={<AddCircleOutlineIcon />}
         onClick={onCreate}
         sx={{ textTransform: 'none' }}
+        fullWidth
       >
         Новый счет
       </Button>
@@ -39,7 +48,7 @@ export function PortfolioSidebar({ items, selectedId, onSelect, onCreate, onLogo
       <Typography variant="overline" color="text.secondary">
         Портфели
       </Typography>
-      <List dense disablePadding sx={{ borderRadius: 2, overflow: 'hidden' }}>
+      <List dense disablePadding sx={{ borderRadius: 2, overflow: 'hidden', overflowY: 'auto' }}>
         {items.map((p) => (
           <ListItem key={p.id} disablePadding>
             <ListItemButton selected={p.id === selectedId} onClick={() => onSelect(p.id)}>
