@@ -8,11 +8,22 @@ interface Props {
   selectedId?: string | null;
   onSelect: (id: string) => void;
   onCreate: () => void;
+  onShowAllSummary: () => void;
+  showAllSelected?: boolean;
   onLogout: () => void;
   mobile?: boolean;
 }
 
-export function PortfolioSidebar({ items, selectedId, onSelect, onCreate, onLogout, mobile = false }: Props) {
+export function PortfolioSidebar({
+  items,
+  selectedId,
+  onSelect,
+  onCreate,
+  onShowAllSummary,
+  showAllSelected = false,
+  onLogout,
+  mobile = false,
+}: Props) {
   return (
     <Stack
       spacing={2}
@@ -70,6 +81,15 @@ export function PortfolioSidebar({ items, selectedId, onSelect, onCreate, onLogo
           </ListItem>
         )}
       </List>
+
+      <Button
+        variant={showAllSelected ? 'contained' : 'outlined'}
+        onClick={onShowAllSummary}
+        sx={{ textTransform: 'none' }}
+        fullWidth
+      >
+        Показать инфу по всем счетам
+      </Button>
     </Stack>
   );
 }

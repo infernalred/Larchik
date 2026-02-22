@@ -1,4 +1,14 @@
-import { Broker, InstrumentLookup, Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSummary, User } from './types';
+import {
+  Broker,
+  InstrumentLookup,
+  Operation,
+  OperationModel,
+  Portfolio,
+  PortfolioPerformance,
+  PortfoliosSummary,
+  PortfolioSummary,
+  User,
+} from './types';
 
 const API_BASE = (import.meta.env.VITE_API_BASE ?? 'https://localhost:6001').replace(/\/$/, '');
 
@@ -129,6 +139,13 @@ export const api = {
   async getPortfolioSummary(id: string, method?: string): Promise<PortfolioSummary> {
     const params = method ? `?method=${encodeURIComponent(method)}` : '';
     return request<PortfolioSummary>(`/api/portfolios/${id}/summary${params}`);
+  },
+
+  async getPortfoliosSummary(method?: string, currency?: string): Promise<PortfoliosSummary> {
+    const params = new URLSearchParams();
+    if (method) params.append('method', method);
+    if (currency) params.append('currency', currency);
+    return request<PortfoliosSummary>(`/api/portfolios/summary${params.toString() ? `?${params}` : ''}`);
   },
 
   async getPerformance(id: string, method?: string): Promise<PortfolioPerformance[]> {

@@ -6,6 +6,7 @@ using Larchik.Application.Portfolios.EditPortfolio;
 using Larchik.Application.Portfolios.GetPortfolio;
 using Larchik.Application.Portfolios.GetPortfolioPerformance;
 using Larchik.Application.Portfolios.GetPortfolios;
+using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Application.Portfolios.GetPortfolioSummary;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -58,6 +59,16 @@ public class PortfoliosController : BaseApiController
     public async Task<ActionResult<PortfolioSummaryDto>> GetSummary(Guid id, [FromQuery] string? method)
     {
         return HandleResult(await Mediator.Send(new GetPortfolioSummaryQuery(id, method), HttpContext.RequestAborted));
+    }
+
+    [HttpGet("summary")]
+    [ProducesResponseType(typeof(PortfoliosSummaryDto), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+    public async Task<ActionResult<PortfoliosSummaryDto>> GetTotalSummary(
+        [FromQuery] string? method,
+        [FromQuery] string? currency)
+    {
+        return HandleResult(await Mediator.Send(new GetPortfoliosSummaryQuery(method, currency), HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:guid}/performance")]

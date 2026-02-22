@@ -61,6 +61,19 @@ export interface PortfolioSummary {
   realizedByInstrument: RealizedPnl[];
 }
 
+export interface PortfoliosSummary {
+  reportingCurrencyId: string;
+  portfolioCount: number;
+  netInflowBase: number;
+  cashBase: number;
+  positionsValueBase: number;
+  realizedBase: number;
+  unrealizedBase: number;
+  pnlBase: number;
+  valuationMethod: string;
+  navBase: number;
+}
+
 export interface CashBalance {
   currencyId: string;
   amount: number;

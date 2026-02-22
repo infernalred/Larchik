@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Container,
+  Divider,
   Grid,
   Drawer,
   MenuItem,
@@ -17,7 +18,16 @@ import {
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import MenuIcon from '@mui/icons-material/Menu';
 import { api } from './api';
-import { Broker, InstrumentLookup, Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSummary } from './types';
+import {
+  Broker,
+  InstrumentLookup,
+  Operation,
+  OperationModel,
+  Portfolio,
+  PortfolioPerformance,
+  PortfoliosSummary,
+  PortfolioSummary,
+} from './types';
 import { SummaryCards } from './SummaryCards';
 import { PositionsTable } from './PositionsTable';
 import { PerformanceTable } from './PerformanceTable';
@@ -37,6 +47,8 @@ interface Props {
   onLogout: () => void;
 }
 
+const formatMoney = (value: number) => value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 function getApiErrorMessage(error: unknown, fallback: string): string {
   if (!(error instanceof Error)) return fallback;
   try {
@@ -53,10 +65,14 @@ export function Dashboard({ onLogout }: Props) {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [brokers, setBrokers] = useState<Broker[]>([]);
   const [selectedPortfolio, setSelectedPortfolio] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'portfolio' | 'all'>('portfolio');
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
+  const [allSummary, setAllSummary] = useState<PortfoliosSummary | null>(null);
   const [performance, setPerformance] = useState<PortfolioPerformance[]>([]);
   const [valuationMethod, setValuationMethod] = useState('adjustingAvg');
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [loadingAllSummary, setLoadingAllSummary] = useState(false);
+  const [allSummaryError, setAllSummaryError] = useState('');
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loadingOps, setLoadingOps] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -75,18 +91,31 @@ export function Dashboard({ onLogout }: Props) {
   }, []);
 
   useEffect(() => {
+    if (viewMode === 'all') {
+      loadAllSummary(valuationMethod);
+      return;
+    }
+
     if (!selectedPortfolio) return;
     loadSummary(selectedPortfolio, valuationMethod);
     loadPerformance(selectedPortfolio, valuationMethod);
     loadOperations(selectedPortfolio);
-  }, [selectedPortfolio, valuationMethod]);
+  }, [selectedPortfolio, valuationMethod, viewMode, portfolios]);
 
   async function loadPortfolios(preferredId?: string) {
     const data = await api.listPortfolios();
     setPortfolios(data);
     if (data.length) {
       setSelectedPortfolio((prev) => preferredId ?? prev ?? data[0].id);
+      return;
     }
+
+    setSelectedPortfolio(null);
+    setSummary(null);
+    setAllSummary(null);
+    setPerformance([]);
+    setOperations([]);
+    setViewMode('portfolio');
   }
 
   async function loadBrokers() {
@@ -101,6 +130,21 @@ export function Dashboard({ onLogout }: Props) {
       setSummary(data);
     } finally {
       setLoadingSummary(false);
+    }
+  }
+
+  async function loadAllSummary(method: string) {
+    const selectedCurrency = portfolios.find((x) => x.id === selectedPortfolio)?.reportingCurrencyId;
+    setLoadingAllSummary(true);
+    setAllSummaryError('');
+    try {
+      const data = await api.getPortfoliosSummary(method, selectedCurrency);
+      setAllSummary(data);
+    } catch (error) {
+      setAllSummary(null);
+      setAllSummaryError(getApiErrorMessage(error, 'Не удалось получить общий итог по всем счетам.'));
+    } finally {
+      setLoadingAllSummary(false);
     }
   }
 
@@ -195,12 +239,23 @@ export function Dashboard({ onLogout }: Props) {
   }
 
   function handleSelectPortfolio(id: string) {
+    setViewMode('portfolio');
     setSelectedPortfolio(id);
+    setAllSummaryError('');
+    setSidebarOpen(false);
+  }
+
+  function handleShowAllSummary() {
+    setViewMode('all');
     setSidebarOpen(false);
   }
 
   const activePortfolio = portfolios.find((x) => x.id === selectedPortfolio) ?? null;
-  const currency = summary?.reportingCurrencyId ?? '—';
+  const currency =
+    viewMode === 'all'
+      ? allSummary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—'
+      : summary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—';
+  const isLoadingCurrent = viewMode === 'all' ? loadingAllSummary : loadingSummary;
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', color: 'text.primary' }}>
@@ -211,6 +266,8 @@ export function Dashboard({ onLogout }: Props) {
             selectedId={selectedPortfolio}
             onSelect={handleSelectPortfolio}
             onCreate={handleOpenCreatePortfolio}
+            onShowAllSummary={handleShowAllSummary}
+            showAllSelected={viewMode === 'all'}
             onLogout={onLogout}
           />
         </Box>
@@ -232,6 +289,8 @@ export function Dashboard({ onLogout }: Props) {
           selectedId={selectedPortfolio}
           onSelect={handleSelectPortfolio}
           onCreate={handleOpenCreatePortfolio}
+          onShowAllSummary={handleShowAllSummary}
+          showAllSelected={viewMode === 'all'}
           onLogout={onLogout}
           mobile
         />
@@ -278,13 +337,13 @@ export function Dashboard({ onLogout }: Props) {
             >
               <Stack spacing={0.5}>
                 <Typography variant="overline" color="text.secondary">
-                  Активный портфель
+                  {viewMode === 'all' ? 'Режим просмотра' : 'Активный портфель'}
                 </Typography>
                 <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-                  {activePortfolio?.name ?? 'Выберите портфель'}
+                  {viewMode === 'all' ? 'Все счета' : activePortfolio?.name ?? 'Выберите портфель'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Валюта портфеля: {activePortfolio?.reportingCurrencyId ?? '—'}
+                  Валюта отчета: {currency}
                 </Typography>
               </Stack>
               <Stack spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
@@ -349,13 +408,13 @@ export function Dashboard({ onLogout }: Props) {
             </Stack>
           </Paper>
 
-          {loadingSummary && (
+          {isLoadingCurrent && (
             <Stack alignItems="center" sx={{ py: 4 }}>
               <CircularProgress />
             </Stack>
           )}
 
-          {!loadingSummary && summary && (
+          {viewMode === 'portfolio' && !loadingSummary && summary && (
             <Stack spacing={{ xs: 2, md: 3 }}>
               <SummaryCards summary={summary} />
 
@@ -395,7 +454,64 @@ export function Dashboard({ onLogout }: Props) {
             </Stack>
           )}
 
-          {!loadingSummary && !summary && (
+          {viewMode === 'all' && !loadingAllSummary && allSummary && (
+            <Stack spacing={{ xs: 2, md: 3 }}>
+              <SummaryCards
+                summary={{
+                  id: 'all-portfolios',
+                  name: 'Все счета',
+                  reportingCurrencyId: allSummary.reportingCurrencyId,
+                  netInflowBase: allSummary.netInflowBase,
+                  cashBase: allSummary.cashBase,
+                  positionsValueBase: allSummary.positionsValueBase,
+                  realizedBase: allSummary.realizedBase,
+                  unrealizedBase: allSummary.unrealizedBase,
+                  navBase: allSummary.navBase,
+                  valuationMethod: allSummary.valuationMethod,
+                  cash: [],
+                  positions: [],
+                  realizedByInstrument: [],
+                }}
+              />
+              <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, backgroundImage: 'none' }}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1.5}
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  justifyContent="space-between"
+                >
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Итого по всем счетам ({allSummary.portfolioCount})
+                    </Typography>
+                    <Typography variant="h6" fontWeight={700}>
+                      Прибыль / убыток
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="h5"
+                    fontWeight={800}
+                    color={allSummary.pnlBase >= 0 ? 'success.main' : 'error.main'}
+                    sx={{ whiteSpace: 'nowrap' }}
+                  >
+                    {formatMoney(allSummary.pnlBase)} {allSummary.reportingCurrencyId}
+                  </Typography>
+                </Stack>
+                <Divider sx={{ my: 1.5 }} />
+                <Typography variant="body2" color="text.secondary">
+                  Чтобы вернуться к деталям по одному счету, выберите нужный счет в списке слева.
+                </Typography>
+              </Paper>
+            </Stack>
+          )}
+
+          {viewMode === 'all' && !loadingAllSummary && !allSummary && allSummaryError && (
+            <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, textAlign: 'center', backgroundImage: 'none' }}>
+              <Typography color="error.main">{allSummaryError}</Typography>
+            </Paper>
+          )}
+
+          {viewMode === 'portfolio' && !loadingSummary && !summary && (
             <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, textAlign: 'center', backgroundImage: 'none' }}>
               <Typography color="text.secondary">Выберите портфель или создайте новый</Typography>
             </Paper>
