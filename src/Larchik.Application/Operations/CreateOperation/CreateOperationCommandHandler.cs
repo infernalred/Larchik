@@ -39,7 +39,7 @@ public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor
         }
 
         var tradeDate = OperationInputNormalizer.NormalizeUtc(request.Model.TradeDate);
-        var settlementDate = OperationInputNormalizer.NormalizeUtc(request.Model.SettlementDate);
+        var settlementDate = OperationInputNormalizer.NormalizeUtc(request.Model.SettlementDate) ?? tradeDate;
 
         var entity = new Operation
         {
