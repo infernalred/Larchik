@@ -21,11 +21,12 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
 
         if (portfolio is null) return null;
 
-        var asOfDate = DateTime.UtcNow.Date;
+        var asOfDateTime = DateTime.UtcNow;
+        var asOfDate = asOfDateTime.Date;
 
         var operations = await context.Operations
             .AsNoTracking()
-            .Where(x => x.PortfolioId == request.Id && x.TradeDate <= asOfDate)
+            .Where(x => x.PortfolioId == request.Id && x.TradeDate <= asOfDateTime)
             .OrderBy(x => x.TradeDate)
             .ThenBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
