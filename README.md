@@ -19,6 +19,7 @@ Larchik is an ASP.NET Core (`net10.0`) portfolio accounting API with CQRS, EF Co
 - `/Users/alex/Repos/Larchik/src/Larchik.Application` - application layer (CQRS handlers, DTOs, validation, business logic)
 - `/Users/alex/Repos/Larchik/src/Larchik.Persistence` - EF Core context, entities, configurations, migrations
 - `/Users/alex/Repos/Larchik/src/Larchik.Infrastructure` - cross-cutting services
+- `/Users/alex/Repos/Larchik/src/Larchik.Jobs` - background jobs host (scheduler/executor)
 - `/Users/alex/Repos/Larchik/src/larchik_client` - React client
 - `/Users/alex/Repos/Larchik/Tests` - test projects placeholder
 
@@ -39,6 +40,7 @@ dotnet dev-certs https --trust
 Main local config file:
 
 - `/Users/alex/Repos/Larchik/src/Larchik.API/appsettings.Development.json`
+- `/Users/alex/Repos/Larchik/src/Larchik.Jobs/appsettings.Development.json` (jobs host)
 
 Required keys:
 
@@ -46,7 +48,7 @@ Required keys:
 - `Cors:Origins` - comma-separated allowed frontend origins
 - `Frontend:BaseUrl` - used in email confirmation/reset links
 - `Admin:Email`, `Admin:Password` - optional admin seeding on startup
-- `BackgroundJobs:*` - built-in scheduler/executor settings (FX sync job, retries, polling)
+- `BackgroundJobs:*` - jobs scheduler/executor settings in `Larchik.Jobs`
 
 `TokenKey`/`DaysTokenLife` are currently not used in the codebase.
 
@@ -71,7 +73,13 @@ dotnet ef database update --project src/Larchik.Persistence --startup-project sr
 dotnet run --project src/Larchik.API
 ```
 
-4. Open Swagger (Development):
+4. Run jobs host (optional locally, required in environments where scheduled jobs are expected):
+
+```bash
+dotnet run --project src/Larchik.Jobs
+```
+
+5. Open Swagger (Development):
 
 - [https://localhost:6001/swagger](https://localhost:6001/swagger)
 
@@ -106,4 +114,4 @@ Operation types include bond redemption flows:
 
 - On startup API runs EF migrations automatically and seeds roles.
 - If `Admin` credentials are configured, admin user is created/updated automatically.
-- Background jobs are DB-backed (`job_definitions`, `job_runs`) with dedup keys, retries, and lock timeout recovery.
+- Background jobs are DB-backed (`job_definitions`, `job_runs`) with dedup keys, retries, and lock timeout recovery, and now run in `Larchik.Jobs` as a separate process.
