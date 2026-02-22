@@ -76,8 +76,8 @@ export function PerformanceTable({ items }: Props) {
   }
 
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ backgroundImage: 'none' }}>
-      <Table size="small">
+    <TableContainer component={Paper} variant="outlined" sx={{ backgroundImage: 'none', borderRadius: 2 }}>
+      <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
             <TableCell>Месяц</TableCell>

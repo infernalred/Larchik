@@ -14,6 +14,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import MenuIcon from '@mui/icons-material/Menu';
 import { api } from './api';
 import { Broker, InstrumentLookup, Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSummary } from './types';
@@ -198,6 +199,7 @@ export function Dashboard({ onLogout }: Props) {
     setSidebarOpen(false);
   }
 
+  const activePortfolio = portfolios.find((x) => x.id === selectedPortfolio) ?? null;
   const currency = summary?.reportingCurrencyId ?? '—';
 
   return (
@@ -235,55 +237,117 @@ export function Dashboard({ onLogout }: Props) {
         />
       </Drawer>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Container maxWidth="xl" sx={{ py: { xs: 2, md: 3 }, px: { xs: 1.5, sm: 2.5, md: 3 } }}>
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            alignItems={{ xs: 'stretch', md: 'center' }}
-            justifyContent="space-between"
-            spacing={1.5}
-            sx={{ mb: 2 }}
+        <Container
+          maxWidth="xl"
+          sx={{
+            pt: { xs: 2, md: 3 },
+            pb: { xs: 'calc(env(safe-area-inset-bottom) + 16px)', md: 3 },
+            px: { xs: 1.5, sm: 2.5, md: 3 },
+          }}
+        >
+          <Paper
+            variant="outlined"
+            sx={{
+              mb: { xs: 2, md: 2.5 },
+              p: { xs: 1.5, sm: 2, md: 2.5 },
+              borderRadius: { xs: 2.5, md: 3 },
+              position: 'relative',
+              overflow: 'hidden',
+              background:
+                'linear-gradient(120deg, rgba(15,118,110,0.2) 0%, rgba(14,165,233,0.1) 55%, rgba(217,119,6,0.12) 100%)',
+            }}
           >
-            <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }} spacing={1}>
-              {isMobile && (
-                <Button
-                  variant="outlined"
-                  onClick={() => setSidebarOpen(true)}
-                  startIcon={<MenuIcon />}
-                  sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
-                >
-                  Портфели
-                </Button>
-              )}
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
-                <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-                  Метод оценки
+            <Box
+              sx={{
+                position: 'absolute',
+                width: 220,
+                height: 220,
+                right: -70,
+                top: -120,
+                borderRadius: '50%',
+                bgcolor: 'rgba(20,184,166,0.18)',
+                filter: 'blur(2px)',
+              }}
+            />
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              alignItems={{ xs: 'stretch', md: 'center' }}
+              justifyContent="space-between"
+              spacing={1.5}
+              sx={{ position: 'relative', zIndex: 1 }}
+            >
+              <Stack spacing={0.5}>
+                <Typography variant="overline" color="text.secondary">
+                  Активный портфель
                 </Typography>
-                <Select
-                  size="small"
-                  value={valuationMethod}
-                  onChange={(e) => setValuationMethod(e.target.value)}
-                  sx={{ minWidth: { xs: '100%', sm: 180 } }}
+                <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+                  {activePortfolio?.name ?? 'Выберите портфель'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Валюта портфеля: {activePortfolio?.reportingCurrencyId ?? '—'}
+                </Typography>
+              </Stack>
+              <Stack spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+                  {isMobile && (
+                    <Button
+                      variant="outlined"
+                      onClick={() => setSidebarOpen(true)}
+                      startIcon={<MenuIcon />}
+                      sx={{ textTransform: 'none' }}
+                      fullWidth
+                    >
+                      Портфели
+                    </Button>
+                  )}
+                  <Button
+                    variant="outlined"
+                    onClick={handleOpenCreatePortfolio}
+                    startIcon={<AddCircleOutlineIcon />}
+                    sx={{ textTransform: 'none' }}
+                    fullWidth={isMobile}
+                  >
+                    Новый счет
+                  </Button>
+                </Stack>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  alignItems={{ xs: 'stretch', sm: 'center' }}
+                  sx={{ width: { xs: '100%', md: 'auto' } }}
                 >
-                  {VALUATION_METHODS.map((m) => (
-                    <MenuItem key={m.value} value={m.value}>
-                      {m.label}
-                    </MenuItem>
-                  ))}
-                </Select>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                    <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+                      Метод оценки
+                    </Typography>
+                    <Select
+                      size="small"
+                      value={valuationMethod}
+                      onChange={(e) => setValuationMethod(e.target.value)}
+                      sx={{ minWidth: { xs: '100%', sm: 180 } }}
+                    >
+                      {VALUATION_METHODS.map((m) => (
+                        <MenuItem key={m.value} value={m.value}>
+                          {m.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </Stack>
+                  <Paper
+                    variant="outlined"
+                    sx={{ px: 1.5, py: 0.75, borderRadius: 999, alignSelf: { xs: 'flex-start', sm: 'center' } }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Базовая валюта
+                    </Typography>
+                    <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2}>
+                      {currency}
+                    </Typography>
+                  </Paper>
+                </Stack>
               </Stack>
             </Stack>
-            <Paper
-              variant="outlined"
-              sx={{ px: 2, py: 1, borderRadius: 999, alignSelf: { xs: 'flex-start', md: 'center' } }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                Базовая валюта
-              </Typography>
-              <Typography variant="subtitle1" fontWeight={700}>
-                {currency}
-              </Typography>
-            </Paper>
-          </Stack>
+          </Paper>
 
           {loadingSummary && (
             <Stack alignItems="center" sx={{ py: 4 }}>
@@ -318,10 +382,7 @@ export function Dashboard({ onLogout }: Props) {
                 <PerformanceTable items={performance} />
               </Stack>
 
-              <Stack spacing={1}>
-                <Typography variant="h6" fontWeight={700}>
-                  Операции
-                </Typography>
+              <Stack spacing={0.75}>
                 {loadingOps && <Typography color="text.secondary">Загрузка операций…</Typography>}
                 <OperationsPanel
                   items={operations}

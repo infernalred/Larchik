@@ -18,7 +18,10 @@ export function PortfolioSidebar({ items, selectedId, onSelect, onCreate, onLogo
       spacing={2}
       sx={{
         width: mobile ? '100%' : 280,
-        minHeight: mobile ? '100%' : 'auto',
+        minHeight: mobile ? '100%' : '100vh',
+        position: mobile ? 'relative' : 'sticky',
+        top: 0,
+        overflowY: 'auto',
         p: 2,
       }}
     >

@@ -79,8 +79,8 @@ export function PositionsTable({ positions }: Props) {
   }
 
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ backgroundImage: 'none' }}>
-      <Table size="small">
+    <TableContainer component={Paper} variant="outlined" sx={{ backgroundImage: 'none', borderRadius: 2 }}>
+      <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
             <TableCell>Инструмент</TableCell>

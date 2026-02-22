@@ -20,7 +20,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { InstrumentLookup, Operation, OperationModel } from './types';
+import { InstrumentLookup, Operation, OperationModel, OperationType } from './types';
 import { OperationForm } from './OperationForm';
 
 interface Props {
@@ -33,6 +33,20 @@ interface Props {
 
 const fmtDate = (v: string) => v.slice(0, 10);
 const fmtNum = (v: number | null | undefined) => (v == null ? '—' : v.toLocaleString('ru-RU', { maximumFractionDigits: 4 }));
+const TYPE_LABELS: Record<OperationType, string> = {
+  Buy: 'Покупка',
+  Sell: 'Продажа',
+  Dividend: 'Дивиденд',
+  Fee: 'Комиссия',
+  Deposit: 'Депозит',
+  Withdraw: 'Вывод',
+  TransferIn: 'Перевод в',
+  TransferOut: 'Перевод из',
+  BondPartialRedemption: 'Частичное погашение',
+  BondMaturity: 'Погашение',
+  Split: 'Сплит',
+  ReverseSplit: 'Обратный сплит',
+};
 
 export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchInstruments }: Props) {
   const theme = useTheme();
@@ -73,7 +87,7 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
               <Stack spacing={1.25}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                   <Stack spacing={0.25}>
-                    <Typography fontWeight={700}>{op.type}</Typography>
+                    <Typography fontWeight={700}>{TYPE_LABELS[op.type]}</Typography>
                     <Typography variant="caption" color="text.secondary">
                       {fmtDate(op.tradeDate)}
                     </Typography>
@@ -141,8 +155,8 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
           )}
         </Stack>
       ) : (
-        <TableContainer component={Box}>
-          <Table size="small">
+        <TableContainer component={Box} sx={{ borderRadius: 2, maxHeight: 520 }}>
+          <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell>Дата</TableCell>
@@ -152,7 +166,7 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
                 <TableCell align="right">Цена/сумма</TableCell>
                 <TableCell align="right">Комиссия</TableCell>
                 <TableCell align="right">Валюта</TableCell>
-                <TableCell align="right">Комментарий</TableCell>
+                <TableCell>Комментарий</TableCell>
                 <TableCell align="right">Действия</TableCell>
               </TableRow>
             </TableHead>
@@ -160,14 +174,14 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
               {sorted.map((op) => (
                 <TableRow key={op.id} hover>
                   <TableCell>{fmtDate(op.tradeDate)}</TableCell>
-                  <TableCell>{op.type}</TableCell>
+                  <TableCell>{TYPE_LABELS[op.type]}</TableCell>
                   <TableCell>{op.instrumentTicker ?? '—'}</TableCell>
                   <TableCell align="right">{fmtNum(op.quantity)}</TableCell>
                   <TableCell align="right">{fmtNum(op.price)}</TableCell>
                   <TableCell align="right">{fmtNum(op.fee)}</TableCell>
                   <TableCell align="right">{op.currencyId}</TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2" color="text.secondary" noWrap maxWidth={160}>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary" noWrap maxWidth={240}>
                       {op.note ?? '—'}
                     </Typography>
                   </TableCell>

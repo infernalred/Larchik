@@ -1,12 +1,12 @@
-import { Grid, Paper, Typography } from '@mui/material';
+import { Box, Grid, Paper, Typography } from '@mui/material';
 import { PortfolioSummary } from './types';
 
 const accents: Record<string, string> = {
-  nav: 'linear-gradient(120deg, #0ea5e9 0%, #22d3ee 100%)',
-  cash: 'linear-gradient(120deg, #22c55e 0%, #86efac 100%)',
-  positions: 'linear-gradient(120deg, #6366f1 0%, #a855f7 100%)',
-  realized: 'linear-gradient(120deg, #f59e0b 0%, #fbbf24 100%)',
-  unrealized: 'linear-gradient(120deg, #ef4444 0%, #fb7185 100%)',
+  nav: 'linear-gradient(140deg, rgba(14,165,233,0.26) 0%, rgba(34,211,238,0.1) 100%)',
+  cash: 'linear-gradient(140deg, rgba(34,197,94,0.26) 0%, rgba(74,222,128,0.1) 100%)',
+  positions: 'linear-gradient(140deg, rgba(15,118,110,0.3) 0%, rgba(45,212,191,0.08) 100%)',
+  realized: 'linear-gradient(140deg, rgba(245,158,11,0.28) 0%, rgba(251,191,36,0.12) 100%)',
+  unrealized: 'linear-gradient(140deg, rgba(239,68,68,0.26) 0%, rgba(248,113,113,0.12) 100%)',
 };
 
 const format = (v: number | null | undefined) =>
@@ -24,17 +24,21 @@ function StatCard({ title, value, currency, accent }: StatCardProps) {
     <Paper
       elevation={0}
       sx={{
-        p: 2,
-        borderRadius: 2,
+        p: { xs: 1.5, sm: 2 },
+        borderRadius: 2.5,
+        minHeight: { xs: 'auto', sm: 112 },
         background: accent ? accents[accent] : 'rgba(255,255,255,0.04)',
-        color: accent ? '#0b1224' : 'inherit',
+        border: '1px solid rgba(148, 163, 184, 0.2)',
       }}
     >
-      <Typography variant="body2" color={accent ? 'inherit' : 'text.secondary'}>
+      <Typography variant="body2" color="text.secondary">
         {title}
       </Typography>
-      <Typography variant="h6" fontWeight={700}>
-        {format(value)} <Typography component="span">{currency}</Typography>
+      <Typography component="div" variant="h6" fontWeight={700} sx={{ mt: 0.5, lineHeight: 1.25 }}>
+        {format(value)}{' '}
+        <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.875rem', fontWeight: 500 }}>
+          {currency}
+        </Box>
       </Typography>
     </Paper>
   );

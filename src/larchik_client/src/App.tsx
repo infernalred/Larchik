@@ -10,13 +10,15 @@ const theme = createTheme({
     mode: 'light',
     primary: {
       main: '#0f766e',
+      light: '#14b8a6',
     },
     secondary: {
       main: '#d97706',
     },
+    divider: 'rgba(148, 163, 184, 0.2)',
     background: {
       default: '#0b1224',
-      paper: '#0f172a',
+      paper: '#0f1a30',
     },
     text: {
       primary: '#e2e8f0',
@@ -28,15 +30,77 @@ const theme = createTheme({
   },
   typography: {
     fontFamily: '"Space Grotesk","Inter","IBM Plex Sans",system-ui,-apple-system,sans-serif',
+    h4: { fontWeight: 700, letterSpacing: '-0.02em' },
+    h5: { fontWeight: 700, letterSpacing: '-0.02em' },
     h6: { fontWeight: 700 },
     subtitle1: { fontWeight: 600 },
+    button: { fontWeight: 700, textTransform: 'none' },
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          colorScheme: 'dark',
+        },
+      },
+    },
     MuiPaper: {
-      styleOverrides: { root: { backgroundImage: 'none' } },
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+        },
+        outlined: {
+          borderColor: 'rgba(148, 163, 184, 0.22)',
+        },
+      },
     },
     MuiCard: {
       styleOverrides: { root: { backgroundImage: 'none' } },
+    },
+    MuiButton: {
+      defaultProps: {
+        disableElevation: true,
+      },
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+        },
+        containedPrimary: {
+          backgroundImage: 'linear-gradient(120deg, #0f766e 0%, #0d9488 100%)',
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        head: {
+          fontWeight: 700,
+          color: '#cbd5e1',
+          backgroundColor: 'rgba(15, 23, 42, 0.96)',
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(15, 23, 42, 0.35)',
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 18,
+          border: '1px solid rgba(148, 163, 184, 0.25)',
+          backgroundImage: 'none',
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          borderRight: '1px solid rgba(148, 163, 184, 0.22)',
+        },
+      },
     },
   },
 });
