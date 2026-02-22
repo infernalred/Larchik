@@ -5,7 +5,8 @@ interface Props {
   positions: PositionHolding[];
 }
 
-const fmt = (v: number) => v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (v: number | null | undefined) =>
+  v == null ? '—' : v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function PositionsTable({ positions }: Props) {
   return (
@@ -24,9 +25,9 @@ export function PositionsTable({ positions }: Props) {
           {positions.map((p) => (
             <TableRow key={p.instrumentId} hover>
               <TableCell>
-                <Typography fontWeight={600}>{p.instrumentName}</Typography>
+                <Typography fontWeight={600}>{p.instrumentName || '—'}</Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {p.currencyId}
+                  {p.currencyId || '—'}
                 </Typography>
               </TableCell>
               <TableCell align="right">{fmt(p.quantity)}</TableCell>
@@ -34,7 +35,7 @@ export function PositionsTable({ positions }: Props) {
                 {fmt(p.averageCost)} {p.currencyId}
               </TableCell>
               <TableCell align="right">
-                {p.lastPrice !== undefined ? `${fmt(p.lastPrice)} ${p.currencyId}` : '—'}
+                {p.lastPrice != null ? `${fmt(p.lastPrice)} ${p.currencyId}` : '—'}
               </TableCell>
               <TableCell align="right">{fmt(p.marketValueBase)}</TableCell>
             </TableRow>

@@ -115,6 +115,7 @@ export interface OperationModel {
 export interface Operation extends OperationModel {
   id: string;
   portfolioId: string;
+  instrumentTicker?: string;
   createdAt: string;
   updatedAt: string;
 }

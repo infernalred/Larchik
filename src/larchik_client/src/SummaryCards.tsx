@@ -9,11 +9,12 @@ const accents: Record<string, string> = {
   unrealized: 'linear-gradient(120deg, #ef4444 0%, #fb7185 100%)',
 };
 
-const format = (v: number) => v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const format = (v: number | null | undefined) =>
+  v == null ? '—' : v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 interface StatCardProps {
   title: string;
-  value: number;
+  value: number | null | undefined;
   currency: string;
   accent?: keyof typeof accents;
 }

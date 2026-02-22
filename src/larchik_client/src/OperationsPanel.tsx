@@ -29,7 +29,7 @@ interface Props {
 }
 
 const fmtDate = (v: string) => v.slice(0, 10);
-const fmtNum = (v: number) => v.toLocaleString('ru-RU', { maximumFractionDigits: 4 });
+const fmtNum = (v: number | null | undefined) => (v == null ? '—' : v.toLocaleString('ru-RU', { maximumFractionDigits: 4 }));
 
 export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchInstruments }: Props) {
   const [editing, setEditing] = useState<Operation | null>(null);
@@ -70,7 +70,7 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
               <TableRow key={op.id} hover>
                 <TableCell>{fmtDate(op.tradeDate)}</TableCell>
                 <TableCell>{op.type}</TableCell>
-                <TableCell>{op.instrumentId ?? '—'}</TableCell>
+                <TableCell>{op.instrumentTicker ?? '—'}</TableCell>
                 <TableCell align="right">{fmtNum(op.quantity)}</TableCell>
                 <TableCell align="right">{fmtNum(op.price)}</TableCell>
                 <TableCell align="right">{fmtNum(op.fee)}</TableCell>

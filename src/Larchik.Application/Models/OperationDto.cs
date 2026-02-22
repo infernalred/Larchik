@@ -7,6 +7,7 @@ public class OperationDto
     public Guid Id { get; set; }
     public Guid PortfolioId { get; set; }
     public Guid? InstrumentId { get; set; }
+    public string? InstrumentTicker { get; set; }
     public OperationType Type { get; set; }
     public decimal Quantity { get; set; }
     public decimal Price { get; set; }

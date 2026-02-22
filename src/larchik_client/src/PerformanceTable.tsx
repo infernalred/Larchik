@@ -5,7 +5,8 @@ interface Props {
   items: PortfolioPerformance[];
 }
 
-const fmt = (v: number) => v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (v: number | null | undefined) =>
+  v == null ? '—' : v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function PerformanceTable({ items }: Props) {
   return (
@@ -32,9 +33,13 @@ export function PerformanceTable({ items }: Props) {
               <TableCell align="right">{fmt(row.netInflowBase)}</TableCell>
               <TableCell align="right">{fmt(row.pnlBase)}</TableCell>
               <TableCell align="right">
-                <Typography color={row.returnPct >= 0 ? 'success.main' : 'error.main'}>
-                  {(row.returnPct * 100).toFixed(2)}%
-                </Typography>
+                {row.returnPct == null ? (
+                  '—'
+                ) : (
+                  <Typography color={row.returnPct >= 0 ? 'success.main' : 'error.main'}>
+                    {(row.returnPct * 100).toFixed(2)}%
+                  </Typography>
+                )}
               </TableCell>
             </TableRow>
           ))}
