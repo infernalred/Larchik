@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
+  Autocomplete,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -9,7 +12,7 @@ import {
   Stack,
   TextField,
 } from '@mui/material';
-import { OperationModel, OperationType } from './types';
+import { InstrumentLookup, OperationModel, OperationType } from './types';
 
 const TYPE_OPTIONS: { value: OperationType; label: string }[] = [
   { value: 'Buy', label: 'Покупка' },
@@ -26,41 +29,126 @@ const TYPE_OPTIONS: { value: OperationType; label: string }[] = [
   { value: 'ReverseSplit', label: 'Обратный сплит' },
 ];
 
+const INSTRUMENT_OPERATION_TYPES = new Set<OperationType>([
+  'Buy',
+  'Sell',
+  'BondPartialRedemption',
+  'BondMaturity',
+  'Split',
+  'ReverseSplit',
+]);
+
 interface Props {
   open: boolean;
   initial?: Partial<OperationModel>;
   onClose: () => void;
   onSubmit: (model: OperationModel) => Promise<void>;
+  searchInstruments: (query: string) => Promise<InstrumentLookup[]>;
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
-export function OperationForm({ open, initial, onClose, onSubmit }: Props) {
-  const [form, setForm] = useState<OperationModel>(() => ({
-    instrumentId: initial?.instrumentId,
-    type: (initial?.type as OperationType) ?? 'Buy',
-    quantity: initial?.quantity ?? 0,
-    price: initial?.price ?? 0,
-    fee: initial?.fee ?? 0,
-    currencyId: initial?.currencyId ?? 'RUB',
-    tradeDate: initial?.tradeDate ?? todayIso(),
-    settlementDate: initial?.settlementDate,
-    note: initial?.note,
-  }));
+const toDateInputValue = (value?: string) => (value ? value.slice(0, 10) : '');
+
+const toUtcIso = (value?: string): string | undefined => {
+  if (!value) return undefined;
+  if (DATE_ONLY_REGEX.test(value)) return `${value}T00:00:00.000Z`;
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+};
+
+const createInitialForm = (initial?: Partial<OperationModel>): OperationModel => ({
+  instrumentId: initial?.instrumentId,
+  type: (initial?.type as OperationType) ?? 'Buy',
+  quantity: initial?.quantity ?? 0,
+  price: initial?.price ?? 0,
+  fee: initial?.fee ?? 0,
+  currencyId: initial?.currencyId ?? 'RUB',
+  tradeDate: toDateInputValue(initial?.tradeDate) || todayIso(),
+  settlementDate: toDateInputValue(initial?.settlementDate) || undefined,
+  note: initial?.note,
+});
+
+export function OperationForm({ open, initial, onClose, onSubmit, searchInstruments }: Props) {
+  const [form, setForm] = useState<OperationModel>(() => createInitialForm(initial));
   const [saving, setSaving] = useState(false);
-  const isSplitType = form.type === 'Split' || form.type === 'ReverseSplit';
+  const [instrumentOptions, setInstrumentOptions] = useState<InstrumentLookup[]>([]);
+  const [instrumentSearch, setInstrumentSearch] = useState('');
+  const [instrumentLoading, setInstrumentLoading] = useState(false);
+  const [instrumentError, setInstrumentError] = useState<string | null>(null);
 
-  const update = (key: keyof OperationModel, value: any) => {
+  useEffect(() => {
+    if (!open) return;
+    setForm(createInitialForm(initial));
+    setInstrumentSearch('');
+    setInstrumentOptions([]);
+    setInstrumentError(null);
+  }, [open, initial]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const query = instrumentSearch.trim();
+    if (!query) {
+      setInstrumentOptions([]);
+      setInstrumentLoading(false);
+      setInstrumentError(null);
+      return;
+    }
+
+    let canceled = false;
+    const timer = window.setTimeout(async () => {
+      setInstrumentLoading(true);
+      setInstrumentError(null);
+      try {
+        const result = await searchInstruments(query);
+        if (!canceled) {
+          setInstrumentOptions(result);
+        }
+      } catch {
+        if (!canceled) {
+          setInstrumentOptions([]);
+          setInstrumentError('Не удалось загрузить инструменты.');
+        }
+      } finally {
+        if (!canceled) {
+          setInstrumentLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      canceled = true;
+      window.clearTimeout(timer);
+    };
+  }, [instrumentSearch, open, searchInstruments]);
+
+  const isSplitType = form.type === 'Split' || form.type === 'ReverseSplit';
+  const isInstrumentType = INSTRUMENT_OPERATION_TYPES.has(form.type);
+
+  const selectedInstrument = useMemo(() => {
+    if (!form.instrumentId) return null;
+
+    return instrumentOptions.find((x) => x.id === form.instrumentId) ?? null;
+  }, [form.instrumentId, instrumentOptions]);
+
+  const update = (key: keyof OperationModel, value: string | number | undefined) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSubmit = async () => {
     setSaving(true);
     try {
+      const tradeDate = toUtcIso(form.tradeDate);
+      const settlementDate = toUtcIso(form.settlementDate);
+
       await onSubmit({
         ...form,
         instrumentId: form.instrumentId || undefined,
-        settlementDate: form.settlementDate || undefined,
+        tradeDate: tradeDate ?? form.tradeDate,
+        settlementDate,
         note: form.note || undefined,
       });
       onClose();
@@ -86,12 +174,59 @@ export function OperationForm({ open, initial, onClose, onSubmit }: Props) {
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            label="InstrumentId (опционально)"
-            value={form.instrumentId ?? ''}
-            onChange={(e) => update('instrumentId', e.target.value)}
-            helperText="Для кэш-операций оставьте пустым"
+
+          <Autocomplete<InstrumentLookup, false, false, false>
+            options={instrumentOptions}
+            value={selectedInstrument}
+            inputValue={instrumentSearch}
+            loading={instrumentLoading}
+            filterOptions={(options) => options}
+            onInputChange={(_, value, reason) => {
+              setInstrumentSearch(value);
+
+              if (reason === 'input') {
+                update('instrumentId', undefined);
+              }
+
+              if (reason === 'clear') {
+                update('instrumentId', undefined);
+              }
+            }}
+            onChange={(_, value) => {
+              update('instrumentId', value?.id ?? undefined);
+            }}
+            getOptionLabel={(option) => `${option.ticker} - ${option.name}${option.currencyId ? ` (${option.currencyId})` : ''}`}
+            noOptionsText={instrumentSearch ? 'Ничего не найдено' : 'Начните вводить тикер'}
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                {option.ticker} - {option.name} ({option.currencyId})
+              </li>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Инструмент (тикер)"
+                helperText={
+                  isInstrumentType
+                    ? 'Выберите инструмент из списка по тикеру'
+                    : 'Для кэш-операций оставьте пустым'
+                }
+                error={isInstrumentType && !form.instrumentId}
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {instrumentLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
           />
+
+          {instrumentError && <Alert severity="warning">{instrumentError}</Alert>}
+
           <Stack direction="row" spacing={2}>
             <TextField
               label={isSplitType ? 'Коэффициент' : 'Количество'}
@@ -128,18 +263,16 @@ export function OperationForm({ open, initial, onClose, onSubmit }: Props) {
             <TextField
               label="Дата сделки"
               type="date"
-              value={form.tradeDate.slice(0, 10)}
-              onChange={(e) => update('tradeDate', new Date(e.target.value).toISOString())}
+              value={toDateInputValue(form.tradeDate)}
+              onChange={(e) => update('tradeDate', e.target.value)}
               InputLabelProps={{ shrink: true }}
               fullWidth
             />
             <TextField
               label="Дата расчёта"
               type="date"
-              value={form.settlementDate?.slice(0, 10) ?? ''}
-              onChange={(e) =>
-                update('settlementDate', e.target.value ? new Date(e.target.value).toISOString() : undefined)
-              }
+              value={toDateInputValue(form.settlementDate)}
+              onChange={(e) => update('settlementDate', e.target.value || undefined)}
               InputLabelProps={{ shrink: true }}
               fullWidth
             />

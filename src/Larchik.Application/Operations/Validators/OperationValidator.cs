@@ -11,8 +11,8 @@ public class OperationValidator : AbstractValidator<OperationModel>
         RuleFor(x => x.Type).IsInEnum();
         RuleFor(x => x.InstrumentId)
             .NotEmpty()
-            .When(x => x.Type is OperationType.Buy or OperationType.Sell or OperationType.BondPartialRedemption or OperationType.BondMaturity or OperationType.Split or OperationType.ReverseSplit)
-            .WithMessage("InstrumentId is required for instrument operations.");
+            .When(x => OperationTypeRules.RequiresInstrument(x.Type))
+            .WithMessage("Instrument is required for instrument operations.");
         RuleFor(x => x.Quantity).GreaterThan(0);
         RuleFor(x => x.Quantity)
             .NotEqual(1m)
@@ -30,8 +30,16 @@ public class OperationValidator : AbstractValidator<OperationModel>
             .WithMessage("Fee must be 0 for split operations.");
         RuleFor(x => x.CurrencyId).NotEmpty().Length(3);
         RuleFor(x => x.TradeDate).NotEmpty();
+        RuleFor(x => x.TradeDate)
+            .Must(x => x.Offset == TimeSpan.Zero)
+            .WithMessage("TradeDate must be in UTC (ISO format with 'Z').");
         RuleFor(x => x.SettlementDate)
-            .GreaterThanOrEqualTo(x => x.TradeDate)
+            .Must(x => !x.HasValue || x.Value.Offset == TimeSpan.Zero)
+            .WithMessage("SettlementDate must be in UTC (ISO format with 'Z').");
+        RuleFor(x => x.SettlementDate)
+            .Must((model, settlementDate) =>
+                !settlementDate.HasValue ||
+                settlementDate.Value.UtcDateTime >= model.TradeDate.UtcDateTime)
             .When(x => x.SettlementDate.HasValue)
             .WithMessage("SettlementDate must be greater than or equal to TradeDate.");
     }

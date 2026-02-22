@@ -36,6 +36,15 @@ export interface Broker {
   country?: string;
 }
 
+export interface InstrumentLookup {
+  id: string;
+  name: string;
+  ticker: string;
+  isin: string;
+  figi?: string;
+  currencyId: string;
+}
+
 export interface PortfolioSummary {
   id: string;
   name: string;

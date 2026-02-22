@@ -1,7 +1,6 @@
 using Larchik.Application.FxRates.SyncCbrFxRates;
 using Larchik.Infrastructure.Jobs;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

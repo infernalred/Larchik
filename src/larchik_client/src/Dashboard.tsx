@@ -11,7 +11,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { api } from './api';
-import { Broker, Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSummary } from './types';
+import { Broker, InstrumentLookup, Operation, OperationModel, Portfolio, PortfolioPerformance, PortfolioSummary } from './types';
 import { SummaryCards } from './SummaryCards';
 import { PositionsTable } from './PositionsTable';
 import { PerformanceTable } from './PerformanceTable';
@@ -180,6 +180,10 @@ export function Dashboard({ onLogout }: Props) {
     await loadOperations(selectedPortfolio);
   }
 
+  async function searchInstruments(query: string): Promise<InstrumentLookup[]> {
+    return api.searchInstruments(query);
+  }
+
   const currency = summary?.reportingCurrencyId ?? '—';
 
   return (
@@ -266,6 +270,7 @@ export function Dashboard({ onLogout }: Props) {
                   onCreate={handleCreateOperation}
                   onUpdate={handleUpdateOperation}
                   onDelete={handleDeleteOperation}
+                  searchInstruments={searchInstruments}
                 />
               </Stack>
             </Stack>

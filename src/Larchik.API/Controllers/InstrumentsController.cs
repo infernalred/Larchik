@@ -3,6 +3,7 @@ using Larchik.Application.Models;
 using Larchik.Application.Stocks.CreateStock;
 using Larchik.Application.Stocks.EditStock;
 using Larchik.Application.Stocks.GetInstrument;
+using Larchik.Application.Stocks.SearchInstruments;
 using Larchik.Persistence.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -12,6 +13,13 @@ namespace Larchik.API.Controllers;
 
 public class InstrumentsController : BaseApiController
 {
+    [HttpGet]
+    [ProducesResponseType(typeof(InstrumentLookupDto[]), (int)HttpStatusCode.OK)]
+    public async Task<ActionResult<InstrumentLookupDto[]>> Search([FromQuery] string? query, [FromQuery] int limit = 20)
+    {
+        return HandleResult(await Mediator.Send(new SearchInstrumentsQuery(query, limit), HttpContext.RequestAborted));
+    }
+
     [Authorize(Roles = $"{Roles.Admin}")]
     [HttpPost]
     [ProducesResponseType(typeof(Unit), (int)HttpStatusCode.OK)]

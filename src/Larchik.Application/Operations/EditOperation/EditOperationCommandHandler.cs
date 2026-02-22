@@ -19,15 +19,36 @@ public class EditOperationCommandHandler(LarchikContext context, IUserAccessor u
         if (op is null) return null;
 
         var originalTradeDate = op.TradeDate;
+        var instrumentId = request.Model.InstrumentId;
+        var requiresInstrument = OperationTypeRules.RequiresInstrument(request.Model.Type);
+        if (requiresInstrument && instrumentId is null)
+        {
+            return Result<Unit>.Failure("Instrument is required for selected operation type.");
+        }
 
-        op.InstrumentId = request.Model.InstrumentId;
+        if (instrumentId is not null)
+        {
+            var exists = await context.Instruments
+                .AsNoTracking()
+                .AnyAsync(x => x.Id == instrumentId.Value, cancellationToken);
+
+            if (!exists)
+            {
+                return Result<Unit>.Failure("Selected instrument was not found.");
+            }
+        }
+
+        var tradeDate = OperationInputNormalizer.NormalizeUtc(request.Model.TradeDate);
+        var settlementDate = OperationInputNormalizer.NormalizeUtc(request.Model.SettlementDate);
+
+        op.InstrumentId = instrumentId;
         op.Type = request.Model.Type;
         op.Quantity = request.Model.Quantity;
         op.Price = request.Model.Price;
         op.Fee = request.Model.Fee;
         op.CurrencyId = request.Model.CurrencyId.ToUpperInvariant();
-        op.TradeDate = request.Model.TradeDate;
-        op.SettlementDate = request.Model.SettlementDate;
+        op.TradeDate = tradeDate;
+        op.SettlementDate = settlementDate;
         op.Note = request.Model.Note;
         op.UpdatedAt = DateTime.UtcNow;
 

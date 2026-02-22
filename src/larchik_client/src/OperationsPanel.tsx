@@ -17,7 +17,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { Operation, OperationModel } from './types';
+import { InstrumentLookup, Operation, OperationModel } from './types';
 import { OperationForm } from './OperationForm';
 
 interface Props {
@@ -25,12 +25,13 @@ interface Props {
   onCreate: (model: OperationModel) => Promise<void>;
   onUpdate: (id: string, model: OperationModel) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  searchInstruments: (query: string) => Promise<InstrumentLookup[]>;
 }
 
 const fmtDate = (v: string) => v.slice(0, 10);
 const fmtNum = (v: number) => v.toLocaleString('ru-RU', { maximumFractionDigits: 4 });
 
-export function OperationsPanel({ items, onCreate, onUpdate, onDelete }: Props) {
+export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchInstruments }: Props) {
   const [editing, setEditing] = useState<Operation | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -107,6 +108,7 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete }: Props) 
       <OperationForm
         open={creating}
         onClose={() => setCreating(false)}
+        searchInstruments={searchInstruments}
         onSubmit={async (model) => {
           await onCreate(model);
           setCreating(false);
@@ -117,6 +119,7 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete }: Props) 
         open={Boolean(editing)}
         initial={editing ?? undefined}
         onClose={() => setEditing(null)}
+        searchInstruments={searchInstruments}
         onSubmit={async (model) => {
           if (!editing) return;
           await onUpdate(editing.id, model);

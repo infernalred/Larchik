@@ -19,18 +19,40 @@ public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor
 
         if (portfolio is null) return Result<Guid>.Failure("Portfolio not found");
 
+        var instrumentId = request.Model.InstrumentId;
+        var requiresInstrument = OperationTypeRules.RequiresInstrument(request.Model.Type);
+        if (requiresInstrument && instrumentId is null)
+        {
+            return Result<Guid>.Failure("Instrument is required for selected operation type.");
+        }
+
+        if (instrumentId is not null)
+        {
+            var exists = await context.Instruments
+                .AsNoTracking()
+                .AnyAsync(x => x.Id == instrumentId.Value, cancellationToken);
+
+            if (!exists)
+            {
+                return Result<Guid>.Failure("Selected instrument was not found.");
+            }
+        }
+
+        var tradeDate = OperationInputNormalizer.NormalizeUtc(request.Model.TradeDate);
+        var settlementDate = OperationInputNormalizer.NormalizeUtc(request.Model.SettlementDate);
+
         var entity = new Operation
         {
             Id = Guid.NewGuid(),
             PortfolioId = request.PortfolioId,
-            InstrumentId = request.Model.InstrumentId,
+            InstrumentId = instrumentId,
             Type = request.Model.Type,
             Quantity = request.Model.Quantity,
             Price = request.Model.Price,
             Fee = request.Model.Fee,
             CurrencyId = request.Model.CurrencyId.ToUpperInvariant(),
-            TradeDate = request.Model.TradeDate,
-            SettlementDate = request.Model.SettlementDate,
+            TradeDate = tradeDate,
+            SettlementDate = settlementDate,
             Note = request.Model.Note,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

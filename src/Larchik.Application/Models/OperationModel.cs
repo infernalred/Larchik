@@ -9,6 +9,6 @@ public record OperationModel(
     decimal Price,
     decimal Fee,
     string CurrencyId,
-    DateTime TradeDate,
-    DateTime? SettlementDate,
+    DateTimeOffset TradeDate,
+    DateTimeOffset? SettlementDate,
     string? Note);
