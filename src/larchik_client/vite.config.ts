@@ -15,6 +15,12 @@ const httpsOptions =
         key: fs.readFileSync(keyPath),
       }
     : undefined
+const hmrConfig = {
+  protocol: httpsOptions ? 'wss' : 'ws',
+  host: 'localhost',
+  port: 5173,
+  clientPort: 5173,
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -24,6 +30,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     https: httpsOptions,
+    hmr: hmrConfig,
   },
   preview: {
     host: 'localhost',

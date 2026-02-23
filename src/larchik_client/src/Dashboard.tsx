@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -253,9 +253,9 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     await loadOperations(selectedPortfolio, operationsPage, operationsPageSize);
   }
 
-  async function searchInstruments(query: string): Promise<InstrumentLookup[]> {
+  const searchInstruments = useCallback((query: string): Promise<InstrumentLookup[]> => {
     return api.searchInstruments(query);
-  }
+  }, []);
 
   function handleSelectPortfolio(id: string) {
     setViewMode('portfolio');

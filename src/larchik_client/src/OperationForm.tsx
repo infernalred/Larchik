@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -79,13 +79,16 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
   const [form, setForm] = useState<OperationModel>(() => createInitialForm(initial));
   const [saving, setSaving] = useState(false);
   const [instrumentOptions, setInstrumentOptions] = useState<InstrumentLookup[]>([]);
+  const [selectedInstrument, setSelectedInstrument] = useState<InstrumentLookup | null>(null);
   const [instrumentSearch, setInstrumentSearch] = useState('');
   const [instrumentLoading, setInstrumentLoading] = useState(false);
   const [instrumentError, setInstrumentError] = useState<string | null>(null);
+  const suppressNextInstrumentSearchRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
     setForm(createInitialForm(initial));
+    setSelectedInstrument(null);
     setInstrumentSearch('');
     setInstrumentOptions([]);
     setInstrumentError(null);
@@ -95,6 +98,13 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
     if (!open) return;
 
     const query = instrumentSearch.trim();
+    if (suppressNextInstrumentSearchRef.current) {
+      suppressNextInstrumentSearchRef.current = false;
+      setInstrumentLoading(false);
+      setInstrumentError(null);
+      return;
+    }
+
     if (!query) {
       setInstrumentOptions([]);
       setInstrumentLoading(false);
@@ -132,11 +142,12 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
   const isSplitType = form.type === 'Split' || form.type === 'ReverseSplit';
   const isInstrumentType = INSTRUMENT_OPERATION_TYPES.has(form.type);
 
-  const selectedInstrument = useMemo(() => {
+  const selectedInstrumentValue = useMemo(() => {
     if (!form.instrumentId) return null;
 
+    if (selectedInstrument?.id === form.instrumentId) return selectedInstrument;
     return instrumentOptions.find((x) => x.id === form.instrumentId) ?? null;
-  }, [form.instrumentId, instrumentOptions]);
+  }, [form.instrumentId, instrumentOptions, selectedInstrument]);
 
   const update = (key: keyof OperationModel, value: string | number | undefined) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -181,23 +192,29 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
 
           <Autocomplete<InstrumentLookup, false, false, false>
             options={instrumentOptions}
-            value={selectedInstrument}
+            value={selectedInstrumentValue}
             inputValue={instrumentSearch}
             loading={instrumentLoading}
             filterOptions={(options) => options}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
             onInputChange={(_, value, reason) => {
-              setInstrumentSearch(value);
-
               if (reason === 'input') {
+                setInstrumentSearch(value);
                 update('instrumentId', undefined);
+                setSelectedInstrument(null);
               }
 
               if (reason === 'clear') {
+                setInstrumentSearch('');
                 update('instrumentId', undefined);
+                setSelectedInstrument(null);
               }
             }}
             onChange={(_, value) => {
               update('instrumentId', value?.id ?? undefined);
+              setSelectedInstrument(value);
+              suppressNextInstrumentSearchRef.current = true;
+              setInstrumentSearch(value?.ticker ?? '');
             }}
             getOptionLabel={(option) => `${option.ticker} - ${option.name}${option.currencyId ? ` (${option.currencyId})` : ''}`}
             noOptionsText={instrumentSearch ? 'Ничего не найдено' : 'Начните вводить тикер'}

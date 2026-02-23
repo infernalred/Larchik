@@ -51,7 +51,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const send = async (): Promise<Response> => {
     const headers = new Headers(options.headers || undefined);
-    if (!headers.has('Content-Type')) {
+    const hasBody = options.body != null;
+    if (hasBody && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json');
     }
 
