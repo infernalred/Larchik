@@ -1,4 +1,5 @@
 using Larchik.Application.FxRates.SyncCbrFxRates;
+using Larchik.Application.Prices.SyncMoexPrices;
 using Larchik.Infrastructure.Jobs;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
@@ -28,8 +29,12 @@ try
                 opt.UseSnakeCaseNamingConvention();
             });
 
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(SyncCbrFxRatesCommand).Assembly));
             services.AddHttpClient();
+
+            // Jobs host only needs sync handlers used by background job adapters.
+            services.AddScoped<SyncCbrFxRatesCommandHandler>();
+            services.AddScoped<SyncMoexPricesCommandHandler>();
+
             services.AddBackgroundJobs(context.Configuration);
         })
         .Build();

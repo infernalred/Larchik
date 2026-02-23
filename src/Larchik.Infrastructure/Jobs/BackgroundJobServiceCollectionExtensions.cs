@@ -12,7 +12,9 @@ public static class BackgroundJobServiceCollectionExtensions
         services.Configure<BackgroundJobsOptions>(configuration.GetSection("BackgroundJobs"));
 
         services.AddScoped<IBackgroundJobHandler, FxCbrDailyJobHandler>();
+        services.AddScoped<IBackgroundJobHandler, MoexPricesDailyJobHandler>();
         services.AddSingleton<IJobRunPlanner, FxCbrDailyRunPlanner>();
+        services.AddSingleton<IJobRunPlanner, MoexPricesDailyRunPlanner>();
 
         services.AddHostedService<BackgroundJobSchedulerService>();
         services.AddHostedService<BackgroundJobExecutorService>();

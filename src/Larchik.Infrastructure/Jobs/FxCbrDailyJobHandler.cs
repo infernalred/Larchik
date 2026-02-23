@@ -1,10 +1,9 @@
 using System.Text.Json;
 using Larchik.Application.FxRates.SyncCbrFxRates;
-using MediatR;
 
 namespace Larchik.Infrastructure.Jobs;
 
-public class FxCbrDailyJobHandler(IMediator mediator) : IBackgroundJobHandler
+public class FxCbrDailyJobHandler(SyncCbrFxRatesCommandHandler syncHandler) : IBackgroundJobHandler
 {
     public string JobType => BackgroundJobConstants.FxCbrDailyJobType;
 
@@ -30,7 +29,7 @@ public class FxCbrDailyJobHandler(IMediator mediator) : IBackgroundJobHandler
             }
         }
 
-        var result = await mediator.Send(new SyncCbrFxRatesCommand(date), cancellationToken);
+        var result = await syncHandler.Handle(new SyncCbrFxRatesCommand(date), cancellationToken);
         return result.IsSuccess
             ? JobExecutionResult.Success()
             : JobExecutionResult.Failure(result.Error ?? "FX sync failed");

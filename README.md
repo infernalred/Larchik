@@ -103,6 +103,10 @@ Default Vite URL `http://localhost:5173` is included in development CORS config.
 - `POST /api/fxrates/sync/cbr?date=YYYY-MM-DD` - sync CBR FX rates (admin)
 - `GET /api/portfolios/{id}/summary?method=adjustingAvg|staticAvg|fifo|lifo`
 
+Scheduled jobs in `Larchik.Jobs`:
+- `fx_cbr_daily` (`fx.cbr.daily`) - daily FX import from CBR
+- `moex_prices_daily` (`prices.moex.daily`) - daily prices import from public MOEX ISS (no API key)
+
 Operation types include bond redemption flows:
 
 - `BondPartialRedemption` - partial redemption of nominal

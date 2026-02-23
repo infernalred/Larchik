@@ -18,6 +18,8 @@ public class BackgroundJobExecutorService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        logger.LogInformation("Background job executor started. WorkerId: {WorkerId}", _workerId);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             var options = optionsMonitor.CurrentValue;
@@ -70,6 +72,11 @@ public class BackgroundJobExecutorService(
 
         foreach (var run in expiredRuns)
         {
+            logger.LogWarning(
+                "Run {RunId} lock expired for job {JobType}; scheduling retry/failover",
+                run.Id,
+                run.JobDefinition?.JobType ?? "unknown");
+
             run.Attempt += 1;
             run.LastError = TrimError("Job lock timeout expired");
             run.LockedBy = null;
@@ -187,6 +194,14 @@ public class BackgroundJobExecutorService(
         {
             try
             {
+                logger.LogInformation(
+                    "Starting run {RunId} for job {JobName} ({JobType}), attempt {Attempt}/{MaxAttempts}",
+                    run.Id,
+                    run.JobDefinition.Name,
+                    run.JobDefinition.JobType,
+                    run.Attempt + 1,
+                    run.MaxAttempts);
+
                 result = await handler.ExecuteAsync(run.PayloadJson, cancellationToken);
             }
             catch (Exception ex)
@@ -206,6 +221,13 @@ public class BackgroundJobExecutorService(
             run.Status = JobRunStatus.Succeeded;
             run.CompletedAt = now;
             run.LastError = null;
+
+            logger.LogInformation(
+                "Run {RunId} for job {JobName} ({JobType}) succeeded on attempt {Attempt}",
+                run.Id,
+                run.JobDefinition?.Name ?? "unknown",
+                run.JobDefinition?.JobType ?? "unknown",
+                run.Attempt);
         }
         else
         {
@@ -214,12 +236,29 @@ public class BackgroundJobExecutorService(
             {
                 run.Status = JobRunStatus.Failed;
                 run.CompletedAt = now;
+
+                logger.LogError(
+                    "Run {RunId} for job {JobName} ({JobType}) failed permanently after {Attempt} attempts. Error: {Error}",
+                    run.Id,
+                    run.JobDefinition?.Name ?? "unknown",
+                    run.JobDefinition?.JobType ?? "unknown",
+                    run.Attempt,
+                    run.LastError);
             }
             else
             {
                 var retryDelay = Math.Max(1, run.JobDefinition?.RetryDelayMinutes ?? 5);
                 run.Status = JobRunStatus.RetryScheduled;
                 run.AvailableAt = now.AddMinutes(retryDelay);
+
+                logger.LogWarning(
+                    "Run {RunId} for job {JobName} ({JobType}) failed on attempt {Attempt}. Retry at {RetryAtUtc:O} UTC. Error: {Error}",
+                    run.Id,
+                    run.JobDefinition?.Name ?? "unknown",
+                    run.JobDefinition?.JobType ?? "unknown",
+                    run.Attempt,
+                    run.AvailableAt,
+                    run.LastError);
             }
         }
 
