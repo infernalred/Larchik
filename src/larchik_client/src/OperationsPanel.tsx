@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   IconButton,
@@ -10,6 +10,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   Tooltip,
   Typography,
@@ -25,6 +26,12 @@ import { OperationForm } from './OperationForm';
 
 interface Props {
   items: Operation[];
+  loading?: boolean;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   onCreate: (model: OperationModel) => Promise<void>;
   onUpdate: (id: string, model: OperationModel) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -33,6 +40,7 @@ interface Props {
 
 const fmtDate = (v: string) => v.slice(0, 10);
 const fmtNum = (v: number | null | undefined) => (v == null ? '—' : v.toLocaleString('ru-RU', { maximumFractionDigits: 4 }));
+const calcAmount = (op: Operation) => op.quantity * op.price;
 const TYPE_LABELS: Record<OperationType, string> = {
   Buy: 'Покупка',
   Sell: 'Продажа',
@@ -48,16 +56,23 @@ const TYPE_LABELS: Record<OperationType, string> = {
   ReverseSplit: 'Обратный сплит',
 };
 
-export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchInstruments }: Props) {
+export function OperationsPanel({
+  items,
+  loading = false,
+  page,
+  pageSize,
+  totalCount,
+  onPageChange,
+  onPageSizeChange,
+  onCreate,
+  onUpdate,
+  onDelete,
+  searchInstruments,
+}: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [editing, setEditing] = useState<Operation | null>(null);
   const [creating, setCreating] = useState(false);
-
-  const sorted = useMemo(
-    () => [...items].sort((a, b) => b.tradeDate.localeCompare(a.tradeDate)),
-    [items],
-  );
 
   return (
     <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, backgroundImage: 'none' }}>
@@ -80,9 +95,14 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
           Новая операция
         </Button>
       </Stack>
+      {loading && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Загрузка операций...
+        </Typography>
+      )}
       {isMobile ? (
         <Stack spacing={1.25}>
-          {sorted.map((op) => (
+          {items.map((op) => (
             <Paper key={op.id} variant="outlined" sx={{ p: 1.25, backgroundImage: 'none' }}>
               <Stack spacing={1.25}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
@@ -118,19 +138,25 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
                     </Typography>
                     <Typography variant="body2">{op.currencyId}</Typography>
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid item xs={6}>
                     <Typography variant="caption" color="text.secondary">
                       Кол-во
                     </Typography>
                     <Typography variant="body2">{fmtNum(op.quantity)}</Typography>
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid item xs={6}>
                     <Typography variant="caption" color="text.secondary">
-                      Цена/сумма
+                      Цена
                     </Typography>
                     <Typography variant="body2">{fmtNum(op.price)}</Typography>
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      Сумма
+                    </Typography>
+                    <Typography variant="body2">{fmtNum(calcAmount(op))}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
                     <Typography variant="caption" color="text.secondary">
                       Комиссия
                     </Typography>
@@ -148,7 +174,7 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
               </Stack>
             </Paper>
           ))}
-          {!sorted.length && (
+          {!items.length && !loading && (
             <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', backgroundImage: 'none' }}>
               <Typography color="text.secondary">Нет операций</Typography>
             </Paper>
@@ -163,7 +189,8 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
                 <TableCell>Тип</TableCell>
                 <TableCell>Инструмент</TableCell>
                 <TableCell align="right">Кол-во</TableCell>
-                <TableCell align="right">Цена/сумма</TableCell>
+                <TableCell align="right">Цена</TableCell>
+                <TableCell align="right">Сумма</TableCell>
                 <TableCell align="right">Комиссия</TableCell>
                 <TableCell align="right">Валюта</TableCell>
                 <TableCell>Комментарий</TableCell>
@@ -171,13 +198,14 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
               </TableRow>
             </TableHead>
             <TableBody>
-              {sorted.map((op) => (
+              {items.map((op) => (
                 <TableRow key={op.id} hover>
                   <TableCell>{fmtDate(op.tradeDate)}</TableCell>
                   <TableCell>{TYPE_LABELS[op.type]}</TableCell>
                   <TableCell>{op.instrumentTicker ?? '—'}</TableCell>
                   <TableCell align="right">{fmtNum(op.quantity)}</TableCell>
                   <TableCell align="right">{fmtNum(op.price)}</TableCell>
+                  <TableCell align="right">{fmtNum(calcAmount(op))}</TableCell>
                   <TableCell align="right">{fmtNum(op.fee)}</TableCell>
                   <TableCell align="right">{op.currencyId}</TableCell>
                   <TableCell>
@@ -199,9 +227,9 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
                   </TableCell>
                 </TableRow>
               ))}
-              {!sorted.length && (
+              {!items.length && !loading && (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">
+                  <TableCell colSpan={10} align="center">
                     <Typography color="text.secondary">Нет операций</Typography>
                   </TableCell>
                 </TableRow>
@@ -210,6 +238,17 @@ export function OperationsPanel({ items, onCreate, onUpdate, onDelete, searchIns
           </Table>
         </TableContainer>
       )}
+      <TablePagination
+        component="div"
+        count={totalCount}
+        page={Math.max(0, page - 1)}
+        onPageChange={(_, nextPage) => onPageChange(nextPage + 1)}
+        rowsPerPage={pageSize}
+        onRowsPerPageChange={(event) => onPageSizeChange(Number(event.target.value))}
+        rowsPerPageOptions={[10, 25, 50, 100]}
+        labelRowsPerPage="На странице:"
+        labelDisplayedRows={({ from, to, count }) => `${from}-${to} из ${count}`}
+      />
 
       <OperationForm
         open={creating}

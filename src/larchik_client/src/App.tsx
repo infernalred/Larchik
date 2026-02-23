@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, CssBaseline, Stack, ThemeProvider, createTheme } from '@mui/material';
 import { api } from './api';
 import { AuthForm } from './AuthForm';
 import { Dashboard } from './Dashboard';
 import { User } from './types';
+
+const resolveRoute = (pathname: string): 'overview' | 'operations' =>
+  pathname === '/operations' || pathname.startsWith('/operations/') ? 'operations' : 'overview';
 
 const theme = createTheme({
   palette: {
@@ -109,6 +112,11 @@ export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [booting, setBooting] = useState(true);
+  const [route, setRoute] = useState<'overview' | 'operations'>(() => resolveRoute(window.location.pathname));
+
+  const applyRouteFromLocation = useCallback(() => {
+    setRoute(resolveRoute(window.location.pathname));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -121,6 +129,21 @@ export function App() {
         setBooting(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    const handler = () => applyRouteFromLocation();
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, [applyRouteFromLocation]);
+
+  const navigateRoute = useCallback((nextRoute: 'overview' | 'operations') => {
+    const nextPath = nextRoute === 'operations' ? '/operations' : '/';
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, '', nextPath);
+    }
+
+    setRoute(nextRoute);
   }, []);
 
   const handleLogin = async (email: string, password: string) => {
@@ -161,8 +184,8 @@ export function App() {
       );
     }
 
-    return <Dashboard onLogout={handleLogout} />;
-  }, [authLoading, booting, user]);
+    return <Dashboard onLogout={handleLogout} route={route} onRouteChange={navigateRoute} />;
+  }, [authLoading, booting, navigateRoute, route, user]);
 
   return (
     <ThemeProvider theme={theme}>

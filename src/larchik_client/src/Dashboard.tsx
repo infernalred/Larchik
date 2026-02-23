@@ -2,16 +2,16 @@ import { useEffect, useState } from 'react';
 import {
   Box,
   Button,
+  CircularProgress,
   Container,
   Divider,
-  Grid,
   Drawer,
+  Grid,
   MenuItem,
   Paper,
   Select,
   Stack,
   Typography,
-  CircularProgress,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -45,6 +45,8 @@ const VALUATION_METHODS = [
 
 interface Props {
   onLogout: () => void;
+  route: 'overview' | 'operations';
+  onRouteChange: (route: 'overview' | 'operations') => void;
 }
 
 const formatMoney = (value: number) => value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -59,7 +61,7 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   }
 }
 
-export function Dashboard({ onLogout }: Props) {
+export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
@@ -74,11 +76,15 @@ export function Dashboard({ onLogout }: Props) {
   const [loadingAllSummary, setLoadingAllSummary] = useState(false);
   const [allSummaryError, setAllSummaryError] = useState('');
   const [operations, setOperations] = useState<Operation[]>([]);
+  const [operationsPage, setOperationsPage] = useState(1);
+  const [operationsPageSize, setOperationsPageSize] = useState(25);
+  const [operationsTotalCount, setOperationsTotalCount] = useState(0);
   const [loadingOps, setLoadingOps] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createPortfolioLoading, setCreatePortfolioLoading] = useState(false);
   const [createPortfolioError, setCreatePortfolioError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const portfolioPage = route;
 
   useEffect(() => {
     (async () => {
@@ -91,16 +97,24 @@ export function Dashboard({ onLogout }: Props) {
   }, []);
 
   useEffect(() => {
-    if (viewMode === 'all') {
-      loadAllSummary(valuationMethod);
-      return;
-    }
+    if (viewMode !== 'all') return;
+    loadAllSummary(valuationMethod);
+  }, [viewMode, valuationMethod, portfolios, selectedPortfolio]);
 
+  useEffect(() => {
+    if (viewMode !== 'portfolio' || portfolioPage !== 'overview') return;
     if (!selectedPortfolio) return;
+
     loadSummary(selectedPortfolio, valuationMethod);
     loadPerformance(selectedPortfolio, valuationMethod);
-    loadOperations(selectedPortfolio);
-  }, [selectedPortfolio, valuationMethod, viewMode, portfolios]);
+  }, [selectedPortfolio, valuationMethod, viewMode, portfolioPage]);
+
+  useEffect(() => {
+    if (viewMode !== 'portfolio' || portfolioPage !== 'operations') return;
+    if (!selectedPortfolio) return;
+
+    loadOperations(selectedPortfolio, operationsPage, operationsPageSize);
+  }, [selectedPortfolio, viewMode, portfolioPage, operationsPage, operationsPageSize]);
 
   async function loadPortfolios(preferredId?: string) {
     const data = await api.listPortfolios();
@@ -115,6 +129,9 @@ export function Dashboard({ onLogout }: Props) {
     setAllSummary(null);
     setPerformance([]);
     setOperations([]);
+    setOperationsTotalCount(0);
+    setOperationsPage(1);
+    onRouteChange('overview');
     setViewMode('portfolio');
   }
 
@@ -153,11 +170,14 @@ export function Dashboard({ onLogout }: Props) {
     setPerformance(data);
   }
 
-  async function loadOperations(id: string) {
+  async function loadOperations(id: string, page: number, pageSize: number) {
     setLoadingOps(true);
     try {
-      const data = await api.listOperations(id);
-      setOperations(data);
+      const data = await api.listOperations(id, { page, pageSize });
+      setOperations(data.items);
+      setOperationsTotalCount(data.totalCount);
+      if (data.page !== operationsPage) setOperationsPage(data.page);
+      if (data.pageSize !== operationsPageSize) setOperationsPageSize(data.pageSize);
     } finally {
       setLoadingOps(false);
     }
@@ -207,31 +227,30 @@ export function Dashboard({ onLogout }: Props) {
     });
     await loadSummary(selectedPortfolio, valuationMethod);
     await loadPerformance(selectedPortfolio, valuationMethod);
-    await loadOperations(selectedPortfolio);
   }
 
   async function handleCreateOperation(model: OperationModel) {
     if (!selectedPortfolio) return;
+
     await api.createOperation(selectedPortfolio, model);
-    await loadSummary(selectedPortfolio, valuationMethod);
-    await loadPerformance(selectedPortfolio, valuationMethod);
-    await loadOperations(selectedPortfolio);
+    if (operationsPage !== 1) {
+      setOperationsPage(1);
+      return;
+    }
+
+    await loadOperations(selectedPortfolio, 1, operationsPageSize);
   }
 
   async function handleUpdateOperation(id: string, model: OperationModel) {
     if (!selectedPortfolio) return;
     await api.updateOperation(selectedPortfolio, id, model);
-    await loadSummary(selectedPortfolio, valuationMethod);
-    await loadPerformance(selectedPortfolio, valuationMethod);
-    await loadOperations(selectedPortfolio);
+    await loadOperations(selectedPortfolio, operationsPage, operationsPageSize);
   }
 
   async function handleDeleteOperation(id: string) {
     if (!selectedPortfolio) return;
     await api.deleteOperation(selectedPortfolio, id);
-    await loadSummary(selectedPortfolio, valuationMethod);
-    await loadPerformance(selectedPortfolio, valuationMethod);
-    await loadOperations(selectedPortfolio);
+    await loadOperations(selectedPortfolio, operationsPage, operationsPageSize);
   }
 
   async function searchInstruments(query: string): Promise<InstrumentLookup[]> {
@@ -242,11 +261,27 @@ export function Dashboard({ onLogout }: Props) {
     setViewMode('portfolio');
     setSelectedPortfolio(id);
     setAllSummaryError('');
+    setOperationsPage(1);
     setSidebarOpen(false);
   }
 
   function handleShowAllSummary() {
     setViewMode('all');
+    onRouteChange('overview');
+    setSidebarOpen(false);
+  }
+
+  function handleShowOverview() {
+    if (!selectedPortfolio) return;
+    setViewMode('portfolio');
+    onRouteChange('overview');
+    setSidebarOpen(false);
+  }
+
+  function handleShowOperations() {
+    if (!selectedPortfolio) return;
+    setViewMode('portfolio');
+    onRouteChange('operations');
     setSidebarOpen(false);
   }
 
@@ -255,7 +290,7 @@ export function Dashboard({ onLogout }: Props) {
     viewMode === 'all'
       ? allSummary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—'
       : summary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—';
-  const isLoadingCurrent = viewMode === 'all' ? loadingAllSummary : loadingSummary;
+  const isLoadingCurrent = viewMode === 'all' ? loadingAllSummary : portfolioPage === 'overview' ? loadingSummary : false;
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', color: 'text.primary' }}>
@@ -337,7 +372,7 @@ export function Dashboard({ onLogout }: Props) {
             >
               <Stack spacing={0.5}>
                 <Typography variant="overline" color="text.secondary">
-                  {viewMode === 'all' ? 'Режим просмотра' : 'Активный портфель'}
+                  {viewMode === 'all' ? 'Режим просмотра' : portfolioPage === 'operations' ? 'Операции портфеля' : 'Активный портфель'}
                 </Typography>
                 <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                   {viewMode === 'all' ? 'Все счета' : activePortfolio?.name ?? 'Выберите портфель'}
@@ -369,6 +404,26 @@ export function Dashboard({ onLogout }: Props) {
                     Новый счет
                   </Button>
                 </Stack>
+                {viewMode === 'portfolio' && selectedPortfolio && (
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+                    <Button
+                      variant={portfolioPage === 'overview' ? 'contained' : 'outlined'}
+                      onClick={handleShowOverview}
+                      sx={{ textTransform: 'none' }}
+                      fullWidth={isMobile}
+                    >
+                      Обзор
+                    </Button>
+                    <Button
+                      variant={portfolioPage === 'operations' ? 'contained' : 'outlined'}
+                      onClick={handleShowOperations}
+                      sx={{ textTransform: 'none' }}
+                      fullWidth={isMobile}
+                    >
+                      Операции
+                    </Button>
+                  </Stack>
+                )}
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}
                   spacing={1}
@@ -384,6 +439,7 @@ export function Dashboard({ onLogout }: Props) {
                       value={valuationMethod}
                       onChange={(e) => setValuationMethod(e.target.value)}
                       sx={{ minWidth: { xs: '100%', sm: 180 } }}
+                      disabled={viewMode === 'portfolio' && portfolioPage === 'operations'}
                     >
                       {VALUATION_METHODS.map((m) => (
                         <MenuItem key={m.value} value={m.value}>
@@ -414,7 +470,7 @@ export function Dashboard({ onLogout }: Props) {
             </Stack>
           )}
 
-          {viewMode === 'portfolio' && !loadingSummary && summary && (
+          {viewMode === 'portfolio' && portfolioPage === 'overview' && !loadingSummary && summary && (
             <Stack spacing={{ xs: 2, md: 3 }}>
               <SummaryCards summary={summary} />
 
@@ -440,17 +496,27 @@ export function Dashboard({ onLogout }: Props) {
                 </Typography>
                 <PerformanceTable items={performance} />
               </Stack>
+            </Stack>
+          )}
 
-              <Stack spacing={0.75}>
-                {loadingOps && <Typography color="text.secondary">Загрузка операций…</Typography>}
-                <OperationsPanel
-                  items={operations}
-                  onCreate={handleCreateOperation}
-                  onUpdate={handleUpdateOperation}
-                  onDelete={handleDeleteOperation}
-                  searchInstruments={searchInstruments}
-                />
-              </Stack>
+          {viewMode === 'portfolio' && portfolioPage === 'operations' && selectedPortfolio && (
+            <Stack spacing={{ xs: 2, md: 3 }}>
+              <OperationsPanel
+                items={operations}
+                loading={loadingOps}
+                page={operationsPage}
+                pageSize={operationsPageSize}
+                totalCount={operationsTotalCount}
+                onPageChange={(page) => setOperationsPage(page)}
+                onPageSizeChange={(pageSize) => {
+                  setOperationsPageSize(pageSize);
+                  setOperationsPage(1);
+                }}
+                onCreate={handleCreateOperation}
+                onUpdate={handleUpdateOperation}
+                onDelete={handleDeleteOperation}
+                searchInstruments={searchInstruments}
+              />
             </Stack>
           )}
 
@@ -511,9 +577,15 @@ export function Dashboard({ onLogout }: Props) {
             </Paper>
           )}
 
-          {viewMode === 'portfolio' && !loadingSummary && !summary && (
+          {viewMode === 'portfolio' && !selectedPortfolio && (
             <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, textAlign: 'center', backgroundImage: 'none' }}>
               <Typography color="text.secondary">Выберите портфель или создайте новый</Typography>
+            </Paper>
+          )}
+
+          {viewMode === 'portfolio' && portfolioPage === 'overview' && !loadingSummary && !summary && selectedPortfolio && (
+            <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, textAlign: 'center', backgroundImage: 'none' }}>
+              <Typography color="text.secondary">Не удалось загрузить обзор портфеля</Typography>
             </Paper>
           )}
         </Container>

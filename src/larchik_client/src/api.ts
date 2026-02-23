@@ -3,6 +3,7 @@ import {
   InstrumentLookup,
   Operation,
   OperationModel,
+  PagedResult,
   Portfolio,
   PortfolioPerformance,
   PortfoliosSummary,
@@ -154,8 +155,16 @@ export const api = {
     return request<PortfolioPerformance[]>(`/api/portfolios/${id}/performance${params.toString() ? `?${params}` : ''}`);
   },
 
-  async listOperations(portfolioId: string) {
-    return request<Operation[]>(`/api/portfolios/${portfolioId}/operations`);
+  async listOperations(
+    portfolioId: string,
+    options: { page?: number; pageSize?: number } = {},
+  ): Promise<PagedResult<Operation>> {
+    const params = new URLSearchParams();
+    if (options.page != null) params.set('page', String(options.page));
+    if (options.pageSize != null) params.set('pageSize', String(options.pageSize));
+
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return request<PagedResult<Operation>>(`/api/portfolios/${portfolioId}/operations${suffix}`);
   },
 
   async createOperation(portfolioId: string, model: OperationModel) {

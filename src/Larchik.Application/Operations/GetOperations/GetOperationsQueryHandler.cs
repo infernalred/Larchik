@@ -1,4 +1,5 @@
 using Larchik.Application.Contracts;
+using Larchik.Application.Common.Paging;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
@@ -8,15 +9,18 @@ using Microsoft.EntityFrameworkCore;
 namespace Larchik.Application.Operations.GetOperations;
 
 public class GetOperationsQueryHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<GetOperationsQuery, Result<IReadOnlyCollection<OperationDto>>>
+    : IRequestHandler<GetOperationsQuery, Result<PagedResult<OperationDto>>>
 {
-    public async Task<Result<IReadOnlyCollection<OperationDto>>> Handle(GetOperationsQuery request, CancellationToken cancellationToken)
+    private const int MaxPageSize = 200;
+
+    public async Task<Result<PagedResult<OperationDto>>> Handle(GetOperationsQuery request, CancellationToken cancellationToken)
     {
         var userId = userAccessor.GetUserId();
-        var ops = await context.Operations
+        var result = await context.Operations
             .AsNoTracking()
             .Where(x => x.PortfolioId == request.PortfolioId && x.Portfolio != null && x.Portfolio.UserId == userId)
-            .OrderBy(x => x.TradeDate)
+            .OrderByDescending(x => x.TradeDate)
+            .ThenByDescending(x => x.CreatedAt)
             .Select(x => new OperationDto
             {
                 Id = x.Id,
@@ -34,8 +38,8 @@ public class GetOperationsQueryHandler(LarchikContext context, IUserAccessor use
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
             })
-            .ToListAsync(cancellationToken);
+            .ToPagedResultAsync(request.Paging, MaxPageSize, cancellationToken);
 
-        return Result<IReadOnlyCollection<OperationDto>>.Success(ops);
+        return Result<PagedResult<OperationDto>>.Success(result);
     }
 }

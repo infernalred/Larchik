@@ -1,4 +1,5 @@
 using System.Net;
+using Larchik.Application.Common.Paging;
 using Larchik.Application.Models;
 using Larchik.Application.Operations.CreateOperation;
 using Larchik.Application.Operations.DeleteOperation;
@@ -14,10 +15,12 @@ namespace Larchik.API.Controllers;
 public class OperationsController : BaseApiController
 {
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<OperationDto>), (int)HttpStatusCode.OK)]
-    public async Task<ActionResult<IEnumerable<OperationDto>>> List(Guid portfolioId)
+    [ProducesResponseType(typeof(PagedResult<OperationDto>), (int)HttpStatusCode.OK)]
+    public async Task<ActionResult<PagedResult<OperationDto>>> List(
+        Guid portfolioId,
+        [FromQuery] PageQuery paging)
     {
-        return HandleResult(await Mediator.Send(new GetOperationsQuery(portfolioId), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new GetOperationsQuery(portfolioId, paging), HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:guid}")]
