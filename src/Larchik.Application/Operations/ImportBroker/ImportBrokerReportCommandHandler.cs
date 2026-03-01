@@ -59,32 +59,30 @@ public class ImportBrokerReportCommandHandler(
             }
         }
 
-        var operations = new List<Operation>();
-        var unresolved = new List<string>();
+        var unresolved = parseResult.Operations
+            .Where(o => o.RequiresInstrument)
+            .Select(o => o.InstrumentCode ?? "UNKNOWN")
+            .Where(code => !instrumentMap.ContainsKey(code))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (unresolved.Length > 0)
+        {
+            var errors = parseResult.Errors.Concat(unresolved.Select(c => $"Не найден инструмент {c}")).ToArray();
+            return Result<ImportResultDto>.Failure(string.Join("; ", errors));
+        }
+
+        var operations = new List<Operation>(parseResult.Operations.Count);
 
         foreach (var parsed in parseResult.Operations)
         {
             if (parsed.RequiresInstrument)
             {
-                if (parsed.InstrumentCode is not null && instrumentMap.TryGetValue(parsed.InstrumentCode, out var id))
-                {
-                    parsed.Operation.InstrumentId = id;
-                }
-                else
-                {
-                    unresolved.Add(parsed.InstrumentCode ?? "UNKNOWN");
-                    continue;
-                }
+                parsed.Operation.InstrumentId = instrumentMap[parsed.InstrumentCode ?? "UNKNOWN"];
             }
 
             parsed.Operation.PortfolioId = portfolio.Id;
             operations.Add(parsed.Operation);
-        }
-
-        if (operations.Count == 0)
-        {
-            var errors = parseResult.Errors.Concat(unresolved.Select(c => $"Не найден инструмент {c}")).ToArray();
-            return Result<ImportResultDto>.Failure(string.Join("; ", errors));
         }
 
         await context.Operations.AddRangeAsync(operations, cancellationToken);
@@ -95,8 +93,8 @@ public class ImportBrokerReportCommandHandler(
 
         var result = new ImportResultDto(
             ImportedOperations: operations.Count,
-            SkippedOperations: parseResult.Operations.Count - operations.Count,
-            Errors: parseResult.Errors.Concat(unresolved.Select(c => $"Не найден инструмент {c}")).ToArray());
+            SkippedOperations: 0,
+            Errors: parseResult.Errors);
 
         return Result<ImportResultDto>.Success(result);
     }
