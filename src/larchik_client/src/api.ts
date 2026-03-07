@@ -1,5 +1,6 @@
 import {
   Broker,
+  ImportResult,
   InstrumentLookup,
   Operation,
   OperationModel,
@@ -52,7 +53,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const send = async (): Promise<Response> => {
     const headers = new Headers(options.headers || undefined);
     const hasBody = options.body != null;
-    if (hasBody && !headers.has('Content-Type')) {
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+    if (hasBody && !isFormData && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json');
     }
 
@@ -185,6 +187,16 @@ export const api = {
   async deleteOperation(portfolioId: string, id: string) {
     return request<void>(`/api/portfolios/${portfolioId}/operations/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  async importOperations(portfolioId: string, brokerCode: string, file: File): Promise<ImportResult> {
+    const payload = new FormData();
+    payload.set('file', file, file.name);
+
+    return request<ImportResult>(`/api/portfolios/${portfolioId}/imports/${encodeURIComponent(brokerCode)}`, {
+      method: 'POST',
+      body: payload,
     });
   },
 };

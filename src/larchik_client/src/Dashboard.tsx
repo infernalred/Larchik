@@ -20,6 +20,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { api } from './api';
 import {
   Broker,
+  ImportResult,
   InstrumentLookup,
   Operation,
   OperationModel,
@@ -241,6 +242,36 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     await loadOperations(selectedPortfolio, 1, operationsPageSize);
   }
 
+  async function handleImportOperations(file: File): Promise<ImportResult> {
+    if (!selectedPortfolio) {
+      throw new Error('Сначала выберите портфель.');
+    }
+
+    const broker = brokers.find((x) => x.id === activePortfolio?.brokerId);
+    if (!broker?.supportsImport || !broker.code) {
+      throw new Error('Для выбранного брокера импорт пока не настроен.');
+    }
+
+    try {
+      const result = await api.importOperations(selectedPortfolio, broker.code, file);
+
+      if (operationsPage !== 1) {
+        setOperationsPage(1);
+      } else {
+        await loadOperations(selectedPortfolio, 1, operationsPageSize);
+      }
+
+      await Promise.all([
+        loadSummary(selectedPortfolio, valuationMethod),
+        loadPerformance(selectedPortfolio, valuationMethod),
+      ]);
+
+      return result;
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error, 'Не удалось импортировать отчет.'));
+    }
+  }
+
   async function handleUpdateOperation(id: string, model: OperationModel) {
     if (!selectedPortfolio) return;
     await api.updateOperation(selectedPortfolio, id, model);
@@ -286,6 +317,8 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   }
 
   const activePortfolio = portfolios.find((x) => x.id === selectedPortfolio) ?? null;
+  const activeBroker = brokers.find((x) => x.id === activePortfolio?.brokerId) ?? null;
+  const canImportOperations = Boolean(activeBroker?.supportsImport && activeBroker.code);
   const currency =
     viewMode === 'all'
       ? allSummary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—'
@@ -513,6 +546,9 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                   setOperationsPage(1);
                 }}
                 onCreate={handleCreateOperation}
+                onImport={handleImportOperations}
+                canImport={canImportOperations}
+                importDisabledReason="Для брокера выбранного счета импорт пока не настроен."
                 onUpdate={handleUpdateOperation}
                 onDelete={handleDeleteOperation}
                 searchInstruments={searchInstruments}

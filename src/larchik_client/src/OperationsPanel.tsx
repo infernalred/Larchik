@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Alert,
   Box,
   IconButton,
   Paper,
@@ -21,7 +22,8 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { InstrumentLookup, Operation, OperationModel, OperationType } from './types';
+import { ImportResult, InstrumentLookup, Operation, OperationModel, OperationType } from './types';
+import { ImportOperationsDialog } from './ImportOperationsDialog';
 import { OperationForm } from './OperationForm';
 
 interface Props {
@@ -33,6 +35,9 @@ interface Props {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onCreate: (model: OperationModel) => Promise<void>;
+  onImport: (file: File) => Promise<ImportResult>;
+  canImport: boolean;
+  importDisabledReason?: string;
   onUpdate: (id: string, model: OperationModel) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   searchInstruments: (query: string) => Promise<InstrumentLookup[]>;
@@ -65,6 +70,9 @@ export function OperationsPanel({
   onPageChange,
   onPageSizeChange,
   onCreate,
+  onImport,
+  canImport,
+  importDisabledReason,
   onUpdate,
   onDelete,
   searchInstruments,
@@ -73,6 +81,30 @@ export function OperationsPanel({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [editing, setEditing] = useState<Operation | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [importSummary, setImportSummary] = useState('');
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    setImportError('');
+    setImportSummary('');
+    try {
+      const result = await onImport(file);
+      const details = [`Импортировано операций: ${result.importedOperations}`];
+      if (result.errors.length > 0) {
+        details.push(`Замечания: ${result.errors.join('; ')}`);
+      }
+
+      setImportSummary(details.join('. '));
+      setImportDialogOpen(false);
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'Не удалось импортировать отчет.');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   return (
     <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, backgroundImage: 'none' }}>
@@ -86,15 +118,35 @@ export function OperationsPanel({
         <Typography variant="h6" fontWeight={700}>
           Операции
         </Typography>
-        <Button
-          startIcon={<AddIcon />}
-          variant="contained"
-          onClick={() => setCreating(true)}
-          sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
-        >
-          Новая операция
-        </Button>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              if (!canImport) return;
+              setImportError('');
+              setImportDialogOpen(true);
+            }}
+            disabled={!canImport}
+            title={!canImport ? importDisabledReason : undefined}
+            sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
+          >
+            Импорт отчета
+          </Button>
+          <Button
+            startIcon={<AddIcon />}
+            variant="contained"
+            onClick={() => setCreating(true)}
+            sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
+          >
+            Новая операция
+          </Button>
+        </Stack>
       </Stack>
+      {importSummary && (
+        <Alert severity="success" sx={{ mb: 1.5 }}>
+          {importSummary}
+        </Alert>
+      )}
       {loading && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Загрузка операций...
@@ -270,6 +322,19 @@ export function OperationsPanel({
           await onUpdate(editing.id, model);
           setEditing(null);
         }}
+      />
+
+      <ImportOperationsDialog
+        open={importDialogOpen}
+        submitting={importing}
+        error={importError}
+        canSubmit={canImport}
+        disabledReason={importDisabledReason}
+        onClose={() => {
+          if (importing) return;
+          setImportDialogOpen(false);
+        }}
+        onSubmit={handleImport}
       />
     </Paper>
   );

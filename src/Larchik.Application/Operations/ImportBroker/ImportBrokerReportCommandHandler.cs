@@ -36,6 +36,11 @@ public class ImportBrokerReportCommandHandler(
         var parseResult = await parser.ParseAsync(request.FileStream, request.FileName, cancellationToken);
         if (parseResult.Operations.Count == 0)
         {
+            if (parseResult.Errors.Count > 0)
+            {
+                return Result<ImportResultDto>.Failure(string.Join("; ", parseResult.Errors));
+            }
+
             return Result<ImportResultDto>.Failure("В файле не найдено операций");
         }
 

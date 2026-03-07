@@ -8,18 +8,43 @@ public class TbankReportParser : IBrokerReportParser
 {
     public string Code => "tbank";
     private static readonly CultureInfo RuCulture = new("ru-RU");
+    private static readonly string InvalidFormatMessage = "Неверный формат файла. Загрузите исходный XLSX-файл отчета Т-Банк.";
+    private static readonly string InvalidExtensionMessage = "Неверное расширение файла. Загрузите отчет в формате .xlsx.";
 
     public Task<BrokerReportParseResult> ParseAsync(Stream fileStream, string fileName, CancellationToken cancellationToken)
     {
+        var validationError = BrokerReportFileValidator.ValidateXlsx(
+            fileStream,
+            fileName,
+            InvalidExtensionMessage,
+            InvalidFormatMessage);
+
+        if (validationError is not null)
+        {
+            return Task.FromResult(new BrokerReportParseResult([], [validationError]));
+        }
+
         var errors = new List<string>();
         var parsed = new List<ParsedOperation>();
 
-        using var workbook = new XLWorkbook(fileStream);
-        var sheet = workbook.Worksheet(1);
-        var rows = sheet.RowsUsed().ToList();
+        try
+        {
+            if (fileStream.CanSeek)
+            {
+                fileStream.Position = 0;
+            }
 
-        ParseTrades(rows, parsed, errors);
-        ParseCash(rows, parsed);
+            using var workbook = new XLWorkbook(fileStream);
+            var sheet = workbook.Worksheet(1);
+            var rows = sheet.RowsUsed().ToList();
+
+            ParseTrades(rows, parsed, errors);
+            ParseCash(rows, parsed);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromResult(new BrokerReportParseResult([], [InvalidFormatMessage]));
+        }
 
         return Task.FromResult(new BrokerReportParseResult(parsed, errors));
     }

@@ -32,8 +32,10 @@ export interface Portfolio {
 
 export interface Broker {
   id: string;
+  code?: string;
   name: string;
   country?: string;
+  supportsImport: boolean;
 }
 
 export interface InstrumentLookup {
@@ -131,6 +133,12 @@ export interface Operation extends OperationModel {
   instrumentTicker?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ImportResult {
+  importedOperations: number;
+  skippedOperations: number;
+  errors: string[];
 }
 
 export interface PagedResult<T> {

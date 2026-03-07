@@ -128,6 +128,11 @@ namespace Larchik.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("Code")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("code");
+
                     b.Property<string>("Country")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -142,6 +147,10 @@ namespace Larchik.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_brokers");
 
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_brokers_code");
+
                     b.HasIndex("Name")
                         .IsUnique()
                         .HasDatabaseName("ix_brokers_name");
@@ -152,120 +161,140 @@ namespace Larchik.Persistence.Migrations
                         new
                         {
                             Id = new Guid("0d30ef6c-f09f-44da-8bf0-a20001c4c001"),
+                            Code = "sber",
                             Country = "Россия",
                             Name = "СберБанк"
                         },
                         new
                         {
                             Id = new Guid("4ee304a8-6f0a-490f-bfa5-58f6f958b002"),
+                            Code = "vtb",
                             Country = "Россия",
                             Name = "ВТБ"
                         },
                         new
                         {
                             Id = new Guid("f6f784ea-b520-4bc5-8a32-9a17f1637003"),
+                            Code = "tbank",
                             Country = "Россия",
                             Name = "Т-Банк"
                         },
                         new
                         {
                             Id = new Guid("f444bdaf-bcb7-41fa-b22d-5a2fd7d5e004"),
+                            Code = "alfabank",
                             Country = "Россия",
                             Name = "Альфа-Банк"
                         },
                         new
                         {
                             Id = new Guid("47096031-0778-4a7e-8552-57a7f6b4d005"),
+                            Code = "gazprombank",
                             Country = "Россия",
                             Name = "Газпромбанк"
                         },
                         new
                         {
                             Id = new Guid("4f3178f2-218d-4802-8e38-68af3a972006"),
+                            Code = "rshb",
                             Country = "Россия",
                             Name = "Россельхозбанк"
                         },
                         new
                         {
                             Id = new Guid("802c7a07-532b-4c22-a8ac-05f984052007"),
+                            Code = "psb",
                             Country = "Россия",
                             Name = "Промсвязьбанк"
                         },
                         new
                         {
                             Id = new Guid("65db9cc2-5f8f-4a53-a37a-6abcf217d008"),
+                            Code = "sovcombank",
                             Country = "Россия",
                             Name = "Совкомбанк"
                         },
                         new
                         {
                             Id = new Guid("1634010e-bf7a-4e0c-89c8-643cde8d6009"),
+                            Code = "raiffeisen",
                             Country = "Россия",
                             Name = "Райффайзенбанк"
                         },
                         new
                         {
                             Id = new Guid("8f3f0f71-ec6f-4f16-960b-a8440deeb010"),
+                            Code = "bcs",
                             Country = "Россия",
                             Name = "БКС Мир инвестиций"
                         },
                         new
                         {
                             Id = new Guid("d040def8-f06d-4602-b350-5c30d9f06011"),
+                            Code = "finam",
                             Country = "Россия",
                             Name = "ФИНАМ"
                         },
                         new
                         {
                             Id = new Guid("20237c6b-3956-4228-ab4e-a4f4c7f1c012"),
+                            Code = "aton",
                             Country = "Россия",
                             Name = "АТОН"
                         },
                         new
                         {
                             Id = new Guid("2f6dd2e6-c1bf-4eec-b024-f7570ab70013"),
+                            Code = "kitfinance",
                             Country = "Россия",
                             Name = "КИТ Финанс Брокер"
                         },
                         new
                         {
                             Id = new Guid("ebff8036-ab31-4e47-ae04-59071f66b014"),
+                            Code = "cifra",
                             Country = "Россия",
                             Name = "Цифра брокер"
                         },
                         new
                         {
                             Id = new Guid("2f54daf8-1f36-4428-9580-28c3fe307015"),
+                            Code = "akbars",
                             Country = "Россия",
                             Name = "Ак Барс Банк"
                         },
                         new
                         {
                             Id = new Guid("1a9e3959-acf8-4936-a90d-90cb9ce98016"),
+                            Code = "uralsib",
                             Country = "Россия",
                             Name = "Банк Уралсиб"
                         },
                         new
                         {
                             Id = new Guid("dc8f9da6-5d31-4dd8-a314-6fa3774e3017"),
+                            Code = "mtsbank",
                             Country = "Россия",
                             Name = "МТС Банк"
                         },
                         new
                         {
                             Id = new Guid("677f0251-0b17-48c5-b14b-37f490ec2018"),
+                            Code = "bspb",
                             Country = "Россия",
                             Name = "Банк Санкт-Петербург"
                         },
                         new
                         {
                             Id = new Guid("935c6579-7695-43bf-8d8c-d6268bc7f019"),
+                            Code = "mkb",
                             Country = "Россия",
                             Name = "МКБ"
                         },
                         new
                         {
                             Id = new Guid("348c1aa0-5480-4fa1-a719-b36eb88dd020"),
+                            Code = "investpalata",
                             Country = "Россия",
                             Name = "Инвестиционная палата"
                         });
