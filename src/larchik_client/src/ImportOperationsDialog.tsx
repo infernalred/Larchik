@@ -23,10 +23,21 @@ interface Props {
 }
 
 const ACCEPT_ATTR = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const DEFAULT_MAX_FILE_SIZE_MB = 10;
+
+function getMaxFileSizeMb(): number {
+  const raw = import.meta.env.VITE_IMPORT_MAX_FILE_SIZE_MB;
+  const parsed = raw ? Number.parseInt(raw, 10) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_FILE_SIZE_MB;
+}
+
+const maxFileSizeMb = getMaxFileSizeMb();
+const maxFileSizeBytes = maxFileSizeMb * 1024 * 1024;
 
 function validateFile(file: File | null): string | null {
   if (!file) return 'Выберите файл отчета.';
   if (file.size === 0) return 'Нельзя загрузить пустой файл.';
+  if (file.size > maxFileSizeBytes) return `Файл отчета слишком большой. Максимальный размер ${maxFileSizeMb} MB.`;
   if (!file.name.toLowerCase().endsWith('.xlsx')) return 'Поддерживаются только файлы .xlsx.';
   return null;
 }

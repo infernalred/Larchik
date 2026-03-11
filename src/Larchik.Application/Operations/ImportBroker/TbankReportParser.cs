@@ -1,10 +1,13 @@
 using System.Globalization;
+using System.IO.Compression;
+using System.Xml.Linq;
 using ClosedXML.Excel;
 using Larchik.Persistence.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace Larchik.Application.Operations.ImportBroker;
 
-public class TbankReportParser : IBrokerReportParser
+public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerReportParser
 {
     public string Code => "tbank";
     private static readonly CultureInfo RuCulture = new("ru-RU");
@@ -29,17 +32,18 @@ public class TbankReportParser : IBrokerReportParser
 
         try
         {
-            if (fileStream.CanSeek)
+            ParseRows(fileStream, fileName, tryClosedXmlFirst: true, parsed, errors);
+
+            if (parsed.Count == 0 && errors.Count == 0)
             {
-                fileStream.Position = 0;
+                logger.LogInformation(
+                    "TBank import: retrying file {FileName} with OpenXML fallback because ClosedXML produced no operations",
+                    fileName);
+
+                parsed.Clear();
+                errors.Clear();
+                ParseRows(fileStream, fileName, tryClosedXmlFirst: false, parsed, errors);
             }
-
-            using var workbook = new XLWorkbook(fileStream);
-            var sheet = workbook.Worksheet(1);
-            var rows = sheet.RowsUsed().ToList();
-
-            ParseTrades(rows, parsed, errors);
-            ParseCash(rows, parsed);
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -49,9 +53,292 @@ public class TbankReportParser : IBrokerReportParser
         return Task.FromResult(new BrokerReportParseResult(parsed, errors));
     }
 
-    private static void ParseTrades(IReadOnlyList<IXLRow> rows, ICollection<ParsedOperation> parsed, ICollection<string> errors)
+    private void ParseRows(
+        Stream fileStream,
+        string fileName,
+        bool tryClosedXmlFirst,
+        ICollection<ParsedOperation> parsed,
+        ICollection<string> errors)
     {
-        var headerRows = rows.Where(r => r.CellsUsed().Any(c => Normalize(c.GetString()) == "номер сделки")).ToList();
+        var loadResult = LoadRows(fileStream, tryClosedXmlFirst);
+        var rows = loadResult.Rows;
+        logger.LogInformation(
+            "TBank import: loaded {RowCount} rows from {Source} for file {FileName}",
+            rows.Count,
+            loadResult.Source,
+            fileName);
+
+        var instrumentAliases = BuildInstrumentAliases(rows);
+        logger.LogInformation(
+            "TBank import: resolved {AliasCount} instrument aliases from report reference sections for file {FileName}",
+            instrumentAliases.Count,
+            fileName);
+
+        var beforeTrades = parsed.Count;
+        ParseTrades(rows, instrumentAliases, parsed, errors);
+        var tradesCount = parsed.Count - beforeTrades;
+
+        var beforeCash = parsed.Count;
+        ParseCash(rows, parsed);
+        var cashCount = parsed.Count - beforeCash;
+
+        logger.LogInformation(
+            "TBank import: parsed {TradesCount} trades and {CashCount} cash operations with {ErrorCount} errors for file {FileName}",
+            tradesCount,
+            cashCount,
+            errors.Count,
+            fileName);
+    }
+
+    private static LoadRowsResult LoadRows(Stream fileStream, bool tryClosedXmlFirst)
+    {
+        if (!tryClosedXmlFirst)
+        {
+            return new LoadRowsResult(LoadRowsFromOpenXml(fileStream), "openxml-fallback");
+        }
+
+        try
+        {
+            var rows = TryLoadRowsWithClosedXml(fileStream);
+            if (rows.Count > 1)
+            {
+                return new LoadRowsResult(rows, "closedxml");
+            }
+        }
+        catch (Exception)
+        {
+            // Some T-Bank exports carry incorrect worksheet dimensions that ClosedXML rejects or truncates.
+        }
+
+        return new LoadRowsResult(LoadRowsFromOpenXml(fileStream), "openxml-fallback");
+    }
+
+    private static List<ReportRow> TryLoadRowsWithClosedXml(Stream fileStream)
+    {
+        if (fileStream.CanSeek)
+        {
+            fileStream.Position = 0;
+        }
+
+        using var workbook = new XLWorkbook(fileStream);
+        var sheet = workbook.Worksheet(1);
+
+        return sheet.RowsUsed()
+            .Select(row => new ReportRow(
+                row.RowNumber(),
+                row.CellsUsed()
+                    .Where(cell => !cell.IsEmpty())
+                    .ToDictionary(
+                        cell => cell.Address.ColumnNumber,
+                        cell => cell.GetString().Trim())))
+            .ToList();
+    }
+
+    private static List<ReportRow> LoadRowsFromOpenXml(Stream fileStream)
+    {
+        if (fileStream.CanSeek)
+        {
+            fileStream.Position = 0;
+        }
+
+        using var archive = new ZipArchive(fileStream, ZipArchiveMode.Read, leaveOpen: true);
+        var worksheetPath = GetFirstWorksheetPath(archive);
+        var worksheetEntry = archive.GetEntry(worksheetPath)
+                             ?? throw new InvalidDataException($"Worksheet entry '{worksheetPath}' not found.");
+
+        var sharedStrings = LoadSharedStrings(archive);
+        var ns = XNamespace.Get("http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+
+        using var worksheetStream = worksheetEntry.Open();
+        var worksheet = XDocument.Load(worksheetStream);
+        var sheetRows = worksheet.Root?
+            .Element(ns + "sheetData")?
+            .Elements(ns + "row")
+            .ToList()
+            ?? [];
+
+        var rows = new List<ReportRow>(sheetRows.Count);
+        var expectedRowNumber = 1;
+
+        foreach (var row in sheetRows)
+        {
+            var rowNumber = (int?)row.Attribute("r") ?? expectedRowNumber;
+            while (expectedRowNumber < rowNumber)
+            {
+                rows.Add(new ReportRow(expectedRowNumber, new Dictionary<int, string>()));
+                expectedRowNumber++;
+            }
+
+            var cells = new Dictionary<int, string>();
+            foreach (var cell in row.Elements(ns + "c"))
+            {
+                var reference = (string?)cell.Attribute("r");
+                if (string.IsNullOrWhiteSpace(reference))
+                {
+                    continue;
+                }
+
+                var value = GetCellValue(cell, sharedStrings, ns);
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                cells[GetColumnNumber(reference)] = value.Trim();
+            }
+
+            rows.Add(new ReportRow(rowNumber, cells));
+            expectedRowNumber = rowNumber + 1;
+        }
+
+        return rows;
+    }
+
+    private static string GetFirstWorksheetPath(ZipArchive archive)
+    {
+        var workbookEntry = archive.GetEntry("xl/workbook.xml")
+                            ?? throw new InvalidDataException("Workbook definition not found.");
+        var relsEntry = archive.GetEntry("xl/_rels/workbook.xml.rels")
+                        ?? throw new InvalidDataException("Workbook relationships not found.");
+
+        var workbookNs = XNamespace.Get("http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+        var officeNs = XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+        var packageNs = XNamespace.Get("http://schemas.openxmlformats.org/package/2006/relationships");
+
+        using var workbookStream = workbookEntry.Open();
+        using var relsStream = relsEntry.Open();
+
+        var workbook = XDocument.Load(workbookStream);
+        var rels = XDocument.Load(relsStream);
+
+        var relationshipId = workbook.Root?
+            .Element(workbookNs + "sheets")?
+            .Elements(workbookNs + "sheet")
+            .Select(sheet => (string?)sheet.Attribute(officeNs + "id"))
+            .FirstOrDefault(id => !string.IsNullOrWhiteSpace(id));
+
+        var target = rels.Root?
+            .Elements(packageNs + "Relationship")
+            .Where(rel => string.Equals((string?)rel.Attribute("Id"), relationshipId, StringComparison.Ordinal))
+            .Select(rel => (string?)rel.Attribute("Target"))
+            .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
+
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            var fallbackPath = archive.Entries
+                .Where(entry => entry.FullName.StartsWith("xl/worksheets/", StringComparison.OrdinalIgnoreCase)
+                                && entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+                                && !entry.FullName.Contains("/_rels/", StringComparison.OrdinalIgnoreCase))
+                .Select(entry => entry.FullName)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+
+            return fallbackPath ?? throw new InvalidDataException("Worksheet not found.");
+        }
+
+        return $"xl/{target.TrimStart('/')}";
+    }
+
+    private static Dictionary<int, string> LoadSharedStrings(ZipArchive archive)
+    {
+        var sharedStringsEntry = archive.GetEntry("xl/sharedStrings.xml");
+        if (sharedStringsEntry is null)
+        {
+            return [];
+        }
+
+        var ns = XNamespace.Get("http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+        using var stream = sharedStringsEntry.Open();
+        var document = XDocument.Load(stream);
+
+        return document.Root?
+            .Elements(ns + "si")
+            .Select((item, index) => new
+            {
+                index,
+                value = string.Concat(item.Descendants(ns + "t").Select(x => x.Value))
+            })
+            .ToDictionary(x => x.index, x => x.value)
+            ?? [];
+    }
+
+    private static string? GetCellValue(XElement cell, IReadOnlyDictionary<int, string> sharedStrings, XNamespace ns)
+    {
+        var type = (string?)cell.Attribute("t");
+        return type switch
+        {
+            "inlineStr" => string.Concat(cell.Descendants(ns + "t").Select(x => x.Value)),
+            "s" => int.TryParse(cell.Element(ns + "v")?.Value, out var index) && sharedStrings.TryGetValue(index, out var sharedValue)
+                ? sharedValue
+                : null,
+            _ => cell.Element(ns + "v")?.Value
+        };
+    }
+
+    private static int GetColumnNumber(string cellReference)
+    {
+        var column = 0;
+        foreach (var ch in cellReference)
+        {
+            if (!char.IsLetter(ch))
+            {
+                break;
+            }
+
+            column = column * 26 + char.ToUpperInvariant(ch) - 'A' + 1;
+        }
+
+        return column;
+    }
+
+    private static Dictionary<string, string> BuildInstrumentAliases(IReadOnlyList<ReportRow> rows)
+    {
+        var aliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in rows)
+        {
+            var headers = BuildHeaderMap(row);
+            if (!headers.ContainsKey("код актива") ||
+                !headers.ContainsKey("isin") ||
+                !headers.ContainsKey("наименование актива"))
+            {
+                continue;
+            }
+
+            var codeCol = headers["код актива"];
+            var isinCol = headers["isin"];
+            var startIndex = row.RowNumber + 1;
+
+            for (var i = startIndex; i <= rows.Count; i++)
+            {
+                var currentRow = rows[i - 1];
+                var code = NormalizeCode(currentRow.GetString(codeCol));
+                var isin = NormalizeCode(currentRow.GetString(isinCol));
+
+                if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(isin))
+                {
+                    break;
+                }
+
+                if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(isin))
+                {
+                    continue;
+                }
+
+                aliases[code] = isin;
+            }
+        }
+
+        return aliases;
+    }
+
+    private static void ParseTrades(
+        IReadOnlyList<ReportRow> rows,
+        IReadOnlyDictionary<string, string> instrumentAliases,
+        ICollection<ParsedOperation> parsed,
+        ICollection<string> errors)
+    {
+        var headerRows = rows.Where(r => r.Cells.Any(c => Normalize(c.Value) == "номер сделки")).ToList();
         foreach (var headerRow in headerRows)
         {
             var headers = BuildHeaderMap(headerRow);
@@ -78,20 +365,20 @@ public class TbankReportParser : IBrokerReportParser
             var stampDutyCurCol = headers.GetValueOrDefault("валюта гербового сбора");
             var settlementDateCol = headers.GetValueOrDefault("дата расчетов план/факт");
 
-            var startIndex = headerRow.RowNumber() + 1;
+            var startIndex = headerRow.RowNumber + 1;
             for (var i = startIndex; i <= rows.Count; i++)
             {
                 var row = rows[i - 1];
-                var dealId = row.Cell(dealCol).GetString();
+                var dealId = row.GetString(dealCol);
                 if (string.IsNullOrWhiteSpace(dealId)) break;
                 if (Normalize(dealId) == "номер сделки" || Normalize(dealId) == "валюта") break;
 
-                var typeText = row.Cell(typeCol).GetString();
+                var typeText = row.GetString(typeCol);
                 var tradeType = ParseTradeType(typeText);
                 if (tradeType is null) continue;
 
-                var dateText = row.Cell(dateCol).GetString();
-                var timeText = timeCol > 0 ? row.Cell(timeCol).GetString() : null;
+                var dateText = row.GetString(dateCol);
+                var timeText = timeCol > 0 ? row.GetString(timeCol) : null;
                 var tradeDate = ParseDateTime(dateText, timeText);
                 if (tradeDate is null)
                 {
@@ -99,13 +386,17 @@ public class TbankReportParser : IBrokerReportParser
                     continue;
                 }
 
-                var instrumentCode = codeCol > 0 ? NormalizeCode(row.Cell(codeCol).GetString()) : null;
+                var instrumentCode = codeCol > 0 ? NormalizeCode(row.GetString(codeCol)) : null;
+                if (instrumentCode is not null && instrumentAliases.TryGetValue(instrumentCode, out var resolvedIsin))
+                {
+                    instrumentCode = resolvedIsin;
+                }
 
-                var price = priceCol > 0 ? row.Cell(priceCol).GetValue<decimal?>() ?? 0 : 0;
-                var quantity = qtyCol > 0 ? row.Cell(qtyCol).GetValue<decimal?>() ?? 0 : 0;
+                var price = priceCol > 0 ? row.GetDecimal(priceCol) ?? 0 : 0;
+                var quantity = qtyCol > 0 ? row.GetDecimal(qtyCol) ?? 0 : 0;
 
-                var priceCurrency = priceCurrencyCol > 0 ? NormalizeCurrency(row.Cell(priceCurrencyCol).GetString()) : null;
-                var settlementCurrency = settlementCurrencyCol > 0 ? NormalizeCurrency(row.Cell(settlementCurrencyCol).GetString()) : null;
+                var priceCurrency = priceCurrencyCol > 0 ? NormalizeCurrency(row.GetString(priceCurrencyCol)) : null;
+                var settlementCurrency = settlementCurrencyCol > 0 ? NormalizeCurrency(row.GetString(settlementCurrencyCol)) : null;
                 var currency = priceCurrency ?? settlementCurrency ?? "RUB";
 
                 var fee = SumFee(row, currency, feeBrokerCol, feeBrokerCurCol);
@@ -113,7 +404,7 @@ public class TbankReportParser : IBrokerReportParser
                 fee += SumFee(row, currency, feeClearCol, feeClearCurCol);
                 fee += SumFee(row, currency, stampDutyCol, stampDutyCurCol);
 
-                var settlementText = settlementDateCol > 0 ? row.Cell(settlementDateCol).GetString() : null;
+                var settlementText = settlementDateCol > 0 ? row.GetString(settlementDateCol) : null;
                 var settlementDate = ParseSettlementDate(settlementText);
 
                 var op = new Operation
@@ -135,14 +426,15 @@ public class TbankReportParser : IBrokerReportParser
         }
     }
 
-    private static void ParseCash(IReadOnlyList<IXLRow> rows, ICollection<ParsedOperation> parsed)
+    private static void ParseCash(IReadOnlyList<ReportRow> rows, ICollection<ParsedOperation> parsed)
     {
-        var headerRow = rows.FirstOrDefault(r => Normalize(r.Cell(1).GetString()) == "дата"
-                                                 && r.CellsUsed().Any(c => Normalize(c.GetString()) == "операция"));
+        var headerRow = rows.FirstOrDefault(r => Normalize(r.GetString(1)) == "дата"
+                                                 && r.Cells.Any(c => Normalize(c.Value) == "операция"));
         if (headerRow is null) return;
 
         var headers = BuildHeaderMap(headerRow);
         var dateCol = headers.GetValueOrDefault("дата");
+        var executionDateCol = headers.GetValueOrDefault("дата исполнения");
         var timeCol = headers.GetValueOrDefault("время совершения");
         var opCol = headers.GetValueOrDefault("операция");
         var incomeCol = headers.GetValueOrDefault("сумма зачисления");
@@ -151,27 +443,32 @@ public class TbankReportParser : IBrokerReportParser
 
         if (dateCol == 0 || opCol == 0) return;
 
-        var startIndex = headerRow.RowNumber() + 1;
+        var startIndex = headerRow.RowNumber + 1;
         for (var i = startIndex; i <= rows.Count; i++)
         {
             var row = rows[i - 1];
-            var dateText = row.Cell(dateCol).GetString();
-            if (string.IsNullOrWhiteSpace(dateText)) break;
+            var opText = row.GetString(opCol);
+            var dateText = row.GetString(dateCol);
+            if (string.IsNullOrWhiteSpace(dateText) && executionDateCol > 0)
+            {
+                dateText = row.GetString(executionDateCol);
+            }
 
-            var opText = row.Cell(opCol).GetString();
+            if (string.IsNullOrWhiteSpace(dateText) && string.IsNullOrWhiteSpace(opText)) continue;
             if (string.IsNullOrWhiteSpace(opText)) continue;
+            if (string.IsNullOrWhiteSpace(dateText)) continue;
 
             var type = ParseCashOperationType(opText);
             if (type is null) continue;
 
-            var timeText = timeCol > 0 ? row.Cell(timeCol).GetString() : null;
+            var timeText = timeCol > 0 ? row.GetString(timeCol) : null;
             var tradeDate = ParseDateTime(dateText, timeText) ?? DateTime.UtcNow;
 
-            var income = incomeCol > 0 ? row.Cell(incomeCol).GetValue<decimal?>() ?? 0 : 0;
-            var outcome = outcomeCol > 0 ? row.Cell(outcomeCol).GetValue<decimal?>() ?? 0 : 0;
+            var income = incomeCol > 0 ? row.GetDecimal(incomeCol) ?? 0 : 0;
+            var outcome = outcomeCol > 0 ? row.GetDecimal(outcomeCol) ?? 0 : 0;
             var amount = income != 0 ? income : outcome;
 
-            var note = noteCol > 0 ? row.Cell(noteCol).GetString() : opText;
+            var note = noteCol > 0 ? row.GetString(noteCol) : opText;
 
             var operation = new Operation
             {
@@ -207,6 +504,7 @@ public class TbankReportParser : IBrokerReportParser
         var normalized = Normalize(value);
         if (normalized.Contains("пополнение")) return OperationType.Deposit;
         if (normalized.Contains("выплата доходов") || normalized.Contains("дивиден")) return OperationType.Dividend;
+        if (normalized.Contains("комиссия")) return OperationType.Fee;
         if (normalized.Contains("налог")) return OperationType.Fee;
         if (normalized.Contains("снятие") || normalized.Contains("вывод")) return OperationType.Withdraw;
         return null;
@@ -216,32 +514,36 @@ public class TbankReportParser : IBrokerReportParser
     {
         if (string.IsNullOrWhiteSpace(dateText)) return null;
         var combined = string.IsNullOrWhiteSpace(timeText) ? dateText : $"{dateText} {timeText}";
-        return DateTime.TryParse(combined, RuCulture, DateTimeStyles.AssumeLocal, out var dt) ? dt : null;
+        return DateTime.TryParse(combined, RuCulture, DateTimeStyles.AssumeLocal, out var dt)
+            ? NormalizeImportedDate(dt)
+            : null;
     }
 
     private static DateTime? ParseSettlementDate(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
         var parts = text.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return DateTime.TryParse(parts.FirstOrDefault(), RuCulture, DateTimeStyles.AssumeLocal, out var dt) ? dt : null;
+        return DateTime.TryParse(parts.FirstOrDefault(), RuCulture, DateTimeStyles.AssumeLocal, out var dt)
+            ? NormalizeImportedDate(dt)
+            : null;
     }
 
-    private static decimal SumFee(IXLRow row, string currency, int valueCol, int currencyCol)
+    private static decimal SumFee(ReportRow row, string currency, int valueCol, int currencyCol)
     {
         if (valueCol <= 0) return 0;
-        var feeCurrency = currencyCol > 0 ? NormalizeCurrency(row.Cell(currencyCol).GetString()) ?? currency : currency;
+        var feeCurrency = currencyCol > 0 ? NormalizeCurrency(row.GetString(currencyCol)) ?? currency : currency;
         if (!string.Equals(feeCurrency, currency, StringComparison.OrdinalIgnoreCase)) return 0;
-        return row.Cell(valueCol).GetValue<decimal?>() ?? 0;
+        return row.GetDecimal(valueCol) ?? 0;
     }
 
-    private static Dictionary<string, int> BuildHeaderMap(IXLRow row)
+    private static Dictionary<string, int> BuildHeaderMap(ReportRow row)
     {
         var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (var cell in row.CellsUsed())
+        foreach (var cell in row.Cells)
         {
-            var key = Normalize(cell.GetString());
+            var key = Normalize(cell.Value);
             if (string.IsNullOrWhiteSpace(key)) continue;
-            map[key] = cell.Address.ColumnNumber;
+            map[key] = cell.Key;
         }
         return map;
     }
@@ -260,4 +562,34 @@ public class TbankReportParser : IBrokerReportParser
 
     private static string? NormalizeCode(string? code) =>
         string.IsNullOrWhiteSpace(code) ? null : code.Trim().ToUpperInvariant();
+
+    private static DateTime NormalizeImportedDate(DateTime value) =>
+        value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
+
+    private sealed record ReportRow(int RowNumber, IReadOnlyDictionary<int, string> Cells)
+    {
+        public string GetString(int column) => Cells.TryGetValue(column, out var value) ? value : string.Empty;
+
+        public decimal? GetDecimal(int column)
+        {
+            if (!Cells.TryGetValue(column, out var value) || string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariant))
+            {
+                return invariant;
+            }
+
+            return decimal.TryParse(value, NumberStyles.Number, RuCulture, out var local) ? local : null;
+        }
+    }
+
+    private sealed record LoadRowsResult(IReadOnlyList<ReportRow> Rows, string Source);
 }

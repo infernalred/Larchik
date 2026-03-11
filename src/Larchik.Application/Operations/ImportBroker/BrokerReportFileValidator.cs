@@ -2,6 +2,16 @@ namespace Larchik.Application.Operations.ImportBroker;
 
 public static class BrokerReportFileValidator
 {
+    public static string? ValidateFileSize(
+        long fileSize,
+        long maxFileSizeBytes,
+        int maxFileSizeMb)
+    {
+        return fileSize > maxFileSizeBytes
+            ? $"Файл отчета слишком большой. Максимальный размер {maxFileSizeMb} MB."
+            : null;
+    }
+
     public static string? ValidateXlsx(
         Stream fileStream,
         string fileName,

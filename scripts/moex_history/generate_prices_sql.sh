@@ -15,6 +15,10 @@ Options:
   --provider <name>    Provider value for prices.provider (default: MOEX)
   --base-url <url>     MOEX ISS base URL (default: https://iss.moex.com/iss)
   --boards <csv>       Board priority list (default: TQBR,TQTF,TQIF,TQCB,TQOB)
+  --targets-file <path>
+                       Explicit TSV file with ticker and market columns.
+                       When set, instruments are loaded from this file instead
+                       of querying table instruments.
   --help               Show this message
 USAGE
 }
@@ -168,6 +172,7 @@ PROVIDER="MOEX"
 BASE_URL="https://iss.moex.com/iss"
 BOARDS_CSV="TQBR,TQTF,TQIF,TQCB,TQOB"
 PAGE_SIZE=100
+TARGETS_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -195,6 +200,10 @@ while [[ $# -gt 0 ]]; do
       BOARDS_CSV="${2:-}"
       shift 2
       ;;
+    --targets-file)
+      TARGETS_FILE="${2:-}"
+      shift 2
+      ;;
     --help)
       usage
       exit 0
@@ -206,11 +215,6 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
-
-if [[ -z "${DATABASE_URL:-}" ]]; then
-  echo "DATABASE_URL is required" >&2
-  exit 1
-fi
 
 if [[ ! "$PROVIDER" =~ ^[A-Za-z0-9_-]{1,50}$ ]]; then
   echo "Invalid provider. Allowed: letters, numbers, underscore, dash (max 50)." >&2
@@ -225,9 +229,12 @@ fi
 
 require_bin curl
 require_bin jq
-require_bin psql
 require_bin awk
 require_bin mktemp
+
+if [[ -z "$TARGETS_FILE" ]]; then
+  require_bin psql
+fi
 
 IFS=',' read -r -a BOARDS <<<"$BOARDS_CSV"
 if [[ "${#BOARDS[@]}" -eq 0 ]]; then
@@ -242,20 +249,42 @@ trap 'rm -rf "$tmp_dir"' EXIT
 
 instruments_file="$tmp_dir/instruments.tsv"
 
-psql "$DATABASE_URL" -X -A -t -F $'\t' -v ON_ERROR_STOP=1 -c "
-select distinct
-       upper(trim(ticker)) as ticker,
-       case
-         when type = 2 then 'bonds'
-         when type in (1, 3) then 'shares'
-         else null
-       end as market
-from instruments
-where ticker is not null
-  and btrim(ticker) <> ''
-  and type in (1, 2, 3)
-order by 1;
-" >"$instruments_file"
+if [[ -n "$TARGETS_FILE" ]]; then
+  if [[ ! -f "$TARGETS_FILE" ]]; then
+    echo "Targets file not found: $TARGETS_FILE" >&2
+    exit 1
+  fi
+
+  awk -F $'\t' '
+    NF >= 2 {
+      ticker = toupper($1)
+      market = tolower($2)
+      if (ticker != "" && (market == "shares" || market == "bonds")) {
+        print ticker "\t" market
+      }
+    }
+  ' "$TARGETS_FILE" | awk -F $'\t' '!seen[$1 FS $2]++ { print $1 "\t" $2 }' >"$instruments_file"
+else
+  if [[ -z "${DATABASE_URL:-}" ]]; then
+    echo "DATABASE_URL is required when --targets-file is not provided" >&2
+    exit 1
+  fi
+
+  psql "$DATABASE_URL" -X -A -t -F $'\t' -v ON_ERROR_STOP=1 -c "
+  select distinct
+         upper(trim(ticker)) as ticker,
+         case
+           when type = 2 then 'bonds'
+           when type in (1, 3) then 'shares'
+           else null
+         end as market
+  from instruments
+  where ticker is not null
+    and btrim(ticker) <> ''
+    and type in (1, 2, 3)
+  order by 1;
+  " >"$instruments_file"
+fi
 
 instrument_count="$(wc -l <"$instruments_file" | tr -d '[:space:]')"
 if [[ "$instrument_count" -eq 0 ]]; then

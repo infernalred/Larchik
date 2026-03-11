@@ -1,4 +1,5 @@
 using System.Net;
+using Larchik.API.DTOs;
 using Larchik.Application.Models;
 using Larchik.Application.Operations.ImportBroker;
 using Microsoft.AspNetCore.Authorization;
@@ -13,9 +14,12 @@ public class ImportsController : BaseApiController
     [HttpPost("{brokerCode}")]
     [ProducesResponseType(typeof(ImportResultDto), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-    public async Task<ActionResult<ImportResultDto>> Import(Guid portfolioId, string brokerCode, IFormFile file)
+    public async Task<ActionResult<ImportResultDto>> Import(
+        Guid portfolioId,
+        string brokerCode,
+        [FromForm] ImportBrokerReportRequest request)
     {
-        if (file is null || file.Length == 0) return BadRequest("Файл отчета не загружен");
+        var file = request.File!;
 
         await using var ms = new MemoryStream();
         await file.CopyToAsync(ms, HttpContext.RequestAborted);

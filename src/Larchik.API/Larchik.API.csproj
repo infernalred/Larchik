@@ -6,6 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <LangVersion>14.0</LangVersion>
         <UserSecretsId>7d9e104c-122d-49af-9e93-232fe554ee44</UserSecretsId>
+        <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;bin\\**;bin\Debug\**;bin\\Debug\\**</DefaultItemExcludes>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,14 +15,14 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="System.IO.Packaging" Version="8.0.1" />
-      <PackageReference Include="Serilog.AspNetCore" Version="8.0.1" />
-      <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
-      <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
-      <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
-      <PackageReference Include="Serilog.Sinks.Grafana.Loki" Version="8.0.0" />
-      <PackageReference Include="NSwag.AspNetCore" Version="14.1.0" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
+      <PackageReference Include="System.IO.Packaging" Version="10.0.4" />
+      <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+      <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
+      <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+      <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+      <PackageReference Include="Serilog.Sinks.Grafana.Loki" Version="8.3.2" />
+      <PackageReference Include="NSwag.AspNetCore" Version="14.6.3" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
