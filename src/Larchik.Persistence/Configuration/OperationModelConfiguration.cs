@@ -8,6 +8,7 @@ public class OperationModelConfiguration : IEntityTypeConfiguration<Operation>
 {
     public void Configure(EntityTypeBuilder<Operation> builder)
     {
+        builder.Property(x => x.BrokerOperationKey).HasMaxLength(35);
         builder.Property(x => x.CurrencyId).IsRequired().HasMaxLength(3);
         builder.Property(x => x.Price).HasPrecision(18, 6);
         builder.Property(x => x.Quantity).HasPrecision(18, 6);
@@ -18,5 +19,8 @@ public class OperationModelConfiguration : IEntityTypeConfiguration<Operation>
 
         builder.HasIndex(x => new { x.PortfolioId, x.TradeDate });
         builder.HasIndex(x => new { x.InstrumentId, x.TradeDate });
+        builder.HasIndex(x => new { x.PortfolioId, x.BrokerOperationKey })
+            .IsUnique()
+            .HasFilter("\"broker_operation_key\" IS NOT NULL");
     }
 }

@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Xml.Linq;
-using ClosedXML.Excel;
 using Larchik.Persistence.Entities;
 using Microsoft.Extensions.Logging;
 
@@ -32,18 +31,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
 
         try
         {
-            ParseRows(fileStream, fileName, tryClosedXmlFirst: true, parsed, errors);
-
-            if (parsed.Count == 0 && errors.Count == 0)
-            {
-                logger.LogInformation(
-                    "TBank import: retrying file {FileName} with OpenXML fallback because ClosedXML produced no operations",
-                    fileName);
-
-                parsed.Clear();
-                errors.Clear();
-                ParseRows(fileStream, fileName, tryClosedXmlFirst: false, parsed, errors);
-            }
+            ParseRows(fileStream, fileName, parsed, errors);
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -56,11 +44,10 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     private void ParseRows(
         Stream fileStream,
         string fileName,
-        bool tryClosedXmlFirst,
         ICollection<ParsedOperation> parsed,
         ICollection<string> errors)
     {
-        var loadResult = LoadRows(fileStream, tryClosedXmlFirst);
+        var loadResult = LoadRows(fileStream);
         var rows = loadResult.Rows;
         logger.LogInformation(
             "TBank import: loaded {RowCount} rows from {Source} for file {FileName}",
@@ -90,48 +77,11 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             fileName);
     }
 
-    private static LoadRowsResult LoadRows(Stream fileStream, bool tryClosedXmlFirst)
+    private static LoadRowsResult LoadRows(Stream fileStream)
     {
-        if (!tryClosedXmlFirst)
-        {
-            return new LoadRowsResult(LoadRowsFromOpenXml(fileStream), "openxml-fallback");
-        }
-
-        try
-        {
-            var rows = TryLoadRowsWithClosedXml(fileStream);
-            if (rows.Count > 1)
-            {
-                return new LoadRowsResult(rows, "closedxml");
-            }
-        }
-        catch (Exception)
-        {
-            // Some T-Bank exports carry incorrect worksheet dimensions that ClosedXML rejects or truncates.
-        }
-
-        return new LoadRowsResult(LoadRowsFromOpenXml(fileStream), "openxml-fallback");
-    }
-
-    private static List<ReportRow> TryLoadRowsWithClosedXml(Stream fileStream)
-    {
-        if (fileStream.CanSeek)
-        {
-            fileStream.Position = 0;
-        }
-
-        using var workbook = new XLWorkbook(fileStream);
-        var sheet = workbook.Worksheet(1);
-
-        return sheet.RowsUsed()
-            .Select(row => new ReportRow(
-                row.RowNumber(),
-                row.CellsUsed()
-                    .Where(cell => !cell.IsEmpty())
-                    .ToDictionary(
-                        cell => cell.Address.ColumnNumber,
-                        cell => cell.GetString().Trim())))
-            .ToList();
+        // T-Bank XLSX exports can have broken worksheet dimensions and sparse rows,
+        // so the importer reads worksheet XML directly instead of relying on a higher-level wrapper.
+        return new LoadRowsResult(LoadRowsFromOpenXml(fileStream), "openxml");
     }
 
     private static List<ReportRow> LoadRowsFromOpenXml(Stream fileStream)
@@ -503,9 +453,9 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     {
         var normalized = Normalize(value);
         if (normalized.Contains("пополнение")) return OperationType.Deposit;
-        if (normalized.Contains("выплата доходов") || normalized.Contains("дивиден")) return OperationType.Dividend;
-        if (normalized.Contains("комиссия")) return OperationType.Fee;
         if (normalized.Contains("налог")) return OperationType.Fee;
+        if (normalized.Contains("комиссия")) return OperationType.Fee;
+        if (normalized.Contains("выплата доходов") || normalized.Contains("дивиден")) return OperationType.Dividend;
         if (normalized.Contains("снятие") || normalized.Contains("вывод")) return OperationType.Withdraw;
         return null;
     }

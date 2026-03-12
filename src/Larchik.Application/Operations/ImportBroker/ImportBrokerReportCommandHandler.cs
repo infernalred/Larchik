@@ -135,6 +135,19 @@ public class ImportBrokerReportCommandHandler(
         }
 
         var operations = new List<Operation>(parseResult.Operations.Count);
+        var importedKeys = new HashSet<string>(StringComparer.Ordinal);
+        var skippedCount = 0;
+        var instrumentCodeById = new Dictionary<Guid, string>();
+
+        foreach (var instrument in await context.Instruments
+                     .Where(i => instrumentCodes.Contains(i.Ticker) || instrumentCodes.Contains(i.Isin))
+                     .Select(i => new { i.Id, i.Isin, i.Ticker })
+                     .ToListAsync(cancellationToken))
+        {
+            instrumentCodeById[instrument.Id] = !string.IsNullOrWhiteSpace(instrument.Isin)
+                ? instrument.Isin
+                : instrument.Ticker;
+        }
 
         foreach (var parsed in parseResult.Operations)
         {
@@ -146,18 +159,56 @@ public class ImportBrokerReportCommandHandler(
             }
 
             parsed.Operation.PortfolioId = portfolio.Id;
+            var canonicalInstrumentCode = parsed.Operation.InstrumentId is { } instrumentId
+                ? instrumentCodeById[instrumentId]
+                : null;
+            parsed.Operation.BrokerOperationKey = BrokerOperationKeyBuilder.Build(parsed.Operation, canonicalInstrumentCode);
+            importedKeys.Add(parsed.Operation.BrokerOperationKey);
+        }
+
+        var existingKeys = importedKeys.Count == 0
+            ? new HashSet<string>(StringComparer.Ordinal)
+            : (await context.Operations
+                .AsNoTracking()
+                .Where(x => x.PortfolioId == portfolio.Id && x.BrokerOperationKey != null && importedKeys.Contains(x.BrokerOperationKey))
+                .Select(x => x.BrokerOperationKey!)
+                .Distinct()
+                .ToListAsync(cancellationToken))
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var parsed in parseResult.Operations)
+        {
+            var brokerOperationKey = parsed.Operation.BrokerOperationKey!;
+            if (!existingKeys.Add(brokerOperationKey))
+            {
+                skippedCount++;
+                continue;
+            }
+
             operations.Add(parsed.Operation);
         }
 
-        await context.Operations.AddRangeAsync(operations, cancellationToken);
-        await context.SaveChangesAsync(cancellationToken);
+        if (skippedCount > 0)
+        {
+            logger.LogInformation(
+                "Broker import: skipped {SkippedCount} duplicate operations for portfolio {PortfolioId} from file {FileName}",
+                skippedCount,
+                portfolio.Id,
+                request.FileName);
+        }
 
-        var earliest = operations.Min(o => o.TradeDate);
-        await recalc.ScheduleRebuild(portfolio.Id, earliest, cancellationToken);
+        if (operations.Count > 0)
+        {
+            await context.Operations.AddRangeAsync(operations, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+
+            var earliest = operations.Min(o => o.TradeDate);
+            await recalc.ScheduleRebuild(portfolio.Id, earliest, cancellationToken);
+        }
 
         var result = new ImportResultDto(
             ImportedOperations: operations.Count,
-            SkippedOperations: 0,
+            SkippedOperations: skippedCount,
             Errors: parseResult.Errors);
 
         return Result<ImportResultDto>.Success(result);
