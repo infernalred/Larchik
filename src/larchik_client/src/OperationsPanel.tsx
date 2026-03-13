@@ -155,16 +155,18 @@ export function OperationsPanel({
           Операции
         </Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-          <Button
-            startIcon={<DeleteSweepIcon />}
-            variant="outlined"
-            color="warning"
-            onClick={handleClearPortfolioData}
-            disabled={clearing || importing}
-            sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
-          >
-            Очистить портфель
-          </Button>
+          {totalCount > 0 && (
+            <Button
+              startIcon={<DeleteSweepIcon />}
+              variant="outlined"
+              color="warning"
+              onClick={handleClearPortfolioData}
+              disabled={clearing || importing}
+              sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
+            >
+              Очистить портфель
+            </Button>
+          )}
           <Button
             variant="outlined"
             onClick={() => {

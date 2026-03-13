@@ -59,15 +59,47 @@ public class ImportBrokerReportCommandHandler(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+        var normalizedInstrumentCodes = instrumentCodes
+            .Select(NormalizeCode)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
         var isinMap = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
         var tickerMap = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        var aliasMap = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
         var ambiguousTickers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var instrumentDetailsById = new Dictionary<Guid, Instrument>();
 
-        if (instrumentCodes.Length > 0)
+        if (normalizedInstrumentCodes.Length > 0)
         {
-            var instruments = await context.Instruments
-                .Where(i => instrumentCodes.Contains(i.Ticker) || instrumentCodes.Contains(i.Isin))
+            var aliases = await context.InstrumentAliases
+                .Where(x => normalizedInstrumentCodes.Contains(x.NormalizedAliasCode))
                 .ToListAsync(cancellationToken);
+
+            foreach (var alias in aliases)
+            {
+                if (!aliasMap.ContainsKey(alias.AliasCode))
+                {
+                    aliasMap[alias.AliasCode] = alias.InstrumentId;
+                }
+            }
+
+            var aliasInstrumentIds = aliases
+                .Select(x => x.InstrumentId)
+                .Distinct()
+                .ToArray();
+
+            var instruments = await context.Instruments
+                .Where(i =>
+                    instrumentCodes.Contains(i.Ticker) ||
+                    instrumentCodes.Contains(i.Isin) ||
+                    aliasInstrumentIds.Contains(i.Id))
+                .ToListAsync(cancellationToken);
+
+            foreach (var instrument in instruments)
+            {
+                instrumentDetailsById[instrument.Id] = instrument;
+            }
 
             foreach (var instrument in instruments)
             {
@@ -108,6 +140,11 @@ public class ImportBrokerReportCommandHandler(
                 continue;
             }
 
+            if (aliasMap.TryGetValue(parsed.InstrumentCode, out _))
+            {
+                continue;
+            }
+
             if (isinMap.TryGetValue(parsed.InstrumentCode, out _))
             {
                 continue;
@@ -140,10 +177,7 @@ public class ImportBrokerReportCommandHandler(
         var instrumentCodeById = new Dictionary<Guid, string>();
         var baseKeyOccurrences = new Dictionary<string, int>(StringComparer.Ordinal);
 
-        foreach (var instrument in await context.Instruments
-                     .Where(i => instrumentCodes.Contains(i.Ticker) || instrumentCodes.Contains(i.Isin))
-                     .Select(i => new { i.Id, i.Isin, i.Ticker })
-                     .ToListAsync(cancellationToken))
+        foreach (var instrument in instrumentDetailsById.Values)
         {
             instrumentCodeById[instrument.Id] = !string.IsNullOrWhiteSpace(instrument.Isin)
                 ? instrument.Isin
@@ -154,9 +188,11 @@ public class ImportBrokerReportCommandHandler(
         {
             if (parsed.RequiresInstrument)
             {
-                parsed.Operation.InstrumentId = isinMap.TryGetValue(parsed.InstrumentCode!, out var isinId)
-                    ? isinId
-                    : tickerMap[parsed.InstrumentCode!];
+                parsed.Operation.InstrumentId = aliasMap.TryGetValue(parsed.InstrumentCode!, out var aliasId)
+                    ? aliasId
+                    : isinMap.TryGetValue(parsed.InstrumentCode!, out var isinId)
+                        ? isinId
+                        : tickerMap[parsed.InstrumentCode!];
             }
 
             parsed.Operation.PortfolioId = portfolio.Id;
@@ -168,6 +204,79 @@ public class ImportBrokerReportCommandHandler(
             baseKeyOccurrences[baseKey] = occurrence;
             parsed.Operation.BrokerOperationKey = BrokerOperationKeyBuilder.Build(parsed.Operation, canonicalInstrumentCode, occurrence);
             importedKeys.Add(parsed.Operation.BrokerOperationKey);
+        }
+
+        var importedInstrumentIds = parseResult.Operations
+            .Where(x => x.Operation.InstrumentId != null)
+            .Select(x => x.Operation.InstrumentId!.Value)
+            .Distinct()
+            .ToArray();
+
+        if (importedInstrumentIds.Length > 0)
+        {
+            var corporateActions = await context.InstrumentCorporateActions
+                .AsNoTracking()
+                .Where(x => importedInstrumentIds.Contains(x.InstrumentId))
+                .OrderBy(x => x.EffectiveDate)
+                .ToListAsync(cancellationToken);
+
+            if (corporateActions.Count > 0)
+            {
+                var existingOperationDates = await context.Operations
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.PortfolioId == portfolio.Id &&
+                        x.InstrumentId != null &&
+                        importedInstrumentIds.Contains(x.InstrumentId.Value))
+                    .Select(x => new { x.InstrumentId, x.TradeDate })
+                    .ToListAsync(cancellationToken);
+
+                foreach (var action in corporateActions)
+                {
+                    var hasImportedHistory = parseResult.Operations.Any(x =>
+                        x.Operation.InstrumentId == action.InstrumentId &&
+                        x.Operation.TradeDate.Date < action.EffectiveDate.Date);
+
+                    var hasExistingHistory = existingOperationDates.Any(x =>
+                        x.InstrumentId == action.InstrumentId &&
+                        x.TradeDate.Date < action.EffectiveDate.Date);
+
+                    if (!hasImportedHistory && !hasExistingHistory)
+                    {
+                        continue;
+                    }
+
+                    if (!instrumentDetailsById.TryGetValue(action.InstrumentId, out var instrument))
+                    {
+                        continue;
+                    }
+
+                    var generatedOperation = new Operation
+                    {
+                        Id = Guid.NewGuid(),
+                        PortfolioId = portfolio.Id,
+                        InstrumentId = action.InstrumentId,
+                        Type = action.Type,
+                        Quantity = action.Factor,
+                        Price = 0,
+                        Fee = 0,
+                        CurrencyId = instrument.CurrencyId,
+                        TradeDate = EnsureUtc(action.EffectiveDate),
+                        SettlementDate = EnsureUtc(action.EffectiveDate),
+                        Note = action.Note,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    var canonicalInstrumentCode = instrumentCodeById[action.InstrumentId];
+                    var baseKey = BrokerOperationKeyBuilder.BuildBaseHash(generatedOperation, canonicalInstrumentCode);
+                    var occurrence = baseKeyOccurrences.GetValueOrDefault(baseKey) + 1;
+                    baseKeyOccurrences[baseKey] = occurrence;
+                    generatedOperation.BrokerOperationKey = BrokerOperationKeyBuilder.Build(generatedOperation, canonicalInstrumentCode, occurrence);
+                    importedKeys.Add(generatedOperation.BrokerOperationKey);
+                    operations.Add(generatedOperation);
+                }
+            }
         }
 
         var existingKeys = importedKeys.Count == 0
@@ -216,5 +325,17 @@ public class ImportBrokerReportCommandHandler(
             Errors: parseResult.Errors);
 
         return Result<ImportResultDto>.Success(result);
+    }
+
+    private static string NormalizeCode(string value) => value.Trim().ToUpperInvariant();
+
+    private static DateTime EnsureUtc(DateTime value)
+    {
+        return value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
     }
 }

@@ -14,6 +14,15 @@ Options:
   --out-dir <path>     Output directory for prices_<year>.sql
   --provider <name>    Provider value for prices.provider (default: TBANK)
   --base-url <url>     GetCandles endpoint URL
+  --targets-file <path>
+                       Explicit TSV file with request instrumentId in the first
+                       column and optional DB FIGI in the second column.
+                       When set, targets are loaded from this file instead of
+                       querying table instruments.
+  --adjust-before <YYYY-MM-DD>
+                       Multiply prices before this date by --adjust-factor.
+  --adjust-factor <N>  Price multiplier applied before --adjust-before date.
+  --insecure           Pass -k to curl (useful for sandbox TLS chain issues)
   --help               Show this message
 USAGE
 }
@@ -36,9 +45,10 @@ normalize_year() {
 }
 
 fetch_figi_year() {
-  local figi="$1"
-  local year="$2"
-  local output_file="$3"
+  local request_id="$1"
+  local db_figi="$2"
+  local year="$3"
+  local output_file="$4"
 
   local from_dt="${year}-01-01T00:00:00Z"
   local to_dt="${year}-12-31T23:59:59Z"
@@ -49,25 +59,31 @@ fetch_figi_year() {
   "from": "${from_dt}",
   "to": "${to_dt}",
   "interval": "CANDLE_INTERVAL_DAY",
-  "instrumentId": "${figi}",
-  "limit": 2400,
-  "candleSourceType": "CANDLE_SOURCE_EXCHANGE"
+  "instrumentId": "${request_id}"
 }
 JSON
 )"
 
   local response
-  if ! response="$(curl -fsS --retry 2 --retry-delay 1 \
+  local curl_args=(-fsS --retry 2 --retry-delay 1)
+  if [[ "$CURL_INSECURE" == "1" ]]; then
+    curl_args=(-k "${curl_args[@]}")
+  fi
+
+  if ! response="$(curl "${curl_args[@]}" \
       -H "Authorization: Bearer ${TINVEST_TOKEN}" \
       -H "Content-Type: application/json" \
       -d "$payload" \
       "$BASE_URL")"; then
-    echo "WARN: request failed for figi=${figi}, year=${year}" >&2
+    echo "WARN: request failed for instrumentId=${request_id}, db_figi=${db_figi}, year=${year}" >&2
     return
   fi
 
   local parsed
-  parsed="$(jq -r --arg figi "$figi" '
+  parsed="$(jq -r \
+    --arg figi "$db_figi" \
+    --arg adjust_before "${ADJUST_BEFORE_DATE}" \
+    --arg adjust_factor "${ADJUST_FACTOR}" '
     (.candles // [])[]
     | select(.time != null and .close != null)
     | (.time | tostring) as $time
@@ -75,7 +91,11 @@ JSON
     | ($time[0:10]) as $date
     | ((.close.units // "0") | tonumber) as $units
     | ((.close.nano // 0) | tonumber) as $nano
-    | ($units + ($nano / 1000000000)) as $price
+    | ($units + ($nano / 1000000000)) as $raw_price
+    | (if ($adjust_before != "" and $date < $adjust_before)
+        then ($raw_price * ($adjust_factor | tonumber))
+        else $raw_price
+      end) as $price
     | select($price > 0)
     | [$figi, $date, ($price | tostring)] | @tsv
   ' <<<"$response")"
@@ -168,6 +188,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT_DIR="${SCRIPT_DIR}/sql"
 PROVIDER="TBANK"
 BASE_URL="https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.MarketDataService/GetCandles"
+TARGETS_FILE=""
+ADJUST_BEFORE_DATE=""
+ADJUST_FACTOR="1"
+CURL_INSECURE="0"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -190,6 +214,22 @@ while [[ $# -gt 0 ]]; do
     --base-url)
       BASE_URL="${2:-}"
       shift 2
+      ;;
+    --targets-file)
+      TARGETS_FILE="${2:-}"
+      shift 2
+      ;;
+    --adjust-before)
+      ADJUST_BEFORE_DATE="${2:-}"
+      shift 2
+      ;;
+    --adjust-factor)
+      ADJUST_FACTOR="${2:-}"
+      shift 2
+      ;;
+    --insecure)
+      CURL_INSECURE="1"
+      shift
       ;;
     --help)
       usage
@@ -226,9 +266,12 @@ fi
 
 require_bin curl
 require_bin jq
-require_bin psql
 require_bin awk
 require_bin mktemp
+
+if [[ -z "$TARGETS_FILE" ]]; then
+  require_bin psql
+fi
 
 mkdir -p "$OUT_DIR"
 
@@ -237,14 +280,32 @@ trap 'rm -rf "$tmp_dir"' EXIT
 
 figi_file="$tmp_dir/figi.tsv"
 
-psql "$DATABASE_URL" -X -A -t -F $'\t' -v ON_ERROR_STOP=1 -c "
-select distinct upper(trim(figi))
+if [[ -n "$TARGETS_FILE" ]]; then
+  if [[ ! -f "$TARGETS_FILE" ]]; then
+    echo "Targets file not found: $TARGETS_FILE" >&2
+    exit 1
+  fi
+
+  awk -F $'\t' '
+    NF >= 1 {
+      request_id = $1
+      db_figi = (NF >= 2 ? $2 : $1)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", request_id)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", db_figi)
+      db_figi = toupper(db_figi)
+      if (request_id != "" && db_figi != "") print request_id "\t" db_figi
+    }
+  ' "$TARGETS_FILE" | awk '!seen[$0]++' >"$figi_file"
+else
+  psql "$DATABASE_URL" -X -A -t -F $'\t' -v ON_ERROR_STOP=1 -c "
+select distinct upper(trim(figi)), upper(trim(figi))
 from instruments
 where figi is not null
   and btrim(figi) <> ''
   and type in (1, 2, 3)
 order by 1;
-" >"$figi_file"
+  " >"$figi_file"
+fi
 
 figi_count="$(wc -l <"$figi_file" | tr -d '[:space:]')"
 if [[ "$figi_count" -eq 0 ]]; then
@@ -261,9 +322,9 @@ for ((year = FROM_YEAR; year <= TO_YEAR; year++)); do
 
   : >"$raw_file"
 
-  while IFS=$'\t' read -r figi; do
-    [[ -z "$figi" ]] && continue
-    fetch_figi_year "$figi" "$year" "$raw_file"
+  while IFS=$'\t' read -r request_id db_figi; do
+    [[ -z "$request_id" || -z "$db_figi" ]] && continue
+    fetch_figi_year "$request_id" "$db_figi" "$year" "$raw_file"
   done <"$figi_file"
 
   awk -F $'\t' 'NF >= 3 && !seen[$1 FS $2]++ { print $1 "\t" $2 "\t" $3 }' "$raw_file" >"$dedup_file"
