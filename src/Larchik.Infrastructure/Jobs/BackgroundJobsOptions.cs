@@ -8,6 +8,7 @@ public class BackgroundJobsOptions
     public int ExecutorBatchSize { get; set; } = 5;
     public FxCbrDailyJobOptions FxCbrDaily { get; set; } = new();
     public MoexPricesDailyJobOptions MoexPricesDaily { get; set; } = new();
+    public TbankPricesDailyJobOptions TbankPricesDaily { get; set; } = new();
 }
 
 public class FxCbrDailyJobOptions
@@ -31,4 +32,22 @@ public class MoexPricesDailyJobOptions
     public string Provider { get; set; } = "MOEX";
     public string BaseUrl { get; set; } = "https://iss.moex.com/iss";
     public string[] Boards { get; set; } = ["TQBR", "TQTF", "TQIF", "TQCB", "TQOB"];
+}
+
+public class TbankPricesDailyJobOptions
+{
+    public bool Enabled { get; set; } = false;
+    public int HourUtc { get; set; } = 21;
+    public int MinuteUtc { get; set; } = 0;
+    public int MaxAttempts { get; set; } = 8;
+    public int RetryDelayMinutes { get; set; } = 20;
+    public int LockTimeoutMinutes { get; set; } = 20;
+    public string Provider { get; set; } = "TBANK";
+    public string BaseUrl { get; set; } =
+        "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.MarketDataService/GetCandles";
+    public string? Token { get; set; }
+    public bool AllowInvalidTls { get; set; }
+    public int MaxHistoryLookbackDays { get; set; } = 7;
+    public int MaxParallelism { get; set; } = 6;
+    public string[] CountryExclusions { get; set; } = ["RU"];
 }

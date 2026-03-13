@@ -1,5 +1,6 @@
 using Larchik.Application.FxRates.SyncCbrFxRates;
 using Larchik.Application.Prices.SyncMoexPrices;
+using Larchik.Application.Prices.SyncTbankPrices;
 using Larchik.Infrastructure.Jobs;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,7 @@ try
             // Jobs host only needs sync handlers used by background job adapters.
             services.AddScoped<SyncCbrFxRatesCommandHandler>();
             services.AddScoped<SyncMoexPricesCommandHandler>();
+            services.AddScoped<SyncTbankPricesCommandHandler>();
 
             services.AddBackgroundJobs(context.Configuration);
         })

@@ -152,6 +152,20 @@ public class BackgroundJobSchedulerService(
             moex.MaxAttempts,
             moex.RetryDelayMinutes,
             moex.LockTimeoutMinutes);
+
+        var tbank = options.TbankPricesDaily;
+        await EnsureDefinition(
+            context,
+            now,
+            cancellationToken,
+            BackgroundJobConstants.TbankPricesDailyDefinitionName,
+            BackgroundJobConstants.TbankPricesDailyJobType,
+            tbank.Enabled,
+            tbank.HourUtc,
+            tbank.MinuteUtc,
+            tbank.MaxAttempts,
+            tbank.RetryDelayMinutes,
+            tbank.LockTimeoutMinutes);
     }
 
     private async Task EnsureDefinition(
