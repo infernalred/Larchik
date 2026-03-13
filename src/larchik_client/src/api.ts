@@ -1,5 +1,6 @@
 import {
   Broker,
+  ClearPortfolioDataResult,
   ImportResult,
   InstrumentLookup,
   Operation,
@@ -137,6 +138,12 @@ export const api = {
     return request<string>('/api/portfolios', {
       method: 'POST',
       body: JSON.stringify(payload),
+    });
+  },
+
+  async clearPortfolioData(id: string): Promise<ClearPortfolioDataResult> {
+    return request<ClearPortfolioDataResult>(`/api/portfolios/${id}/data`, {
+      method: 'DELETE',
     });
   },
 

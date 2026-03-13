@@ -141,6 +141,14 @@ export interface ImportResult {
   errors: string[];
 }
 
+export interface ClearPortfolioDataResult {
+  deletedOperations: number;
+  deletedPositionSnapshots: number;
+  deletedPortfolioSnapshots: number;
+  deletedLots: number;
+  deletedCashBalances: number;
+}
+
 export interface PagedResult<T> {
   items: T[];
   page: number;

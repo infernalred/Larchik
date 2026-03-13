@@ -138,6 +138,7 @@ public class ImportBrokerReportCommandHandler(
         var importedKeys = new HashSet<string>(StringComparer.Ordinal);
         var skippedCount = 0;
         var instrumentCodeById = new Dictionary<Guid, string>();
+        var baseKeyOccurrences = new Dictionary<string, int>(StringComparer.Ordinal);
 
         foreach (var instrument in await context.Instruments
                      .Where(i => instrumentCodes.Contains(i.Ticker) || instrumentCodes.Contains(i.Isin))
@@ -162,7 +163,10 @@ public class ImportBrokerReportCommandHandler(
             var canonicalInstrumentCode = parsed.Operation.InstrumentId is { } instrumentId
                 ? instrumentCodeById[instrumentId]
                 : null;
-            parsed.Operation.BrokerOperationKey = BrokerOperationKeyBuilder.Build(parsed.Operation, canonicalInstrumentCode);
+            var baseKey = BrokerOperationKeyBuilder.BuildBaseHash(parsed.Operation, canonicalInstrumentCode);
+            var occurrence = baseKeyOccurrences.GetValueOrDefault(baseKey) + 1;
+            baseKeyOccurrences[baseKey] = occurrence;
+            parsed.Operation.BrokerOperationKey = BrokerOperationKeyBuilder.Build(parsed.Operation, canonicalInstrumentCode, occurrence);
             importedKeys.Add(parsed.Operation.BrokerOperationKey);
         }
 

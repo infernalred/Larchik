@@ -22,7 +22,15 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { ImportResult, InstrumentLookup, Operation, OperationModel, OperationType } from './types';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import {
+  ClearPortfolioDataResult,
+  ImportResult,
+  InstrumentLookup,
+  Operation,
+  OperationModel,
+  OperationType,
+} from './types';
 import { ImportOperationsDialog } from './ImportOperationsDialog';
 import { OperationForm } from './OperationForm';
 
@@ -36,6 +44,7 @@ interface Props {
   onPageSizeChange: (pageSize: number) => void;
   onCreate: (model: OperationModel) => Promise<void>;
   onImport: (file: File) => Promise<ImportResult>;
+  onClearPortfolioData: () => Promise<ClearPortfolioDataResult>;
   canImport: boolean;
   importDisabledReason?: string;
   onUpdate: (id: string, model: OperationModel) => Promise<void>;
@@ -71,6 +80,7 @@ export function OperationsPanel({
   onPageSizeChange,
   onCreate,
   onImport,
+  onClearPortfolioData,
   canImport,
   importDisabledReason,
   onUpdate,
@@ -82,6 +92,7 @@ export function OperationsPanel({
   const [editing, setEditing] = useState<Operation | null>(null);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importError, setImportError] = useState('');
   const [importSummary, setImportSummary] = useState('');
@@ -106,6 +117,31 @@ export function OperationsPanel({
     }
   };
 
+  const handleClearPortfolioData = async () => {
+    const confirmed = window.confirm(
+      'Очистить все операции и пересчитанные данные выбранного портфеля? Это действие нельзя отменить.',
+    );
+    if (!confirmed) return;
+
+    setClearing(true);
+    setImportError('');
+    setImportSummary('');
+    try {
+      const result = await onClearPortfolioData();
+      setImportSummary(
+        [
+          `Операций удалено: ${result.deletedOperations}`,
+          `Снапшотов позиций удалено: ${result.deletedPositionSnapshots}`,
+          `Снапшотов портфеля удалено: ${result.deletedPortfolioSnapshots}`,
+        ].join('. '),
+      );
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'Не удалось очистить портфель.');
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, backgroundImage: 'none' }}>
       <Stack
@@ -120,13 +156,23 @@ export function OperationsPanel({
         </Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
           <Button
+            startIcon={<DeleteSweepIcon />}
+            variant="outlined"
+            color="warning"
+            onClick={handleClearPortfolioData}
+            disabled={clearing || importing}
+            sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
+          >
+            Очистить портфель
+          </Button>
+          <Button
             variant="outlined"
             onClick={() => {
               if (!canImport) return;
               setImportError('');
               setImportDialogOpen(true);
             }}
-            disabled={!canImport}
+            disabled={!canImport || clearing}
             title={!canImport ? importDisabledReason : undefined}
             sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
           >
@@ -136,6 +182,7 @@ export function OperationsPanel({
             startIcon={<AddIcon />}
             variant="contained"
             onClick={() => setCreating(true)}
+            disabled={clearing}
             sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
           >
             Новая операция

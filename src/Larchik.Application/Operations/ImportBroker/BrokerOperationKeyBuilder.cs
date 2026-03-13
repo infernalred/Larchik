@@ -7,7 +7,12 @@ namespace Larchik.Application.Operations.ImportBroker;
 
 internal static class BrokerOperationKeyBuilder
 {
-    public static string Build(Operation operation, string? instrumentCode)
+    public static string Build(Operation operation, string? instrumentCode, int occurrence)
+    {
+        return $"v2:{BuildBaseHash(operation, instrumentCode)}:{occurrence.ToString("D6", CultureInfo.InvariantCulture)}";
+    }
+
+    public static string BuildBaseHash(Operation operation, string? instrumentCode)
     {
         var payload = string.Join('|',
             "v1",
@@ -22,7 +27,7 @@ internal static class BrokerOperationKeyBuilder
             NormalizeNote(operation.Note));
 
         var hash = MD5.HashData(Encoding.UTF8.GetBytes(payload));
-        return $"v1:{Convert.ToHexString(hash).ToLowerInvariant()}";
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private static string FormatDate(DateTime value)

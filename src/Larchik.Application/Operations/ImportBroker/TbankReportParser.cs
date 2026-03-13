@@ -320,8 +320,24 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             {
                 var row = rows[i - 1];
                 var dealId = row.GetString(dealCol);
-                if (string.IsNullOrWhiteSpace(dealId)) break;
-                if (Normalize(dealId) == "номер сделки" || Normalize(dealId) == "валюта") break;
+                if (string.IsNullOrWhiteSpace(dealId))
+                {
+                    continue;
+                }
+
+                var normalizedDealId = Normalize(dealId);
+                if (normalizedDealId == "номер сделки" ||
+                    normalizedDealId == "валюта" ||
+                    normalizedDealId == "дата" ||
+                    IsTradeSectionMarker(normalizedDealId))
+                {
+                    break;
+                }
+
+                if (IsTradePager(normalizedDealId))
+                {
+                    continue;
+                }
 
                 var typeText = row.GetString(typeCol);
                 var tradeType = ParseTradeType(typeText);
@@ -502,6 +518,25 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         string.IsNullOrWhiteSpace(value)
             ? string.Empty
             : value.Replace("\n", " ").Replace("\r", " ").Trim().ToLowerInvariant();
+
+    private static bool IsTradePager(string normalizedValue)
+    {
+        if (string.IsNullOrWhiteSpace(normalizedValue))
+        {
+            return false;
+        }
+
+        var parts = normalizedValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 3 &&
+               int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out _) &&
+               parts[1] == "из" &&
+               int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out _);
+    }
+
+    private static bool IsTradeSectionMarker(string normalizedValue) =>
+        normalizedValue.Length >= 2 &&
+        char.IsDigit(normalizedValue[0]) &&
+        normalizedValue[1] == '.';
 
     private static string? NormalizeCurrency(string? currency)
     {

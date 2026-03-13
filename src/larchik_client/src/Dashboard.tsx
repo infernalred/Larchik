@@ -20,6 +20,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { api } from './api';
 import {
   Broker,
+  ClearPortfolioDataResult,
   ImportResult,
   InstrumentLookup,
   Operation,
@@ -282,6 +283,33 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     if (!selectedPortfolio) return;
     await api.deleteOperation(selectedPortfolio, id);
     await loadOperations(selectedPortfolio, operationsPage, operationsPageSize);
+  }
+
+  async function handleClearPortfolioData(): Promise<ClearPortfolioDataResult> {
+    if (!selectedPortfolio) {
+      throw new Error('Сначала выберите портфель.');
+    }
+
+    try {
+      const result = await api.clearPortfolioData(selectedPortfolio);
+
+      setOperations([]);
+      setOperationsTotalCount(0);
+      if (operationsPage !== 1) {
+        setOperationsPage(1);
+      } else {
+        await loadOperations(selectedPortfolio, 1, operationsPageSize);
+      }
+
+      await Promise.all([
+        loadSummary(selectedPortfolio, valuationMethod),
+        loadPerformance(selectedPortfolio, valuationMethod),
+      ]);
+
+      return result;
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error, 'Не удалось очистить данные портфеля.'));
+    }
   }
 
   const searchInstruments = useCallback((query: string): Promise<InstrumentLookup[]> => {
@@ -547,6 +575,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                 }}
                 onCreate={handleCreateOperation}
                 onImport={handleImportOperations}
+                onClearPortfolioData={handleClearPortfolioData}
                 canImport={canImportOperations}
                 importDisabledReason="Для брокера выбранного счета импорт пока не настроен."
                 onUpdate={handleUpdateOperation}

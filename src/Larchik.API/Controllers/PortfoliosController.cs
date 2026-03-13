@@ -1,5 +1,6 @@
 using System.Net;
 using Larchik.Application.Models;
+using Larchik.Application.Portfolios.ClearPortfolioData;
 using Larchik.Application.Portfolios.CreatePortfolio;
 using Larchik.Application.Portfolios.DeletePortfolio;
 using Larchik.Application.Portfolios.EditPortfolio;
@@ -51,6 +52,14 @@ public class PortfoliosController : BaseApiController
     public async Task<ActionResult<Unit>> Delete(Guid id)
     {
         return HandleResult(await Mediator.Send(new DeletePortfolioCommand(id), HttpContext.RequestAborted));
+    }
+
+    [HttpDelete("{id:guid}/data")]
+    [ProducesResponseType(typeof(ClearPortfolioDataResultDto), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<ActionResult<ClearPortfolioDataResultDto>> ClearData(Guid id)
+    {
+        return HandleResult(await Mediator.Send(new ClearPortfolioDataCommand(id), HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:guid}/summary")]

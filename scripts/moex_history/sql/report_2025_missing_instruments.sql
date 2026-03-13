@@ -14,7 +14,8 @@ WITH src (name, ticker, isin, figi, type, currency_id, category_id, exchange, co
     VALUES
         ('МОНОПОЛИЯ оббП03', 'RU000A10ARS4', 'RU000A10ARS4', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),
         ('ТГК-14 оббП05', 'RU000A10AS02', 'RU000A10AS02', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),
-        ('ВИС ФИНАНС оббП07', 'RU000A10AV15', 'RU000A10AV15', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4))
+        ('ВИС ФИНАНС оббП07', 'RU000A10AV15', 'RU000A10AV15', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),
+        ('Озон Фармацевтика', 'OZPH', 'RU000A109B25', NULL::text, 1, 'RUB', 21, 'TQBR', 'RU', NULL::numeric(18,4))
 ),
 actor AS (
     SELECT '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid AS user_id
