@@ -130,8 +130,12 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         foreach (var op in operations)
         {
             if (op.InstrumentId is null) continue;
+            if (instruments.TryGetValue(op.InstrumentId.Value, out var instrument) && instrument.Type == InstrumentType.Currency)
+            {
+                continue;
+            }
 
-            var instrumentCurrency = instruments.TryGetValue(op.InstrumentId.Value, out var instrument)
+            var instrumentCurrency = instruments.TryGetValue(op.InstrumentId.Value, out instrument)
                 ? instrument.CurrencyId
                 : op.CurrencyId;
             var price = data.Convert(op.Price, op.CurrencyId, instrumentCurrency, op.TradeDate);
@@ -166,17 +170,34 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         {
             if (op.TradeDate.Date > asOfDate.Date) break;
 
+            var instrument = op.InstrumentId is not null && instruments.TryGetValue(op.InstrumentId.Value, out var resolvedInstrument)
+                ? resolvedInstrument
+                : null;
             var amount = op.Price != 0 ? op.Price : op.Quantity;
             var tradeValue = op.Quantity * op.Price;
 
             switch (op.Type)
             {
                 case OperationType.Buy when op.InstrumentId != null:
+                    if (instrument?.Type == InstrumentType.Currency)
+                    {
+                        AddCash(instrument.CurrencyId, op.Quantity, cashByCurrency);
+                        AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
+                        break;
+                    }
+
                     AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
                     break;
                 case OperationType.Sell when op.InstrumentId != null:
                 case OperationType.BondPartialRedemption when op.InstrumentId != null:
                 case OperationType.BondMaturity when op.InstrumentId != null:
+                    if (instrument?.Type == InstrumentType.Currency)
+                    {
+                        AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
+                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                        break;
+                    }
+
                     AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     break;
                 case OperationType.Split when op.InstrumentId != null:
@@ -199,6 +220,12 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     break;
                 case OperationType.TransferOut when op.InstrumentId == null:
                     AddCash(op.CurrencyId, -amount, cashByCurrency);
+                    break;
+                case OperationType.TransferIn when op.InstrumentId != null && instrument?.Type == InstrumentType.Currency:
+                    AddCash(instrument.CurrencyId, op.Quantity, cashByCurrency);
+                    break;
+                case OperationType.TransferOut when op.InstrumentId != null && instrument?.Type == InstrumentType.Currency:
+                    AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
                     break;
             }
         }
@@ -224,6 +251,10 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             var instrumentCurrency = instruments.TryGetValue(instrumentId, out var instrument)
                 ? instrument.CurrencyId
                 : baseCurrency;
+            if (instrument?.Type == InstrumentType.Currency)
+            {
+                continue;
+            }
             var pricePoint = data.GetPrice(instrumentId, asOfDate);
             var priceValue = pricePoint?.Value;
             var marketValueBase = priceValue.HasValue

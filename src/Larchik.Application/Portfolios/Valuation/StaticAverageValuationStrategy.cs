@@ -43,7 +43,10 @@ public class StaticAverageValuationStrategy : IValuationStrategy
                 case OperationType.ReverseSplit:
                     if (position.Quantity != 0)
                     {
-                        position.Quantity *= op.Quantity;
+                        var updated = position.Quantity * op.Quantity;
+                        position.Quantity = op.Type == OperationType.ReverseSplit
+                            ? decimal.Round(updated, 0, MidpointRounding.AwayFromZero)
+                            : updated;
                     }
                     break;
                 default:

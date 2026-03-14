@@ -89,14 +89,27 @@ public class LifoValuationStrategy : IValuationStrategy
                     var factor = op.Quantity;
                     if (factor <= 0) break;
 
-                    position.Quantity *= factor;
+                    var scaledTotal = position.Quantity * factor;
+                    var targetTotal = op.Type == OperationType.ReverseSplit
+                        ? decimal.Round(scaledTotal, 0, MidpointRounding.AwayFromZero)
+                        : scaledTotal;
+                    position.Quantity = targetTotal;
 
                     if (lots.Count == 0) break;
 
-                    foreach (var lot in lots)
+                    var adjustedLots = lots.ToArray();
+                    var lotTotal = 0m;
+                    foreach (var lot in adjustedLots)
                     {
                         lot.Quantity *= factor;
                         lot.CostPerUnit /= factor;
+                        lotTotal += lot.Quantity;
+                    }
+
+                    var delta = targetTotal - lotTotal;
+                    if (delta != 0 && adjustedLots.Length > 0)
+                    {
+                        adjustedLots[0].Quantity += delta;
                     }
 
                     break;

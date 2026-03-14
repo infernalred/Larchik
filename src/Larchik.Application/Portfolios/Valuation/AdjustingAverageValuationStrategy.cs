@@ -45,7 +45,13 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
                 case OperationType.ReverseSplit:
                     if (position.Quantity != 0)
                     {
-                        qtyChange = position.Quantity * (op.Quantity - 1m);
+                        var updated = position.Quantity * op.Quantity;
+                        if (op.Type == OperationType.ReverseSplit)
+                        {
+                            updated = decimal.Round(updated, 0, MidpointRounding.AwayFromZero);
+                        }
+
+                        qtyChange = updated - position.Quantity;
                     }
                     break;
                 default:

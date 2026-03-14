@@ -76,15 +76,32 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
         var valuationOperations = new List<ValuationOperation>();
         foreach (var op in operations)
         {
+            var instrument = op.InstrumentId is not null && instruments.TryGetValue(op.InstrumentId.Value, out var resolvedInstrument)
+                ? resolvedInstrument
+                : null;
             var amount = op.Price != 0 ? op.Price : op.Quantity;
             var tradeValue = op.Quantity * op.Price;
             switch (op.Type)
             {
                 case OperationType.Buy when op.InstrumentId != null:
+                    if (instrument?.Type == InstrumentType.Currency)
+                    {
+                        AddCash(instrument.CurrencyId, op.Quantity, cashByCurrency);
+                        AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
+                        break;
+                    }
+
                     AddPosition(op.InstrumentId.Value, op.Quantity, positions);
                     AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
                     break;
                 case OperationType.Sell when op.InstrumentId != null:
+                    if (instrument?.Type == InstrumentType.Currency)
+                    {
+                        AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
+                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                        break;
+                    }
+
                     AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
                     AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     break;
@@ -95,6 +112,11 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
                     break;
                 case OperationType.Split when op.InstrumentId != null:
                 case OperationType.ReverseSplit when op.InstrumentId != null:
+                    if (instrument?.Type == InstrumentType.Currency)
+                    {
+                        break;
+                    }
+
                     ApplySplitFactor(op.InstrumentId.Value, op.Quantity, positions);
                     break;
                 case OperationType.Dividend:
@@ -114,6 +136,12 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
                 case OperationType.TransferIn:
                     if (op.InstrumentId != null)
                     {
+                        if (instrument?.Type == InstrumentType.Currency)
+                        {
+                            AddCash(instrument.CurrencyId, op.Quantity, cashByCurrency);
+                            break;
+                        }
+
                         AddPosition(op.InstrumentId.Value, op.Quantity, positions);
                     }
                     else
@@ -126,6 +154,12 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
                 case OperationType.TransferOut:
                     if (op.InstrumentId != null)
                     {
+                        if (instrument?.Type == InstrumentType.Currency)
+                        {
+                            AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
+                            break;
+                        }
+
                         AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
                     }
                     else
@@ -138,10 +172,9 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             }
 
             if (op.InstrumentId is null) continue;
+            if (instrument?.Type == InstrumentType.Currency) continue;
 
-            var instrumentCurrency = instruments.TryGetValue(op.InstrumentId.Value, out var instrument)
-                ? instrument.CurrencyId
-                : op.CurrencyId;
+            var instrumentCurrency = instrument?.CurrencyId ?? op.CurrencyId;
             var priceInInstrument = data.Convert(op.Price, op.CurrencyId, instrumentCurrency, op.TradeDate);
             var feeInInstrument = data.Convert(op.Fee, op.CurrencyId, instrumentCurrency, op.TradeDate);
 
@@ -288,7 +321,10 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
     {
         if (factor <= 0) return;
         if (!positions.TryGetValue(instrumentId, out var existing)) return;
-        positions[instrumentId] = existing * factor;
+        var updated = existing * factor;
+        positions[instrumentId] = factor < 1m
+            ? decimal.Round(updated, 0, MidpointRounding.AwayFromZero)
+            : updated;
     }
 
 }
