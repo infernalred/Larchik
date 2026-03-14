@@ -121,8 +121,44 @@ public class SyncMoexPricesCommandHandler(
             return Result<int>.Success(0);
         }
 
-        var matches = instruments
-            .Where(x => pricesByTicker.ContainsKey(x.Ticker))
+        var instrumentIds = instruments
+            .Select(x => x.Id)
+            .ToArray();
+        var aliasCodes = await context.InstrumentAliases
+            .AsNoTracking()
+            .Where(x => instrumentIds.Contains(x.InstrumentId))
+            .Select(x => new InstrumentAliasCandidate(x.InstrumentId, x.NormalizedAliasCode))
+            .ToListAsync(cancellationToken);
+
+        var instrumentsById = instruments.ToDictionary(x => x.Id);
+        var codeMap = new Dictionary<string, InstrumentCandidate>(StringComparer.OrdinalIgnoreCase);
+        foreach (var instrument in instruments)
+        {
+            if (!codeMap.ContainsKey(instrument.Ticker))
+            {
+                codeMap[instrument.Ticker] = instrument;
+            }
+        }
+
+        foreach (var alias in aliasCodes)
+        {
+            if (codeMap.ContainsKey(alias.NormalizedAliasCode))
+            {
+                continue;
+            }
+
+            if (instrumentsById.TryGetValue(alias.InstrumentId, out var instrument))
+            {
+                codeMap[alias.NormalizedAliasCode] = instrument;
+            }
+        }
+
+        var matches = pricesByTicker
+            .Select(kvp => codeMap.TryGetValue(kvp.Key, out var instrument)
+                ? new MatchedPricePoint(instrument, kvp.Value)
+                : null)
+            .Where(x => x is not null)
+            .Select(x => x!)
             .ToList();
 
         if (matches.Count == 0)
@@ -134,9 +170,9 @@ public class SyncMoexPricesCommandHandler(
             return Result<int>.Success(0);
         }
 
-        var instrumentIds = matches.Select(x => x.Id).Distinct().ToArray();
+        instrumentIds = matches.Select(x => x.Instrument.Id).Distinct().ToArray();
         var sourceDates = matches
-            .Select(x => pricesByTicker[x.Ticker].Date)
+            .Select(x => x.Point.Date)
             .Distinct()
             .ToArray();
         var sourceDateValues = sourceDates
@@ -157,9 +193,10 @@ public class SyncMoexPricesCommandHandler(
         var inserted = 0;
         var updated = 0;
 
-        foreach (var instrument in matches)
+        foreach (var matched in matches)
         {
-            var point = pricesByTicker[instrument.Ticker];
+            var instrument = matched.Instrument;
+            var point = matched.Point;
             var existingKey = new { InstrumentId = instrument.Id, Date = point.Date };
 
             if (existingByInstrumentDate.TryGetValue(existingKey, out var price))
@@ -189,14 +226,16 @@ public class SyncMoexPricesCommandHandler(
 
         var changes = await context.SaveChangesAsync(cancellationToken);
         var sourceDateDistribution = matches
-            .GroupBy(x => pricesByTicker[x.Ticker].Date)
+            .GroupBy(x => x.Point.Date)
             .OrderBy(x => x.Key)
             .Select(x => $"{x.Key:yyyy-MM-dd}:{x.Count()}")
             .ToArray();
+        var aliasMatchCount = matches.Count(x => !string.Equals(x.Instrument.Ticker, x.Point.SecId, StringComparison.OrdinalIgnoreCase));
 
         logger.LogInformation(
             "MOEX price sync finished for {Date} UTC. Boards loaded: {LoadedBoards}/{TotalBoards}. " +
             "Records from MOEX: {MoexRecordsFromBoards} ({MoexUniqueSecIds} unique). Local matches: {Matches}/{InstrumentCount}. " +
+            "Alias matches: {AliasMatches}. " +
             "Matched source dates: {SourceDates}. " +
             "Inserted: {Inserted}, updated: {Updated}, db changes: {Changes}",
             date.ToString("yyyy-MM-dd"),
@@ -206,6 +245,7 @@ public class SyncMoexPricesCommandHandler(
             pricesByTicker.Count,
             matches.Count,
             instruments.Count,
+            aliasMatchCount,
             sourceDateDistribution.Length == 0 ? "none" : string.Join(", ", sourceDateDistribution),
             inserted,
             updated,
@@ -268,7 +308,7 @@ public class SyncMoexPricesCommandHandler(
                         {
                             if (!prices.ContainsKey(row.SecId))
                             {
-                                prices[row.SecId] = new MoexPricePoint(row.Price, probeDate);
+                                prices[row.SecId] = new MoexPricePoint(row.SecId, row.Price, probeDate);
                             }
                         }
 
@@ -438,7 +478,9 @@ public class SyncMoexPricesCommandHandler(
     }
 
     private sealed record InstrumentCandidate(Guid Id, string Ticker, string CurrencyId);
-    private sealed record MoexPricePoint(decimal Value, DateOnly Date);
+    private sealed record InstrumentAliasCandidate(Guid InstrumentId, string NormalizedAliasCode);
+    private sealed record MatchedPricePoint(InstrumentCandidate Instrument, MoexPricePoint Point);
+    private sealed record MoexPricePoint(string SecId, decimal Value, DateOnly Date);
     private sealed record MoexBoardPrices(DateOnly? SourceDate, Dictionary<string, MoexPricePoint> Prices);
     private sealed record MoexPriceRow(string SecId, decimal Price);
 }

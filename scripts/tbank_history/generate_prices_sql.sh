@@ -16,7 +16,8 @@ Options:
   --base-url <url>     GetCandles endpoint URL
   --targets-file <path>
                        Explicit TSV file with request instrumentId in the first
-                       column and optional DB FIGI in the second column.
+                       column and optional local DB lookup code in the second
+                       column. The local code may be either FIGI or ticker.
                        When set, targets are loaded from this file instead of
                        querying table instruments.
   --adjust-before <YYYY-MM-DD>
@@ -46,7 +47,7 @@ normalize_year() {
 
 fetch_figi_year() {
   local request_id="$1"
-  local db_figi="$2"
+  local db_code="$2"
   local year="$3"
   local output_file="$4"
 
@@ -75,13 +76,13 @@ JSON
       -H "Content-Type: application/json" \
       -d "$payload" \
       "$BASE_URL")"; then
-    echo "WARN: request failed for instrumentId=${request_id}, db_figi=${db_figi}, year=${year}" >&2
+    echo "WARN: request failed for instrumentId=${request_id}, db_code=${db_code}, year=${year}" >&2
     return
   fi
 
   local parsed
   parsed="$(jq -r \
-    --arg figi "$db_figi" \
+    --arg db_code "$db_code" \
     --arg adjust_before "${ADJUST_BEFORE_DATE}" \
     --arg adjust_factor "${ADJUST_FACTOR}" '
     (.candles // [])[]
@@ -97,7 +98,7 @@ JSON
         else $raw_price
       end) as $price
     | select($price > 0)
-    | [$figi, $date, ($price | tostring)] | @tsv
+    | [$db_code, $date, ($price | tostring)] | @tsv
   ' <<<"$response")"
 
   if [[ -n "$parsed" ]]; then
@@ -128,17 +129,17 @@ write_year_sql() {
     fi
 
     echo "BEGIN;"
-    echo "WITH src (figi, trade_date, price) AS ("
+    echo "WITH src (db_code, trade_date, price) AS ("
     echo "    VALUES"
 
     awk -F $'\t' -v total="$rows_count" '
       {
-        figi = $1
-        gsub(/\047/, "\047\047", figi)
+        db_code = $1
+        gsub(/\047/, "\047\047", db_code)
         price = $3
         gsub(/,/, ".", price)
         suffix = (NR < total ? "," : "")
-        printf "    (\047%s\047, DATE \047%s\047, %s)%s\n", figi, $2, price, suffix
+        printf "    (\047%s\047, DATE \047%s\047, %s)%s\n", db_code, $2, price, suffix
       }
     ' "$rows_file"
 
@@ -152,7 +153,9 @@ resolved AS (
         i.currency_id,
         md5(i.id::text || '|' || s.trade_date::text || '|${PROVIDER}') AS hash_key
     FROM src s
-    JOIN instruments i ON upper(i.figi) = s.figi
+    JOIN instruments i
+      ON upper(coalesce(i.figi, '')) = s.db_code
+      OR upper(i.ticker) = s.db_code
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
@@ -289,11 +292,11 @@ if [[ -n "$TARGETS_FILE" ]]; then
   awk -F $'\t' '
     NF >= 1 {
       request_id = $1
-      db_figi = (NF >= 2 ? $2 : $1)
+      db_code = (NF >= 2 ? $2 : $1)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", request_id)
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", db_figi)
-      db_figi = toupper(db_figi)
-      if (request_id != "" && db_figi != "") print request_id "\t" db_figi
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", db_code)
+      db_code = toupper(db_code)
+      if (request_id != "" && db_code != "") print request_id "\t" db_code
     }
   ' "$TARGETS_FILE" | awk '!seen[$0]++' >"$figi_file"
 else
@@ -322,9 +325,9 @@ for ((year = FROM_YEAR; year <= TO_YEAR; year++)); do
 
   : >"$raw_file"
 
-  while IFS=$'\t' read -r request_id db_figi; do
-    [[ -z "$request_id" || -z "$db_figi" ]] && continue
-    fetch_figi_year "$request_id" "$db_figi" "$year" "$raw_file"
+  while IFS=$'\t' read -r request_id db_code; do
+    [[ -z "$request_id" || -z "$db_code" ]] && continue
+    fetch_figi_year "$request_id" "$db_code" "$year" "$raw_file"
   done <"$figi_file"
 
   awk -F $'\t' 'NF >= 3 && !seen[$1 FS $2]++ { print $1 "\t" $2 "\t" $3 }' "$raw_file" >"$dedup_file"

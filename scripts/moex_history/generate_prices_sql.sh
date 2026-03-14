@@ -16,9 +16,10 @@ Options:
   --base-url <url>     MOEX ISS base URL (default: https://iss.moex.com/iss)
   --boards <csv>       Board priority list (default: TQBR,TQTF,TQIF,TQCB,TQOB)
   --targets-file <path>
-                       Explicit TSV file with ticker and market columns.
-                       When set, instruments are loaded from this file instead
-                       of querying table instruments.
+                       Explicit TSV file with request ticker, market, and
+                       optional local DB ticker columns. When set, instruments
+                       are loaded from this file instead of querying table
+                       instruments.
   --help               Show this message
 USAGE
 }
@@ -41,22 +42,33 @@ normalize_year() {
 }
 
 fetch_ticker_year() {
-  local ticker="$1"
+  local request_ticker="$1"
   local market="$2"
-  local year="$3"
-  local output_file="$4"
+  local db_ticker="$3"
+  local year="$4"
+  local output_file="$5"
 
   local from_date="${year}-01-01"
   local till_date="${year}-12-31"
 
+  local boards=("${BOARDS[@]}")
+  local url_path_template="history/engines/stock/markets/${market}/boards/%s/securities/${request_ticker}.json"
+
+  if [[ "$market" == "currency" ]]; then
+    boards=("CETS")
+    url_path_template="history/engines/currency/markets/selt/boards/%s/securities/${request_ticker}.json"
+  fi
+
   local board
-  for board in "${BOARDS[@]}"; do
+  for board in "${boards[@]}"; do
     local start=0
     while true; do
-      local url="${BASE_URL}/history/engines/stock/markets/${market}/boards/${board}/securities/${ticker}.json?from=${from_date}&till=${till_date}&start=${start}&iss.meta=off&iss.only=history&history.columns=SECID,TRADEDATE,LEGALCLOSEPRICE,MARKETPRICE2,CLOSE,WAPRICE,LCLOSEPRICE,LAST"
+      local path
+      printf -v path "$url_path_template" "$board"
+      local url="${BASE_URL}/${path}?from=${from_date}&till=${till_date}&start=${start}&iss.meta=off&iss.only=history&history.columns=SECID,TRADEDATE,LEGALCLOSEPRICE,MARKETPRICE2,CLOSE,WAPRICE,LCLOSEPRICE,LAST"
       local response
       if ! response="$(curl -fsS --retry 2 --retry-delay 1 "$url")"; then
-        echo "WARN: request failed for ticker=${ticker}, market=${market}, board=${board}, year=${year}" >&2
+        echo "WARN: request failed for request_ticker=${request_ticker}, market=${market}, board=${board}, year=${year}" >&2
         break
       fi
 
@@ -69,8 +81,8 @@ fetch_ticker_year() {
         | select(($r[1] | tostring) | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))
         | select($price | test("^[0-9]+(\\.[0-9]+)?$"))
         | select(($price | tonumber) > 0)
-        | [($r[0] | tostring), ($r[1] | tostring), $price] | @tsv
-      ' <<<"$response")"
+        | [($r[1] | tostring), $price] | @tsv
+      ' <<<"$response" | awk -F $'\t' -v db_ticker="$db_ticker" 'NF >= 2 { print db_ticker "\t" $1 "\t" $2 }')"
 
       if [[ -n "$parsed" ]]; then
         printf '%s\n' "$parsed" >>"$output_file"
@@ -259,11 +271,12 @@ if [[ -n "$TARGETS_FILE" ]]; then
     NF >= 2 {
       ticker = toupper($1)
       market = tolower($2)
-      if (ticker != "" && (market == "shares" || market == "bonds")) {
-        print ticker "\t" market
+      db_ticker = (NF >= 3 ? toupper($3) : ticker)
+      if (ticker != "" && db_ticker != "" && (market == "shares" || market == "bonds" || market == "currency")) {
+        print ticker "\t" market "\t" db_ticker
       }
     }
-  ' "$TARGETS_FILE" | awk -F $'\t' '!seen[$1 FS $2]++ { print $1 "\t" $2 }' >"$instruments_file"
+  ' "$TARGETS_FILE" | awk -F $'\t' '!seen[$1 FS $2 FS $3]++ { print $1 "\t" $2 "\t" $3 }' >"$instruments_file"
 else
   if [[ -z "${DATABASE_URL:-}" ]]; then
     echo "DATABASE_URL is required when --targets-file is not provided" >&2
@@ -276,12 +289,13 @@ else
          case
            when type = 2 then 'bonds'
            when type in (1, 3) then 'shares'
+           when type = 4 then 'currency'
            else null
          end as market
   from instruments
   where ticker is not null
     and btrim(ticker) <> ''
-    and type in (1, 2, 3)
+    and type in (1, 2, 3, 4)
   order by 1;
   " >"$instruments_file"
 fi
@@ -301,9 +315,9 @@ for ((year = FROM_YEAR; year <= TO_YEAR; year++)); do
 
   : >"$raw_file"
 
-  while IFS=$'\t' read -r ticker market; do
-    [[ -z "$ticker" || -z "$market" ]] && continue
-    fetch_ticker_year "$ticker" "$market" "$year" "$raw_file"
+  while IFS=$'\t' read -r request_ticker market db_ticker; do
+    [[ -z "$request_ticker" || -z "$market" || -z "$db_ticker" ]] && continue
+    fetch_ticker_year "$request_ticker" "$market" "$db_ticker" "$year" "$raw_file"
   done <"$instruments_file"
 
   awk -F $'\t' 'NF >= 3 && !seen[$1 FS $2]++ { print $1 "\t" $2 "\t" $3 }' "$raw_file" >"$dedup_file"

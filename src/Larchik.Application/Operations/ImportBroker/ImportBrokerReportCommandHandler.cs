@@ -236,12 +236,23 @@ public class ImportBrokerReportCommandHandler(
                     var hasImportedHistory = parseResult.Operations.Any(x =>
                         x.Operation.InstrumentId == action.InstrumentId &&
                         x.Operation.TradeDate.Date < action.EffectiveDate.Date);
+                    var hasImportedPostActionActivity = parseResult.Operations.Any(x =>
+                        x.Operation.InstrumentId == action.InstrumentId &&
+                        x.Operation.TradeDate.Date >= action.EffectiveDate.Date);
 
                     var hasExistingHistory = existingOperationDates.Any(x =>
                         x.InstrumentId == action.InstrumentId &&
                         x.TradeDate.Date < action.EffectiveDate.Date);
+                    var hasExistingPostActionActivity = existingOperationDates.Any(x =>
+                        x.InstrumentId == action.InstrumentId &&
+                        x.TradeDate.Date >= action.EffectiveDate.Date);
 
                     if (!hasImportedHistory && !hasExistingHistory)
+                    {
+                        continue;
+                    }
+
+                    if (!hasImportedPostActionActivity && !hasExistingPostActionActivity)
                     {
                         continue;
                     }
