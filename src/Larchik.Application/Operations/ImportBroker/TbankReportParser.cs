@@ -428,9 +428,17 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         if (dateCol == 0 || opCol == 0) return;
 
         var startIndex = headerRow.RowNumber + 1;
+        var currentCurrency = FindCurrentCashCurrency(rows, headerRow.RowNumber - 1) ?? "RUB";
         for (var i = startIndex; i <= rows.Count; i++)
         {
             var row = rows[i - 1];
+            var rowCurrency = TryGetCashSectionCurrency(row);
+            if (rowCurrency is not null)
+            {
+                currentCurrency = rowCurrency;
+                continue;
+            }
+
             var opText = row.GetString(opCol);
             var dateText = row.GetString(dateCol);
             if (string.IsNullOrWhiteSpace(dateText) && executionDateCol > 0)
@@ -461,7 +469,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
                 Quantity = 0,
                 Price = amount,
                 Fee = 0,
-                CurrencyId = "RUB",
+                CurrencyId = currentCurrency,
                 TradeDate = tradeDate,
                 SettlementDate = tradeDate,
                 Note = note,
@@ -509,6 +517,32 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         var parts = text.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return DateTime.TryParse(parts.FirstOrDefault(), RuCulture, DateTimeStyles.AssumeLocal, out var dt)
             ? NormalizeImportedDate(dt)
+            : null;
+    }
+
+    private static string? FindCurrentCashCurrency(IReadOnlyList<ReportRow> rows, int rowNumber)
+    {
+        for (var i = rowNumber; i >= 1; i--)
+        {
+            var currency = TryGetCashSectionCurrency(rows[i - 1]);
+            if (currency is not null)
+            {
+                return currency;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? TryGetCashSectionCurrency(ReportRow row)
+    {
+        if (row.Cells.Count != 1)
+        {
+            return null;
+        }
+
+        return row.Cells.Keys.First() == 1
+            ? NormalizeCurrency(row.GetString(1))
             : null;
     }
 
