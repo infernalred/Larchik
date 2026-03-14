@@ -65,7 +65,7 @@ fetch_ticker_year() {
     while true; do
       local path
       printf -v path "$url_path_template" "$board"
-      local url="${BASE_URL}/${path}?from=${from_date}&till=${till_date}&start=${start}&iss.meta=off&iss.only=history&history.columns=SECID,TRADEDATE,LEGALCLOSEPRICE,MARKETPRICE2,CLOSE,WAPRICE,LCLOSEPRICE,LAST"
+      local url="${BASE_URL}/${path}?from=${from_date}&till=${till_date}&start=${start}&iss.meta=off&iss.only=history&history.columns=SECID,TRADEDATE,LEGALCLOSEPRICE,MARKETPRICE2,CLOSE,WAPRICE,LCLOSEPRICE,LAST,CURRENCYID,FACEVALUE,FACEUNIT,ACCINT"
       local response
       if ! response="$(curl -fsS --retry 2 --retry-delay 1 "$url")"; then
         echo "WARN: request failed for request_ticker=${request_ticker}, market=${market}, board=${board}, year=${year}" >&2
@@ -74,15 +74,29 @@ fetch_ticker_year() {
 
       local parsed
       parsed="$(jq -r '
-        (.history.data // [])[]
+        (.history.columns // []) as $columns
+        | def col($name): ($columns | index($name));
+          def val($row; $name):
+            (col($name)) as $index
+            | if $index == null then null else $row[$index] end;
+          (.history.data // [])[]
         | . as $r
-        | ($r[2] // $r[3] // $r[4] // $r[5] // $r[6] // $r[7]) as $raw_price
+        | ([val($r; "LEGALCLOSEPRICE"), val($r; "MARKETPRICE2"), val($r; "CLOSE"), val($r; "WAPRICE"), val($r; "LCLOSEPRICE"), val($r; "LAST")]
+            | map(select(. != null))
+            | .[0]) as $raw_price
         | ($raw_price | tostring | gsub(","; ".")) as $price
-        | select(($r[1] | tostring) | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))
+        | ((val($r; "CURRENCYID") // "") | tostring | ascii_upcase) as $trade_currency
+        | ((val($r; "FACEVALUE") // "") | tostring | gsub(","; ".")) as $face_value
+        | ((val($r; "FACEUNIT") // "") | tostring | ascii_upcase) as $face_currency
+        | ((val($r; "ACCINT") // "") | tostring | gsub(","; ".")) as $accrued_interest
+        | ((val($r; "TRADEDATE") // "") | tostring) as $trade_date
+        | select($trade_date | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))
         | select($price | test("^[0-9]+(\\.[0-9]+)?$"))
         | select(($price | tonumber) > 0)
-        | [($r[1] | tostring), $price] | @tsv
-      ' <<<"$response" | awk -F $'\t' -v db_ticker="$db_ticker" 'NF >= 2 { print db_ticker "\t" $1 "\t" $2 }')"
+        | select(($face_value == "") or ($face_value | test("^[0-9]+(\\.[0-9]+)?$")))
+        | select(($accrued_interest == "") or ($accrued_interest | test("^[0-9]+(\\.[0-9]+)?$")))
+        | [$trade_date, $price, $trade_currency, $face_value, $face_currency, $accrued_interest] | @tsv
+      ' <<<"$response" | awk -F $'\t' -v db_ticker="$db_ticker" 'NF >= 2 { print db_ticker "\t" $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5 "\t" $6 }')"
 
       if [[ -n "$parsed" ]]; then
         printf '%s\n' "$parsed" >>"$output_file"
@@ -122,31 +136,132 @@ write_year_sql() {
     fi
 
     echo "BEGIN;"
-    echo "WITH src (ticker, trade_date, price) AS ("
+    echo "WITH src (ticker, trade_date, raw_price, trade_currency_id, face_value, face_currency_id, accrued_interest) AS ("
     echo "    VALUES"
 
     awk -F $'\t' -v total="$rows_count" '
+      function sql_text(value,    escaped) {
+        if (value == "") {
+          return "NULL"
+        }
+        escaped = value
+        gsub(/\047/, "\047\047", escaped)
+        return sprintf("\047%s\047", escaped)
+      }
+
+      function sql_numeric(value) {
+        if (value == "") {
+          return "NULL"
+        }
+        gsub(/,/, ".", value)
+        return value
+      }
+
       {
         ticker = $1
         gsub(/\047/, "\047\047", ticker)
-        price = $3
-        gsub(/,/, ".", price)
+        raw_price = $3
+        gsub(/,/, ".", raw_price)
         suffix = (NR < total ? "," : "")
-        printf "    (\047%s\047, DATE \047%s\047, %s)%s\n", ticker, $2, price, suffix
+        printf "    (\047%s\047, DATE \047%s\047, %s, %s, %s, %s, %s)%s\n",
+          ticker,
+          $2,
+          raw_price,
+          sql_text($4),
+          sql_numeric($5),
+          sql_text($6),
+          sql_numeric($7),
+          suffix
       }
     ' "$rows_file"
 
     cat <<SQL_TAIL
 ),
-resolved AS (
+resolved_base AS (
     SELECT
         i.id AS instrument_id,
         s.trade_date,
-        s.price::numeric(18,4) AS price,
+        i.type AS instrument_type,
+        s.raw_price,
+        CASE
+            WHEN upper(coalesce(s.trade_currency_id, '')) IN ('SUR', 'RUR') THEN 'RUB'
+            WHEN nullif(upper(coalesce(s.trade_currency_id, '')), '') IS NULL THEN i.currency_id
+            ELSE upper(s.trade_currency_id)
+        END AS trade_currency_id,
+        s.face_value,
+        CASE
+            WHEN upper(coalesce(s.face_currency_id, '')) IN ('SUR', 'RUR') THEN 'RUB'
+            WHEN nullif(upper(coalesce(s.face_currency_id, '')), '') IS NULL THEN i.currency_id
+            ELSE upper(s.face_currency_id)
+        END AS face_currency_id,
+        coalesce(s.accrued_interest, 0) AS accrued_interest,
         i.currency_id,
         md5(i.id::text || '|' || s.trade_date::text || '|${PROVIDER}') AS hash_key
     FROM src s
     JOIN instruments i ON upper(i.ticker) = s.ticker
+),
+resolved AS (
+    SELECT
+        rb.instrument_id,
+        rb.trade_date,
+        CASE
+            WHEN rb.instrument_type = 2 AND coalesce(rb.face_value, 0) > 0 THEN (
+                CASE
+                    WHEN rb.face_currency_id = rb.currency_id THEN (rb.raw_price / 100.0) * rb.face_value
+                    WHEN clean_direct.rate IS NOT NULL THEN ((rb.raw_price / 100.0) * rb.face_value) * clean_direct.rate
+                    WHEN clean_inverse.rate IS NOT NULL AND clean_inverse.rate <> 0 THEN ((rb.raw_price / 100.0) * rb.face_value) / clean_inverse.rate
+                    ELSE (rb.raw_price / 100.0) * rb.face_value
+                END
+                +
+                CASE
+                    WHEN rb.accrued_interest = 0 THEN 0
+                    WHEN rb.trade_currency_id = rb.currency_id THEN rb.accrued_interest
+                    WHEN accrued_direct.rate IS NOT NULL THEN rb.accrued_interest * accrued_direct.rate
+                    WHEN accrued_inverse.rate IS NOT NULL AND accrued_inverse.rate <> 0 THEN rb.accrued_interest / accrued_inverse.rate
+                    ELSE rb.accrued_interest
+                END
+            )::numeric(18,4)
+            ELSE rb.raw_price::numeric(18,4)
+        END AS price,
+        rb.currency_id,
+        rb.hash_key
+    FROM resolved_base rb
+    LEFT JOIN LATERAL (
+        SELECT fx.rate
+        FROM fx_rates fx
+        WHERE fx.base_currency_id = rb.face_currency_id
+          AND fx.quote_currency_id = rb.currency_id
+          AND fx.date::date <= rb.trade_date
+        ORDER BY fx.date DESC, fx.created_at DESC
+        LIMIT 1
+    ) AS clean_direct ON true
+    LEFT JOIN LATERAL (
+        SELECT fx.rate
+        FROM fx_rates fx
+        WHERE fx.base_currency_id = rb.currency_id
+          AND fx.quote_currency_id = rb.face_currency_id
+          AND fx.date::date <= rb.trade_date
+        ORDER BY fx.date DESC, fx.created_at DESC
+        LIMIT 1
+    ) AS clean_inverse ON true
+    LEFT JOIN LATERAL (
+        SELECT fx.rate
+        FROM fx_rates fx
+        WHERE fx.base_currency_id = rb.trade_currency_id
+          AND fx.quote_currency_id = rb.currency_id
+          AND fx.date::date <= rb.trade_date
+        ORDER BY fx.date DESC, fx.created_at DESC
+        LIMIT 1
+    ) AS accrued_direct ON true
+    LEFT JOIN LATERAL (
+        SELECT fx.rate
+        FROM fx_rates fx
+        WHERE fx.base_currency_id = rb.currency_id
+          AND fx.quote_currency_id = rb.trade_currency_id
+          AND fx.date::date <= rb.trade_date
+        ORDER BY fx.date DESC, fx.created_at DESC
+        LIMIT 1
+    ) AS accrued_inverse ON true
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
@@ -284,19 +399,37 @@ else
   fi
 
   psql "$DATABASE_URL" -X -A -t -F $'\t' -v ON_ERROR_STOP=1 -c "
+  with alias_candidates as (
+      select
+          ia.instrument_id,
+          upper(trim(ia.alias_code)) as alias_code,
+          row_number() over (partition by ia.instrument_id order by ia.alias_code) as rn
+      from instrument_aliases ia
+      where ia.alias_code is not null
+        and btrim(ia.alias_code) <> ''
+        and upper(trim(ia.alias_code)) !~ '^[A-Z]{2}[A-Z0-9]{10}$'
+  )
   select distinct
-         upper(trim(ticker)) as ticker,
+         upper(trim(
+             case
+               when upper(trim(i.ticker)) ~ '^[A-Z]{2}[A-Z0-9]{10}$' and ac.alias_code is not null
+                 then ac.alias_code
+               else i.ticker
+             end
+         )) as request_ticker,
          case
-           when type = 2 then 'bonds'
-           when type in (1, 3) then 'shares'
-           when type = 4 then 'currency'
+           when i.type = 2 then 'bonds'
+           when i.type in (1, 3) then 'shares'
+           when i.type = 4 then 'currency'
            else null
-         end as market
-  from instruments
-  where ticker is not null
-    and btrim(ticker) <> ''
-    and type in (1, 2, 3, 4)
-  order by 1;
+         end as market,
+         upper(trim(i.ticker)) as db_ticker
+  from instruments i
+  left join alias_candidates ac on ac.instrument_id = i.id and ac.rn = 1
+  where i.ticker is not null
+    and btrim(i.ticker) <> ''
+    and i.type in (1, 2, 3, 4)
+  order by 3;
   " >"$instruments_file"
 fi
 
@@ -320,7 +453,7 @@ for ((year = FROM_YEAR; year <= TO_YEAR; year++)); do
     fetch_ticker_year "$request_ticker" "$market" "$db_ticker" "$year" "$raw_file"
   done <"$instruments_file"
 
-  awk -F $'\t' 'NF >= 3 && !seen[$1 FS $2]++ { print $1 "\t" $2 "\t" $3 }' "$raw_file" >"$dedup_file"
+  awk -F $'\t' 'NF >= 3 && !seen[$1 FS $2]++ { print }' "$raw_file" >"$dedup_file"
 
   write_year_sql "$year" "$dedup_file" "$sql_file"
 

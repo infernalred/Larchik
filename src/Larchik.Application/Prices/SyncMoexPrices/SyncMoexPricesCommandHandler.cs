@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Larchik.Application.Helpers;
+using Larchik.Application.Portfolios.Valuation;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
@@ -58,7 +59,7 @@ public class SyncMoexPricesCommandHandler(
                 (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf) &&
                 x.Ticker != null &&
                 x.Ticker != "")
-            .Select(x => new InstrumentCandidate(x.Id, x.Ticker.ToUpper(), x.CurrencyId.ToUpperInvariant()))
+            .Select(x => new InstrumentCandidate(x.Id, x.Ticker.ToUpper(), x.CurrencyId.ToUpperInvariant(), x.Type))
             .ToListAsync(cancellationToken);
 
         if (instruments.Count == 0)
@@ -178,6 +179,24 @@ public class SyncMoexPricesCommandHandler(
         var sourceDateValues = sourceDates
             .Select(x => x.ToDateTime(TimeOnly.MinValue).Date)
             .ToArray();
+        var neededCurrencies = matches
+            .SelectMany(x => new[]
+            {
+                x.Instrument.CurrencyId,
+                x.Point.CurrencyId,
+                x.Point.FaceCurrencyId
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.ToUpperInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var fxRates = neededCurrencies.Length == 0
+            ? []
+            : await context.FxRates
+                .AsNoTracking()
+                .Where(x => neededCurrencies.Contains(x.BaseCurrencyId) && neededCurrencies.Contains(x.QuoteCurrencyId))
+                .ToListAsync(cancellationToken);
+        var data = new HistoricalDataLookup([], fxRates);
 
         var existing = await context.Prices
             .Where(x => instrumentIds.Contains(x.InstrumentId))
@@ -197,11 +216,12 @@ public class SyncMoexPricesCommandHandler(
         {
             var instrument = matched.Instrument;
             var point = matched.Point;
+            var normalizedValue = NormalizeStoredPrice(instrument, point, data);
             var existingKey = new { InstrumentId = instrument.Id, Date = point.Date };
 
             if (existingByInstrumentDate.TryGetValue(existingKey, out var price))
             {
-                price.Value = point.Value;
+                price.Value = normalizedValue;
                 price.CurrencyId = instrument.CurrencyId;
                 price.Provider = provider;
                 price.UpdatedAt = DateTime.UtcNow;
@@ -214,7 +234,7 @@ public class SyncMoexPricesCommandHandler(
                     Id = Guid.NewGuid(),
                     InstrumentId = instrument.Id,
                     Date = point.Date.ToDateTime(TimeOnly.MinValue),
-                    Value = point.Value,
+                    Value = normalizedValue,
                     CurrencyId = instrument.CurrencyId,
                     Provider = provider,
                     CreatedAt = DateTime.UtcNow,
@@ -308,7 +328,14 @@ public class SyncMoexPricesCommandHandler(
                         {
                             if (!prices.ContainsKey(row.SecId))
                             {
-                                prices[row.SecId] = new MoexPricePoint(row.SecId, row.Price, probeDate);
+                                prices[row.SecId] = new MoexPricePoint(
+                                    row.SecId,
+                                    row.Price,
+                                    probeDate,
+                                    row.CurrencyId,
+                                    row.FaceValue,
+                                    row.FaceCurrencyId,
+                                    row.AccruedInterest);
                             }
                         }
 
@@ -374,6 +401,10 @@ public class SyncMoexPricesCommandHandler(
                 .Select(column => Array.FindIndex(columns, x => x.Equals(column, StringComparison.OrdinalIgnoreCase)))
                 .Where(index => index >= 0)
                 .ToArray();
+            var currencyIdIndex = Array.FindIndex(columns, x => x.Equals("CURRENCYID", StringComparison.OrdinalIgnoreCase));
+            var faceValueIndex = Array.FindIndex(columns, x => x.Equals("FACEVALUE", StringComparison.OrdinalIgnoreCase));
+            var faceUnitIndex = Array.FindIndex(columns, x => x.Equals("FACEUNIT", StringComparison.OrdinalIgnoreCase));
+            var accruedIndex = Array.FindIndex(columns, x => x.Equals("ACCINT", StringComparison.OrdinalIgnoreCase));
 
             if (priceIndexes.Length == 0)
             {
@@ -399,7 +430,26 @@ public class SyncMoexPricesCommandHandler(
                     continue;
                 }
 
-                rows.Add(new MoexPriceRow(secId.ToUpperInvariant(), price));
+                var currencyId = TryGetString(rowElement, currencyIdIndex, out var rawCurrencyId)
+                    ? NormalizeMoexCurrency(rawCurrencyId)
+                    : null;
+                var faceCurrencyId = TryGetString(rowElement, faceUnitIndex, out var rawFaceCurrencyId)
+                    ? NormalizeMoexCurrency(rawFaceCurrencyId)
+                    : null;
+                var faceValue = TryGetDecimal(rowElement, faceValueIndex, out var parsedFaceValue)
+                    ? parsedFaceValue
+                    : (decimal?)null;
+                var accruedInterest = TryGetDecimal(rowElement, accruedIndex, out var parsedAccrued)
+                    ? parsedAccrued
+                    : (decimal?)null;
+
+                rows.Add(new MoexPriceRow(
+                    secId.ToUpperInvariant(),
+                    price,
+                    currencyId,
+                    faceValue,
+                    faceCurrencyId,
+                    accruedInterest));
             }
 
             return Result<List<MoexPriceRow>>.Success(rows);
@@ -427,7 +477,7 @@ public class SyncMoexPricesCommandHandler(
     private static bool TryGetString(JsonElement row, int index, out string? value)
     {
         value = null;
-        if (row.GetArrayLength() <= index)
+        if (index < 0 || row.GetArrayLength() <= index)
         {
             return false;
         }
@@ -451,7 +501,7 @@ public class SyncMoexPricesCommandHandler(
     private static bool TryGetDecimal(JsonElement row, int index, out decimal value)
     {
         value = 0;
-        if (row.GetArrayLength() <= index)
+        if (index < 0 || row.GetArrayLength() <= index)
         {
             return false;
         }
@@ -477,10 +527,61 @@ public class SyncMoexPricesCommandHandler(
         return decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out value);
     }
 
-    private sealed record InstrumentCandidate(Guid Id, string Ticker, string CurrencyId);
+    private static decimal NormalizeStoredPrice(
+        InstrumentCandidate instrument,
+        MoexPricePoint point,
+        HistoricalDataLookup data)
+    {
+        if (instrument.Type != InstrumentType.Bond || point.FaceValue is null or <= 0)
+        {
+            return point.Value;
+        }
+
+        var asOfDate = point.Date.ToDateTime(TimeOnly.MinValue);
+        var faceCurrency = point.FaceCurrencyId ?? instrument.CurrencyId;
+        var tradeCurrency = point.CurrencyId ?? instrument.CurrencyId;
+
+        var cleanAmount = point.Value / 100m * point.FaceValue.Value;
+        var cleanInInstrumentCurrency = data.Convert(cleanAmount, faceCurrency, instrument.CurrencyId, asOfDate);
+        var accruedInInstrumentCurrency = point.AccruedInterest is > 0
+            ? data.Convert(point.AccruedInterest.Value, tradeCurrency, instrument.CurrencyId, asOfDate)
+            : 0m;
+
+        return cleanInInstrumentCurrency + accruedInInstrumentCurrency;
+    }
+
+    private static string? NormalizeMoexCurrency(string? rawCurrency)
+    {
+        if (string.IsNullOrWhiteSpace(rawCurrency))
+        {
+            return null;
+        }
+
+        return rawCurrency.Trim().ToUpperInvariant() switch
+        {
+            "SUR" or "RUR" => "RUB",
+            "EUR" => "EUR",
+            var value => value
+        };
+    }
+
+    private sealed record InstrumentCandidate(Guid Id, string Ticker, string CurrencyId, InstrumentType Type);
     private sealed record InstrumentAliasCandidate(Guid InstrumentId, string NormalizedAliasCode);
     private sealed record MatchedPricePoint(InstrumentCandidate Instrument, MoexPricePoint Point);
-    private sealed record MoexPricePoint(string SecId, decimal Value, DateOnly Date);
+    private sealed record MoexPricePoint(
+        string SecId,
+        decimal Value,
+        DateOnly Date,
+        string? CurrencyId = null,
+        decimal? FaceValue = null,
+        string? FaceCurrencyId = null,
+        decimal? AccruedInterest = null);
     private sealed record MoexBoardPrices(DateOnly? SourceDate, Dictionary<string, MoexPricePoint> Prices);
-    private sealed record MoexPriceRow(string SecId, decimal Price);
+    private sealed record MoexPriceRow(
+        string SecId,
+        decimal Price,
+        string? CurrencyId,
+        decimal? FaceValue,
+        string? FaceCurrencyId,
+        decimal? AccruedInterest);
 }

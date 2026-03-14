@@ -10,6 +10,19 @@ SET isin = 'RU0009091573',
 WHERE upper(ticker) = 'TRNFP'
   AND upper(isin) = 'BBG00475KHX6';
 
+-- Existing row for ticker T was loaded with the ISIN of T-Technologies but the
+-- metadata of AT&T. Correct it in-place so imported operations resolve to the
+-- right Russian equity.
+UPDATE instruments
+SET name = 'Т-Технологии МКПАО ао',
+    country = 'RU',
+    currency_id = 'RUB',
+    exchange = 'TQBR',
+    updated_at = now(),
+    updated_by = '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid
+WHERE upper(ticker) = 'T'
+  AND upper(isin) = 'RU000A107UL4';
+
 WITH src (name, ticker, isin, figi, type, currency_id, category_id, exchange, country, price) AS (
     VALUES
         ('МОНОПОЛИЯ оббП03', 'RU000A10ARS4', 'RU000A10ARS4', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),

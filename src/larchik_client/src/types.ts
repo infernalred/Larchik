@@ -85,11 +85,14 @@ export interface CashBalance {
 export interface PositionHolding {
   instrumentId: string;
   instrumentName: string;
+  instrumentType?: InstrumentType;
   currencyId: string;
   quantity: number;
   lastPrice?: number;
   marketValueBase: number;
   averageCost: number;
+  isCash?: boolean;
+  localAmount?: number;
 }
 
 export interface RealizedPnl {

@@ -194,6 +194,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             {
                 InstrumentId = kvp.Key,
                 InstrumentName = instrument.Name,
+                InstrumentType = instrument.Type.ToString(),
                 CurrencyId = instrument.CurrencyId,
                 Quantity = kvp.Value,
                 LastPrice = lastPrice,

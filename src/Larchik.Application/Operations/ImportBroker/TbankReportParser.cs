@@ -305,6 +305,9 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             var priceCurrencyCol = headers.GetValueOrDefault("валюта цены");
             var settlementCurrencyCol = headers.GetValueOrDefault("валюта расчетов");
             var qtyCol = headers.GetValueOrDefault("количество");
+            var sumWithoutAccruedCol = headers.GetValueOrDefault("сумма (без нкд)");
+            var accruedCol = headers.GetValueOrDefault("нкд");
+            var totalDealCol = headers.GetValueOrDefault("сумма сделки");
             var feeBrokerCol = headers.GetValueOrDefault("комиссия брокера");
             var feeBrokerCurCol = headers.GetValueOrDefault("валюта комиссии");
             var feeExchangeCol = headers.GetValueOrDefault("комиссия биржи");
@@ -364,6 +367,21 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
                 var priceCurrency = priceCurrencyCol > 0 ? NormalizeCurrency(row.GetString(priceCurrencyCol)) : null;
                 var settlementCurrency = settlementCurrencyCol > 0 ? NormalizeCurrency(row.GetString(settlementCurrencyCol)) : null;
                 var currency = priceCurrency ?? settlementCurrency ?? "RUB";
+                var sumWithoutAccrued = sumWithoutAccruedCol > 0 ? row.GetDecimal(sumWithoutAccruedCol) : null;
+                var accrued = accruedCol > 0 ? row.GetDecimal(accruedCol) : null;
+                var totalDeal = totalDealCol > 0 ? row.GetDecimal(totalDealCol) : null;
+
+                // T-Bank reports bond prices as % of nominal in the trade table.
+                // For portfolio accounting we need money-per-bond dirty price.
+                if (string.Equals(priceCurrency, "%", StringComparison.OrdinalIgnoreCase) && quantity > 0)
+                {
+                    var dirtyTradeAmount = totalDeal ?? ((sumWithoutAccrued ?? 0) + (accrued ?? 0));
+                    if (dirtyTradeAmount > 0)
+                    {
+                        price = dirtyTradeAmount / quantity;
+                        currency = settlementCurrency ?? "RUB";
+                    }
+                }
 
                 var fee = SumFee(row, currency, feeBrokerCol, feeBrokerCurCol);
                 fee += SumFee(row, currency, feeExchangeCol, feeExchangeCurCol);

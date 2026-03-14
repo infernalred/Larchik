@@ -45,8 +45,8 @@ public class SyncCbrFxRatesCommandHandler(LarchikContext context, IHttpClientFac
             rates.Add(new FxRate
             {
                 Id = Guid.NewGuid(),
-                BaseCurrencyId = "RUB",
-                QuoteCurrencyId = code.ToUpperInvariant(),
+                BaseCurrencyId = code.ToUpperInvariant(),
+                QuoteCurrencyId = "RUB",
                 Date = date.ToDateTime(TimeOnly.MinValue),
                 Rate = ratePerUnit,
                 Source = "CBR",

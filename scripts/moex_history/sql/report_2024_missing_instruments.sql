@@ -15,7 +15,8 @@ WITH src (name, ticker, isin, figi, type, currency_id, category_id, exchange, co
         ('паи БПИФ рфи Т-КапиталДивидАкц', 'TDIV', 'RU000A107563', NULL::text, 3, 'RUB', 22, NULL::text, NULL::text, NULL::numeric(18,4)),
         ('Yandex clA', 'NBIS', 'NL0009805522', NULL::text, 1, 'RUB', 25, NULL::text, 'NL', NULL::numeric(18,4)),
         ('АйДи Коллект обб04', 'RU000A107C34', 'RU000A107C34', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),
-        ('КОНТРОЛ лизинг оббП01', 'RU000A106T85', 'RU000A106T85', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4))
+        ('КОНТРОЛ лизинг оббП01', 'RU000A106T85', 'RU000A106T85', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),
+        ('Хайтэк-Интеграция БО-01', 'RU000A104TM1', 'RU000A104TM1', NULL::text, 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4))
 ),
 actor AS (
     SELECT '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid AS user_id

@@ -18,6 +18,7 @@ public class HistoricalDataLookup
             .ToDictionary(
                 g => g.Key,
                 g => g.OrderByDescending(p => p.Date)
+                      .ThenBy(p => GetProviderPriority(p.Provider))
                       .ThenByDescending(p => p.CreatedAt)
                       .ToList());
 
@@ -44,14 +45,14 @@ public class HistoricalDataLookup
     {
         if (string.Equals(fromCurrency, toCurrency, StringComparison.OrdinalIgnoreCase)) return amount;
 
-        var directKey = (toCurrency.ToUpperInvariant(), fromCurrency.ToUpperInvariant());
+        var directKey = (fromCurrency.ToUpperInvariant(), toCurrency.ToUpperInvariant());
         if (_fxByPair.TryGetValue(directKey, out var directList))
         {
             var rate = FindRate(directList, asOfDate);
             if (rate is > 0) return amount * rate.Value;
         }
 
-        var inverseKey = (fromCurrency.ToUpperInvariant(), toCurrency.ToUpperInvariant());
+        var inverseKey = (toCurrency.ToUpperInvariant(), fromCurrency.ToUpperInvariant());
         if (_fxByPair.TryGetValue(inverseKey, out var inverseList))
         {
             var rate = FindRate(inverseList, asOfDate);
@@ -65,13 +66,13 @@ public class HistoricalDataLookup
     {
         if (string.Equals(fromCurrency, toCurrency, StringComparison.OrdinalIgnoreCase)) return 1m;
 
-        var directKey = (toCurrency.ToUpperInvariant(), fromCurrency.ToUpperInvariant());
+        var directKey = (fromCurrency.ToUpperInvariant(), toCurrency.ToUpperInvariant());
         if (_fxByPair.TryGetValue(directKey, out var directList))
         {
             return FindRate(directList, asOfDate);
         }
 
-        var inverseKey = (fromCurrency.ToUpperInvariant(), toCurrency.ToUpperInvariant());
+        var inverseKey = (toCurrency.ToUpperInvariant(), fromCurrency.ToUpperInvariant());
         if (_fxByPair.TryGetValue(inverseKey, out var inverseList))
         {
             var rate = FindRate(inverseList, asOfDate);
@@ -87,5 +88,15 @@ public class HistoricalDataLookup
         if (match != null) return match.Rate;
 
         return list.Count > 0 ? list[^1].Rate : null;
+    }
+
+    private static int GetProviderPriority(string? provider)
+    {
+        return provider?.ToUpperInvariant() switch
+        {
+            "MOEX" => 0,
+            "TBANK" => 1,
+            _ => 2
+        };
     }
 }
