@@ -29,6 +29,7 @@ const TYPE_OPTIONS: { value: OperationType; label: string }[] = [
   { value: 'BondMaturity', label: 'Полное погашение облигации' },
   { value: 'Split', label: 'Сплит' },
   { value: 'ReverseSplit', label: 'Обратный сплит' },
+  { value: 'CashAdjustment', label: 'Движение денег' },
 ];
 
 const INSTRUMENT_OPERATION_TYPES = new Set<OperationType>([

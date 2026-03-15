@@ -18,6 +18,7 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
     {
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
+            .Include(x => x.Broker)
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.Id && x.UserId == userId, cancellationToken);
 
@@ -81,9 +82,9 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             var startBoundary = cursor.AddDays(-1);
 
             var startSnapshot = ComputeValuation(startBoundary, method, baseCurrency, data, instruments, operations,
-                valuationOperations, valuationService);
+                valuationOperations, valuationService, UsesBrokerCashLedger(portfolio));
             var endSnapshot = ComputeValuation(monthEnd, method, baseCurrency, data, instruments, operations,
-                valuationOperations, valuationService);
+                valuationOperations, valuationService, UsesBrokerCashLedger(portfolio));
 
             var netFlow = ComputeFlows(operations, data, baseCurrency, cursor, monthEnd);
 
@@ -162,7 +163,8 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         IReadOnlyDictionary<Guid, Instrument> instruments,
         IReadOnlyList<Operation> operations,
         IReadOnlyList<ValuationOperation> valuationOperations,
-        ValuationService valuationService)
+        ValuationService valuationService,
+        bool usesBrokerCashLedger)
     {
         var cashByCurrency = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
@@ -173,32 +175,63 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             var instrument = op.InstrumentId is not null && instruments.TryGetValue(op.InstrumentId.Value, out var resolvedInstrument)
                 ? resolvedInstrument
                 : null;
+            var cashEffective = IsCashEffective(op, asOfDate);
             var amount = op.Price != 0 ? op.Price : op.Quantity;
             var tradeValue = op.Quantity * op.Price;
 
             switch (op.Type)
             {
                 case OperationType.Buy when op.InstrumentId != null:
-                    if (instrument?.Type == InstrumentType.Currency)
+                    if (usesBrokerCashLedger)
                     {
-                        AddCash(instrument.CurrencyId, op.Quantity, cashByCurrency);
-                        AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
+                        if (cashEffective && op.Fee != 0)
+                        {
+                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
+                        }
                         break;
                     }
 
-                    AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
+                    if (instrument?.Type == InstrumentType.Currency)
+                    {
+                        if (cashEffective)
+                        {
+                            AddCash(instrument.CurrencyId, op.Quantity, cashByCurrency);
+                            AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
+                        }
+                        break;
+                    }
+
+                    if (cashEffective)
+                    {
+                        AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
+                    }
                     break;
                 case OperationType.Sell when op.InstrumentId != null:
                 case OperationType.BondPartialRedemption when op.InstrumentId != null:
                 case OperationType.BondMaturity when op.InstrumentId != null:
-                    if (instrument?.Type == InstrumentType.Currency)
+                    if (usesBrokerCashLedger)
                     {
-                        AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
-                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                        if (cashEffective && op.Fee != 0)
+                        {
+                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
+                        }
                         break;
                     }
 
-                    AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                    if (instrument?.Type == InstrumentType.Currency)
+                    {
+                        if (cashEffective)
+                        {
+                            AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
+                            AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                        }
+                        break;
+                    }
+
+                    if (cashEffective)
+                    {
+                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                    }
                     break;
                 case OperationType.Split when op.InstrumentId != null:
                 case OperationType.ReverseSplit when op.InstrumentId != null:
@@ -208,6 +241,9 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     break;
                 case OperationType.Fee:
                     AddCash(op.CurrencyId, amount != 0 ? -amount : -op.Fee, cashByCurrency);
+                    break;
+                case OperationType.CashAdjustment:
+                    AddCash(op.CurrencyId, op.Price, cashByCurrency);
                     break;
                 case OperationType.Deposit:
                     AddCash(op.CurrencyId, amount, cashByCurrency);
@@ -318,6 +354,23 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         }
 
         return flow;
+    }
+
+    private static bool IsCashEffective(Operation operation, DateTime asOfDate)
+    {
+        return GetCashEffectiveDate(operation) <= asOfDate.Date;
+    }
+
+    private static DateTime GetCashEffectiveDate(Operation operation)
+    {
+        return operation.InstrumentId is null
+            ? operation.TradeDate.Date
+            : (operation.SettlementDate ?? operation.TradeDate).Date;
+    }
+
+    private static bool UsesBrokerCashLedger(Portfolio portfolio)
+    {
+        return string.Equals(portfolio.Broker?.Code, "tbank", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AddCash(string currencyId, decimal amount, IDictionary<string, decimal> cashByCurrency)

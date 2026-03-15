@@ -16,6 +16,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
     {
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
+            .Include(x => x.Broker)
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.Id && x.UserId == userId, cancellationToken);
 
@@ -68,6 +69,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             .ToListAsync(cancellationToken);
 
         var data = new HistoricalDataLookup(prices, fxRates);
+        var usesBrokerCashLedger = UsesBrokerCashLedger(portfolio);
 
         var cashByCurrency = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         var positions = new Dictionary<Guid, decimal>();
@@ -79,36 +81,92 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             var instrument = op.InstrumentId is not null && instruments.TryGetValue(op.InstrumentId.Value, out var resolvedInstrument)
                 ? resolvedInstrument
                 : null;
+            var cashEffective = IsCashEffective(op, asOfDate);
             var amount = op.Price != 0 ? op.Price : op.Quantity;
             var tradeValue = op.Quantity * op.Price;
             switch (op.Type)
             {
                 case OperationType.Buy when op.InstrumentId != null:
+                    if (usesBrokerCashLedger)
+                    {
+                        if (instrument?.Type != InstrumentType.Currency)
+                        {
+                            AddPosition(op.InstrumentId.Value, op.Quantity, positions);
+                        }
+
+                        if (cashEffective && op.Fee != 0)
+                        {
+                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
+                        }
+
+                        break;
+                    }
+
                     if (instrument?.Type == InstrumentType.Currency)
                     {
-                        AddCash(instrument.CurrencyId, op.Quantity, cashByCurrency);
-                        AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
+                        if (cashEffective)
+                        {
+                            AddCash(instrument.CurrencyId, op.Quantity, cashByCurrency);
+                            AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
+                        }
                         break;
                     }
 
                     AddPosition(op.InstrumentId.Value, op.Quantity, positions);
-                    AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
+                    if (cashEffective)
+                    {
+                        AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
+                    }
                     break;
                 case OperationType.Sell when op.InstrumentId != null:
+                    if (usesBrokerCashLedger)
+                    {
+                        if (instrument?.Type != InstrumentType.Currency)
+                        {
+                            AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
+                        }
+
+                        if (cashEffective && op.Fee != 0)
+                        {
+                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
+                        }
+
+                        break;
+                    }
+
                     if (instrument?.Type == InstrumentType.Currency)
                     {
-                        AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
-                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                        if (cashEffective)
+                        {
+                            AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
+                            AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                        }
                         break;
                     }
 
                     AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
-                    AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                    if (cashEffective)
+                    {
+                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                    }
                     break;
                 case OperationType.BondPartialRedemption when op.InstrumentId != null:
                 case OperationType.BondMaturity when op.InstrumentId != null:
+                    if (usesBrokerCashLedger)
+                    {
+                        AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
+                        if (cashEffective && op.Fee != 0)
+                        {
+                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
+                        }
+                        break;
+                    }
+
                     AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
-                    AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                    if (cashEffective)
+                    {
+                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                    }
                     break;
                 case OperationType.Split when op.InstrumentId != null:
                 case OperationType.ReverseSplit when op.InstrumentId != null:
@@ -124,6 +182,9 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
                     break;
                 case OperationType.Fee:
                     AddCash(op.CurrencyId, amount != 0 ? -amount : -op.Fee, cashByCurrency);
+                    break;
+                case OperationType.CashAdjustment:
+                    AddCash(op.CurrencyId, op.Price, cashByCurrency);
                     break;
                 case OperationType.Deposit:
                     AddCash(op.CurrencyId, amount, cashByCurrency);
@@ -325,6 +386,23 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
         positions[instrumentId] = factor < 1m
             ? decimal.Round(updated, 0, MidpointRounding.AwayFromZero)
             : updated;
+    }
+
+    private static bool IsCashEffective(Operation operation, DateTime asOfDate)
+    {
+        return GetCashEffectiveDate(operation) <= asOfDate;
+    }
+
+    private static DateTime GetCashEffectiveDate(Operation operation)
+    {
+        return operation.InstrumentId is null
+            ? operation.TradeDate.Date
+            : (operation.SettlementDate ?? operation.TradeDate).Date;
+    }
+
+    private static bool UsesBrokerCashLedger(Portfolio portfolio)
+    {
+        return string.Equals(portfolio.Broker?.Code, "tbank", StringComparison.OrdinalIgnoreCase);
     }
 
 }

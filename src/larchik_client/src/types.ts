@@ -12,7 +12,8 @@ export type OperationType =
   | 'BondPartialRedemption'
   | 'BondMaturity'
   | 'Split'
-  | 'ReverseSplit';
+  | 'ReverseSplit'
+  | 'CashAdjustment';
 
 export interface User {
   id: string;

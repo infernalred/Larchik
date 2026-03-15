@@ -68,6 +68,7 @@ const TYPE_LABELS: Record<OperationType, string> = {
   BondMaturity: 'Погашение',
   Split: 'Сплит',
   ReverseSplit: 'Обратный сплит',
+  CashAdjustment: 'Движение денег',
 };
 
 export function OperationsPanel({

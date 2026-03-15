@@ -13,5 +13,6 @@ public enum OperationType
     BondPartialRedemption = 9,
     BondMaturity = 10,
     Split = 11,
-    ReverseSplit = 12
+    ReverseSplit = 12,
+    CashAdjustment = 13
 }

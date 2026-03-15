@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO.Compression;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Larchik.Persistence.Entities;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,8 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     private static readonly CultureInfo RuCulture = new("ru-RU");
     private static readonly string InvalidFormatMessage = "Неверный формат файла. Загрузите исходный XLSX-файл отчета Т-Банк.";
     private static readonly string InvalidExtensionMessage = "Неверное расширение файла. Загрузите отчет в формате .xlsx.";
+    private static readonly Regex ReportPeriodRegex =
+        new(@"(?<start>\d{4}-\d{2}-\d{2})-(?<end>\d{4}-\d{2}-\d{2})", RegexOptions.Compiled);
 
     public Task<BrokerReportParseResult> ParseAsync(Stream fileStream, string fileName, CancellationToken cancellationToken)
     {
@@ -56,6 +59,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             fileName);
 
         var instrumentAliases = BuildInstrumentAliases(rows);
+        var reportPeriodEnd = ParseReportPeriodEnd(fileName);
         logger.LogInformation(
             "TBank import: resolved {AliasCount} instrument aliases from report reference sections for file {FileName}",
             instrumentAliases.Count,
@@ -66,7 +70,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         var tradesCount = parsed.Count - beforeTrades;
 
         var beforeCash = parsed.Count;
-        ParseCash(rows, parsed);
+        ParseCash(rows, parsed, reportPeriodEnd);
         var cashCount = parsed.Count - beforeCash;
 
         logger.LogInformation(
@@ -364,7 +368,8 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
                 var price = priceCol > 0 ? row.GetDecimal(priceCol) ?? 0 : 0;
                 var quantity = qtyCol > 0 ? row.GetDecimal(qtyCol) ?? 0 : 0;
 
-                var priceCurrency = priceCurrencyCol > 0 ? NormalizeCurrency(row.GetString(priceCurrencyCol)) : null;
+                var rawPriceCurrency = priceCurrencyCol > 0 ? row.GetString(priceCurrencyCol)?.Trim() : null;
+                var priceCurrency = NormalizeCurrency(rawPriceCurrency);
                 var settlementCurrency = settlementCurrencyCol > 0 ? NormalizeCurrency(row.GetString(settlementCurrencyCol)) : null;
                 var currency = priceCurrency ?? settlementCurrency ?? "RUB";
                 var sumWithoutAccrued = sumWithoutAccruedCol > 0 ? row.GetDecimal(sumWithoutAccruedCol) : null;
@@ -373,7 +378,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
 
                 // T-Bank reports bond prices as % of nominal in the trade table.
                 // For portfolio accounting we need money-per-bond dirty price.
-                if (string.Equals(priceCurrency, "%", StringComparison.OrdinalIgnoreCase) && quantity > 0)
+                if (string.Equals(rawPriceCurrency, "%", StringComparison.OrdinalIgnoreCase) && quantity > 0)
                 {
                     var dirtyTradeAmount = totalDeal ?? ((sumWithoutAccrued ?? 0) + (accrued ?? 0));
                     if (dirtyTradeAmount > 0)
@@ -410,7 +415,10 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         }
     }
 
-    private static void ParseCash(IReadOnlyList<ReportRow> rows, ICollection<ParsedOperation> parsed)
+    private static void ParseCash(
+        IReadOnlyList<ReportRow> rows,
+        ICollection<ParsedOperation> parsed,
+        DateTime? reportPeriodEnd)
     {
         var headerRow = rows.FirstOrDefault(r => Normalize(r.GetString(1)) == "дата"
                                                  && r.Cells.Any(c => Normalize(c.Value) == "операция"));
@@ -450,29 +458,39 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             if (string.IsNullOrWhiteSpace(opText)) continue;
             if (string.IsNullOrWhiteSpace(dateText)) continue;
 
-            var type = ParseCashOperationType(opText);
-            if (type is null) continue;
-
             var timeText = timeCol > 0 ? row.GetString(timeCol) : null;
             var tradeDate = ParseDateTime(dateText, timeText) ?? DateTime.UtcNow;
+            if (reportPeriodEnd.HasValue && tradeDate.Date > reportPeriodEnd.Value.Date)
+            {
+                continue;
+            }
 
             var income = incomeCol > 0 ? row.GetDecimal(incomeCol) ?? 0 : 0;
             var outcome = outcomeCol > 0 ? row.GetDecimal(outcomeCol) ?? 0 : 0;
-            var amount = income != 0 ? income : outcome;
+            var signedAmount = income - outcome;
+            if (signedAmount == 0)
+            {
+                continue;
+            }
 
             var note = noteCol > 0 ? row.GetString(noteCol) : opText;
+            var mapped = MapCashOperation(opText, signedAmount);
+            if (mapped is null)
+            {
+                continue;
+            }
 
             var operation = new Operation
             {
                 Id = Guid.NewGuid(),
-                Type = type.Value,
+                Type = mapped.Value.Type,
                 Quantity = 0,
-                Price = amount,
+                Price = mapped.Value.Amount,
                 Fee = 0,
                 CurrencyId = currentCurrency,
                 TradeDate = tradeDate,
                 SettlementDate = tradeDate,
-                Note = note,
+                Note = string.IsNullOrWhiteSpace(note) ? opText : $"{opText}: {note}",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -491,15 +509,36 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         };
     }
 
-    private static OperationType? ParseCashOperationType(string value)
+    private static (OperationType Type, decimal Amount)? MapCashOperation(string value, decimal signedAmount)
     {
         var normalized = Normalize(value);
-        if (normalized.Contains("пополнение")) return OperationType.Deposit;
-        if (normalized.Contains("налог")) return OperationType.Fee;
-        if (normalized.Contains("комиссия")) return OperationType.Fee;
-        if (normalized.Contains("выплата доходов") || normalized.Contains("дивиден")) return OperationType.Dividend;
-        if (normalized.Contains("снятие") || normalized.Contains("вывод")) return OperationType.Withdraw;
-        return null;
+        if (normalized.Contains("пополнение"))
+        {
+            return (OperationType.Deposit, decimal.Abs(signedAmount));
+        }
+
+        if (normalized.Contains("снятие") || normalized.Contains("вывод"))
+        {
+            return (OperationType.Withdraw, decimal.Abs(signedAmount));
+        }
+
+        if (normalized.Contains("комис"))
+        {
+            return (OperationType.Fee, decimal.Abs(signedAmount));
+        }
+
+        if (normalized.Contains("налог"))
+        {
+            return (OperationType.Fee, decimal.Abs(signedAmount));
+        }
+
+        if (normalized.Contains("дивиденд") ||
+            normalized.Contains("выплата доход"))
+        {
+            return (OperationType.Dividend, decimal.Abs(signedAmount));
+        }
+
+        return (OperationType.CashAdjustment, signedAmount);
     }
 
     private static DateTime? ParseDateTime(string? dateText, string? timeText)
@@ -543,6 +582,24 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
 
         return row.Cells.Keys.First() == 1
             ? NormalizeCurrency(row.GetString(1))
+            : null;
+    }
+
+    private static DateTime? ParseReportPeriodEnd(string fileName)
+    {
+        var match = ReportPeriodRegex.Match(fileName);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        return DateTime.TryParseExact(
+            match.Groups["end"].Value,
+            "yyyy-MM-dd",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var end)
+            ? NormalizeImportedDate(end)
             : null;
     }
 
