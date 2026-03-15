@@ -5,6 +5,8 @@ public class PortfoliosSummaryDto
     public string ReportingCurrencyId { get; set; } = null!;
     public int PortfolioCount { get; set; }
     public decimal NetInflowBase { get; set; }
+    public decimal GrossDepositsBase { get; set; }
+    public decimal GrossWithdrawalsBase { get; set; }
     public decimal CashBase { get; set; }
     public decimal PositionsValueBase { get; set; }
     public decimal RealizedBase { get; set; }

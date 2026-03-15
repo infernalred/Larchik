@@ -76,6 +76,10 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
             var instrumentCurrency = instruments.TryGetValue(op.InstrumentId!.Value, out var instrument)
                 ? instrument.CurrencyId
                 : op.CurrencyId;
+            if (instrument?.Type == InstrumentType.Currency)
+            {
+                continue;
+            }
             var price = data.Convert(op.Price, op.CurrencyId, instrumentCurrency, op.TradeDate);
             var fee = data.Convert(op.Fee, op.CurrencyId, instrumentCurrency, op.TradeDate);
 
@@ -138,6 +142,10 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 var instrumentCurrency = instruments.TryGetValue(instrumentId, out var instrument)
                     ? instrument.CurrencyId
                     : baseCurrency;
+                if (instrument?.Type == InstrumentType.Currency)
+                {
+                    continue;
+                }
                 var price = data.GetPrice(instrumentId, date);
                 var lastPrice = price?.Value;
                 var marketValueBase = lastPrice.HasValue

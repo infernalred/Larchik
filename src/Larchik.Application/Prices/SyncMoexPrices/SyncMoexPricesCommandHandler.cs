@@ -27,6 +27,8 @@ public class SyncMoexPricesCommandHandler(
         "LCLOSEPRICE",
         "LAST"
     ];
+    private const string HistoryColumns =
+        "SECID,TRADEDATE,LEGALCLOSEPRICE,MARKETPRICE2,CLOSE,WAPRICE,LCLOSEPRICE,LAST,CURRENCYID,FACEVALUE,FACEUNIT,ACCINT";
 
     public async Task<Result<int>> Handle(SyncMoexPricesCommand request, CancellationToken cancellationToken)
     {
@@ -298,7 +300,8 @@ public class SyncMoexPricesCommandHandler(
                     for (var start = 0; ; start += pageSize)
                     {
                         var url =
-                            $"{baseUrl}/history/engines/stock/markets/{market}/boards/{board}/securities.json?date={probeDate:yyyy-MM-dd}&start={start}";
+                            $"{baseUrl}/history/engines/stock/markets/{market}/boards/{board}/securities.json" +
+                            $"?date={probeDate:yyyy-MM-dd}&start={start}&iss.meta=off&iss.only=history&history.columns={HistoryColumns}";
 
                         var response = await client.GetAsync(url, cancellationToken);
                         if (!response.IsSuccessStatusCode)

@@ -52,23 +52,29 @@ export function SummaryCards({ summary }: Props) {
   const c = summary.reportingCurrencyId;
   return (
     <Grid container spacing={2}>
-      <Grid item xs={12} sm={6} md={4}>
+      <Grid item xs={12} sm={6} md={3}>
         <StatCard title="NAV" value={summary.navBase} currency={c} accent="nav" />
       </Grid>
-      <Grid item xs={12} sm={6} md={4}>
+      <Grid item xs={12} sm={6} md={3}>
         <StatCard title="Наличность" value={summary.cashBase} currency={c} accent="cash" />
       </Grid>
-      <Grid item xs={12} sm={6} md={4}>
+      <Grid item xs={12} sm={6} md={3}>
         <StatCard title="Позиции" value={summary.positionsValueBase} currency={c} accent="positions" />
       </Grid>
-      <Grid item xs={12} sm={6} md={4}>
+      <Grid item xs={12} sm={6} md={3}>
+        <StatCard title="Net inflow" value={summary.netInflowBase} currency={c} />
+      </Grid>
+      <Grid item xs={12} sm={6} md={3}>
+        <StatCard title="Пополнения" value={summary.grossDepositsBase} currency={c} />
+      </Grid>
+      <Grid item xs={12} sm={6} md={3}>
+        <StatCard title="Выводы" value={summary.grossWithdrawalsBase} currency={c} />
+      </Grid>
+      <Grid item xs={12} sm={6} md={3}>
         <StatCard title="Реализовано" value={summary.realizedBase} currency={c} accent="realized" />
       </Grid>
-      <Grid item xs={12} sm={6} md={4}>
+      <Grid item xs={12} sm={6} md={3}>
         <StatCard title="Нереализовано" value={summary.unrealizedBase} currency={c} accent="unrealized" />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4}>
-        <StatCard title="Net inflow" value={summary.netInflowBase} currency={c} />
       </Grid>
     </Grid>
   );

@@ -632,6 +632,8 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                   name: 'Все счета',
                   reportingCurrencyId: allSummary.reportingCurrencyId,
                   netInflowBase: allSummary.netInflowBase,
+                  grossDepositsBase: allSummary.grossDepositsBase,
+                  grossWithdrawalsBase: allSummary.grossWithdrawalsBase,
                   cashBase: allSummary.cashBase,
                   positionsValueBase: allSummary.positionsValueBase,
                   realizedBase: allSummary.realizedBase,

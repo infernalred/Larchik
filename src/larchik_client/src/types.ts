@@ -53,6 +53,8 @@ export interface PortfolioSummary {
   name: string;
   reportingCurrencyId: string;
   netInflowBase: number;
+  grossDepositsBase: number;
+  grossWithdrawalsBase: number;
   cashBase: number;
   positionsValueBase: number;
   realizedBase: number;
@@ -68,6 +70,8 @@ export interface PortfoliosSummary {
   reportingCurrencyId: string;
   portfolioCount: number;
   netInflowBase: number;
+  grossDepositsBase: number;
+  grossWithdrawalsBase: number;
   cashBase: number;
   positionsValueBase: number;
   realizedBase: number;

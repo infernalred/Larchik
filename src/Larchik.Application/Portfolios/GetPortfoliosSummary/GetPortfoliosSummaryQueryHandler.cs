@@ -88,6 +88,8 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
         var valuationService = new ValuationService();
 
         decimal totalNetInflowBase = 0;
+        decimal totalGrossDepositsBase = 0;
+        decimal totalGrossWithdrawalsBase = 0;
         decimal totalCashBase = 0;
         decimal totalPositionsValueBase = 0;
         decimal totalRealizedBase = 0;
@@ -96,7 +98,7 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
         foreach (var portfolio in portfolios)
         {
             var portfolioOperations = operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [];
-            var (netInflowBase, cashBase, positionsValueBase, realizedBase, unrealizedBase) =
+            var (netInflowBase, grossDepositsBase, grossWithdrawalsBase, cashBase, positionsValueBase, realizedBase, unrealizedBase) =
                 CalculatePortfolioMetrics(
                     portfolioOperations,
                     instruments,
@@ -108,6 +110,8 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                     UsesBrokerCashLedger(portfolio));
 
             totalNetInflowBase += netInflowBase;
+            totalGrossDepositsBase += grossDepositsBase;
+            totalGrossWithdrawalsBase += grossWithdrawalsBase;
             totalCashBase += cashBase;
             totalPositionsValueBase += positionsValueBase;
             totalRealizedBase += realizedBase;
@@ -122,6 +126,8 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
             ReportingCurrencyId = baseCurrency,
             PortfolioCount = portfolios.Count,
             NetInflowBase = totalNetInflowBase,
+            GrossDepositsBase = totalGrossDepositsBase,
+            GrossWithdrawalsBase = totalGrossWithdrawalsBase,
             CashBase = totalCashBase,
             PositionsValueBase = totalPositionsValueBase,
             RealizedBase = totalRealizedBase,
@@ -132,7 +138,7 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
         });
     }
 
-    private static (decimal NetInflowBase, decimal CashBase, decimal PositionsValueBase, decimal RealizedBase, decimal UnrealizedBase)
+    private static (decimal NetInflowBase, decimal GrossDepositsBase, decimal GrossWithdrawalsBase, decimal CashBase, decimal PositionsValueBase, decimal RealizedBase, decimal UnrealizedBase)
         CalculatePortfolioMetrics(
             IReadOnlyList<Operation> operations,
             IReadOnlyDictionary<Guid, Instrument> instruments,
@@ -147,6 +153,8 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
         var positions = new Dictionary<Guid, decimal>();
         var valuationOperations = new List<ValuationOperation>();
         decimal netInflowBase = 0;
+        decimal grossDepositsBase = 0;
+        decimal grossWithdrawalsBase = 0;
 
         foreach (var op in operations)
         {
@@ -244,11 +252,15 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                     break;
                 case OperationType.Deposit:
                     AddCash(op.CurrencyId, amount, cashByCurrency);
-                    netInflowBase += data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                    var depositBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                    netInflowBase += depositBase;
+                    grossDepositsBase += depositBase;
                     break;
                 case OperationType.Withdraw:
                     AddCash(op.CurrencyId, -amount, cashByCurrency);
-                    netInflowBase -= data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                    var withdrawBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                    netInflowBase -= withdrawBase;
+                    grossWithdrawalsBase += withdrawBase;
                     break;
                 case OperationType.TransferIn:
                     if (op.InstrumentId != null)
@@ -264,7 +276,9 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                     else
                     {
                         AddCash(op.CurrencyId, amount, cashByCurrency);
-                        netInflowBase += data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                        var transferInBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                        netInflowBase += transferInBase;
+                        grossDepositsBase += transferInBase;
                     }
 
                     break;
@@ -282,7 +296,9 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                     else
                     {
                         AddCash(op.CurrencyId, -amount, cashByCurrency);
-                        netInflowBase -= data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                        var transferOutBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                        netInflowBase -= transferOutBase;
+                        grossWithdrawalsBase += transferOutBase;
                     }
 
                     break;
@@ -349,6 +365,8 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
 
         return (
             netInflowBase,
+            grossDepositsBase,
+            grossWithdrawalsBase,
             cashBase,
             positionsValueBase,
             realizedBase,
