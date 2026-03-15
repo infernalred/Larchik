@@ -54,6 +54,7 @@ public class SyncTbankPricesCommandHandler(
             .AsNoTracking()
             .Where(x =>
                 (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Etf || x.Type == InstrumentType.Currency) &&
+                x.IsTrading &&
                 x.Figi != null &&
                 x.Figi != "");
 

@@ -14,4 +14,5 @@ public class InstrumentDto
     public int CategoryId { get; set; }
     public string? Exchange { get; set; }
     public string? Country { get; set; }
+    public bool IsTrading { get; set; }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json;
 using Larchik.Application.Helpers;
@@ -18,6 +19,7 @@ public class SyncMoexPricesCommandHandler(
 {
     private static readonly string[] DefaultBoards = ["TQBR", "TQTF", "TQIF", "TQCB", "TQOB"];
     private const int MaxHistoryLookbackDays = 7;
+    private const int MaxTradingStatusParallelism = 6;
     private static readonly string[] PriceColumns =
     [
         "LEGALCLOSEPRICE",
@@ -59,6 +61,7 @@ public class SyncMoexPricesCommandHandler(
             .AsNoTracking()
             .Where(x =>
                 (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf) &&
+                x.IsTrading &&
                 x.Ticker != null &&
                 x.Ticker != "")
             .Select(x => new InstrumentCandidate(x.Id, x.Ticker.ToUpper(), x.CurrencyId.ToUpperInvariant(), x.Type))
@@ -116,12 +119,11 @@ public class SyncMoexPricesCommandHandler(
         if (pricesByTicker.Count == 0)
         {
             logger.LogInformation(
-                "MOEX price sync finished for {Date} UTC: loaded boards {LoadedBoards}/{TotalBoards}, but no records returned (lookback: {LookbackDays} days)",
+                "MOEX price sync got no price records for {Date} UTC after loading {LoadedBoards}/{TotalBoards} boards (lookback: {LookbackDays} days); trading flags will still be refreshed",
                 date.ToString("yyyy-MM-dd"),
                 loadedBoards,
                 boards.Length,
                 MaxHistoryLookbackDays);
-            return Result<int>.Success(0);
         }
 
         var instrumentIds = instruments
@@ -156,6 +158,17 @@ public class SyncMoexPricesCommandHandler(
             }
         }
 
+        var tradingStatusByInstrument = await LoadTradingStates(
+            instruments,
+            aliasCodes,
+            boards,
+            baseUrl,
+            cancellationToken);
+
+        var trackedInstruments = await context.Instruments
+            .Where(x => instrumentIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+
         var matches = pricesByTicker
             .Select(kvp => codeMap.TryGetValue(kvp.Key, out var instrument)
                 ? new MatchedPricePoint(instrument, kvp.Value)
@@ -166,11 +179,15 @@ public class SyncMoexPricesCommandHandler(
 
         if (matches.Count == 0)
         {
+            var tradingOnlyChanges = ApplyTradingStateUpdates(trackedInstruments, tradingStatusByInstrument);
+            var tradingOnlyDbChanges = tradingOnlyChanges == 0 ? 0 : await context.SaveChangesAsync(cancellationToken);
             logger.LogInformation(
-                "MOEX price sync finished for {Date} UTC: received {MoexRecords} records, no local instrument matches",
+                "MOEX price sync finished for {Date} UTC: received {MoexRecords} records, no local instrument matches. Trading flag updates: {TradingUpdates}, db changes: {Changes}",
                 date.ToString("yyyy-MM-dd"),
-                pricesByTicker.Count);
-            return Result<int>.Success(0);
+                pricesByTicker.Count,
+                tradingOnlyChanges,
+                tradingOnlyDbChanges);
+            return Result<int>.Success(tradingOnlyDbChanges);
         }
 
         instrumentIds = matches.Select(x => x.Instrument.Id).Distinct().ToArray();
@@ -213,6 +230,7 @@ public class SyncMoexPricesCommandHandler(
 
         var inserted = 0;
         var updated = 0;
+        var tradingUpdates = 0;
 
         foreach (var matched in matches)
         {
@@ -246,6 +264,8 @@ public class SyncMoexPricesCommandHandler(
             }
         }
 
+        tradingUpdates = ApplyTradingStateUpdates(trackedInstruments, tradingStatusByInstrument);
+
         var changes = await context.SaveChangesAsync(cancellationToken);
         var sourceDateDistribution = matches
             .GroupBy(x => x.Point.Date)
@@ -259,7 +279,7 @@ public class SyncMoexPricesCommandHandler(
             "Records from MOEX: {MoexRecordsFromBoards} ({MoexUniqueSecIds} unique). Local matches: {Matches}/{InstrumentCount}. " +
             "Alias matches: {AliasMatches}. " +
             "Matched source dates: {SourceDates}. " +
-            "Inserted: {Inserted}, updated: {Updated}, db changes: {Changes}",
+            "Trading flag updates: {TradingUpdates}. Inserted: {Inserted}, updated: {Updated}, db changes: {Changes}",
             date.ToString("yyyy-MM-dd"),
             loadedBoards,
             boards.Length,
@@ -269,6 +289,7 @@ public class SyncMoexPricesCommandHandler(
             instruments.Count,
             aliasMatchCount,
             sourceDateDistribution.Length == 0 ? "none" : string.Join(", ", sourceDateDistribution),
+            tradingUpdates,
             inserted,
             updated,
             changes);
@@ -365,6 +386,161 @@ public class SyncMoexPricesCommandHandler(
         catch (Exception ex)
         {
             return Result<MoexBoardPrices>.Failure($"MOEX request failed for board '{board}': {ex.Message}");
+        }
+    }
+
+    private async Task<Dictionary<Guid, bool>> LoadTradingStates(
+        IReadOnlyCollection<InstrumentCandidate> instruments,
+        IReadOnlyCollection<InstrumentAliasCandidate> aliases,
+        IReadOnlyCollection<string> boards,
+        string baseUrl,
+        CancellationToken cancellationToken)
+    {
+        var aliasesByInstrument = aliases
+            .GroupBy(x => x.InstrumentId)
+            .ToDictionary(
+                x => x.Key,
+                x => x.Select(y => y.NormalizedAliasCode)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray());
+
+        using var client = httpClientFactory.CreateClient();
+        var results = new ConcurrentDictionary<Guid, bool>();
+        var errors = new ConcurrentBag<string>();
+        var semaphore = new SemaphoreSlim(MaxTradingStatusParallelism);
+
+        await Task.WhenAll(instruments.Select(async instrument =>
+        {
+            await semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                var codes = aliasesByInstrument.TryGetValue(instrument.Id, out var instrumentAliases)
+                    ? new[] { instrument.Ticker }.Concat(instrumentAliases).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+                    : [instrument.Ticker];
+
+                var tradingState = await LoadTradingState(client, codes, boards, baseUrl, cancellationToken);
+                if (tradingState.IsSuccess && tradingState.Value.HasValue)
+                {
+                    results[instrument.Id] = tradingState.Value.Value;
+                }
+                else if (!tradingState.IsSuccess)
+                {
+                    errors.Add(tradingState.Error ?? $"MOEX trading status lookup failed for {instrument.Ticker}");
+                }
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }));
+
+        if (!errors.IsEmpty)
+        {
+            logger.LogWarning(
+                "MOEX trading status lookup had {ErrorCount} errors. Sample: {Sample}",
+                errors.Count,
+                string.Join("; ", errors.Take(5)));
+        }
+
+        return results.ToDictionary(x => x.Key, x => x.Value);
+    }
+
+    private async Task<Result<bool?>> LoadTradingState(
+        HttpClient client,
+        IReadOnlyCollection<string> codes,
+        IReadOnlyCollection<string> boards,
+        string baseUrl,
+        CancellationToken cancellationToken)
+    {
+        foreach (var code in codes.Where(x => !string.IsNullOrWhiteSpace(x)))
+        {
+            try
+            {
+                var url = $"{baseUrl}/securities/{Uri.EscapeDataString(code)}.json?iss.meta=off&iss.only=boards";
+                using var response = await client.GetAsync(url, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    continue;
+                }
+
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                var parseResult = ParseBoardsTradingState(json, boards);
+                if (parseResult.IsSuccess)
+                {
+                    if (parseResult.Value.HasValue)
+                    {
+                        return parseResult;
+                    }
+
+                    continue;
+                }
+
+                return parseResult;
+            }
+            catch (Exception ex)
+            {
+                return Result<bool?>.Failure($"MOEX trading status request failed for {code}: {ex.Message}");
+            }
+        }
+
+        return Result<bool?>.Success(null);
+    }
+
+    private static Result<bool?> ParseBoardsTradingState(string json, IReadOnlyCollection<string> boards)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("boards", out var boardsElement))
+            {
+                return Result<bool?>.Failure("MOEX response has no 'boards' section");
+            }
+
+            if (!boardsElement.TryGetProperty("columns", out var columnsElement) ||
+                columnsElement.ValueKind != JsonValueKind.Array)
+            {
+                return Result<bool?>.Failure("MOEX response has invalid 'boards.columns'");
+            }
+
+            if (!boardsElement.TryGetProperty("data", out var dataElement) || dataElement.ValueKind != JsonValueKind.Array)
+            {
+                return Result<bool?>.Failure("MOEX response has invalid 'boards.data'");
+            }
+
+            var columns = columnsElement
+                .EnumerateArray()
+                .Select(x => x.GetString() ?? string.Empty)
+                .ToArray();
+
+            var boardIdIndex = Array.FindIndex(columns, x => x.Equals("BOARDID", StringComparison.OrdinalIgnoreCase));
+            var isTradedIndex = Array.FindIndex(columns, x => x.Equals("IS_TRADED", StringComparison.OrdinalIgnoreCase));
+            if (boardIdIndex < 0 || isTradedIndex < 0)
+            {
+                return Result<bool?>.Failure("MOEX boards response has no BOARDID/IS_TRADED columns");
+            }
+
+            var relevantRows = dataElement.EnumerateArray()
+                .Where(x => x.ValueKind == JsonValueKind.Array)
+                .Select(x => new
+                {
+                    Board = TryGetStringValue(x, boardIdIndex),
+                    IsTraded = TryGetBooleanValue(x, isTradedIndex)
+                })
+                .Where(x => !string.IsNullOrWhiteSpace(x.Board) &&
+                            boards.Contains(x.Board!, StringComparer.OrdinalIgnoreCase) &&
+                            x.IsTraded.HasValue)
+                .ToArray();
+
+            if (relevantRows.Length == 0)
+            {
+                return Result<bool?>.Success(null);
+            }
+
+            return Result<bool?>.Success(relevantRows.Any(x => x.IsTraded!.Value));
+        }
+        catch (Exception ex)
+        {
+            return Result<bool?>.Failure($"Failed to parse MOEX boards response: {ex.Message}");
         }
     }
 
@@ -501,6 +677,41 @@ public class SyncMoexPricesCommandHandler(
         return false;
     }
 
+    private static string? TryGetStringValue(JsonElement row, int index)
+    {
+        if (index < 0 || row.GetArrayLength() <= index)
+        {
+            return null;
+        }
+
+        var cell = row[index];
+        return cell.ValueKind switch
+        {
+            JsonValueKind.String => cell.GetString(),
+            JsonValueKind.Number => cell.ToString(),
+            _ => null
+        };
+    }
+
+    private static bool? TryGetBooleanValue(JsonElement row, int index)
+    {
+        if (index < 0 || row.GetArrayLength() <= index)
+        {
+            return null;
+        }
+
+        var cell = row[index];
+        return cell.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Number when cell.TryGetInt32(out var intValue) => intValue != 0,
+            JsonValueKind.String when bool.TryParse(cell.GetString(), out var boolValue) => boolValue,
+            JsonValueKind.String when int.TryParse(cell.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedInt) => parsedInt != 0,
+            _ => null
+        };
+    }
+
     private static bool TryGetDecimal(JsonElement row, int index, out decimal value)
     {
         value = 0;
@@ -566,6 +777,28 @@ public class SyncMoexPricesCommandHandler(
             "EUR" => "EUR",
             var value => value
         };
+    }
+
+    private static int ApplyTradingStateUpdates(
+        IReadOnlyDictionary<Guid, Instrument> trackedInstruments,
+        IReadOnlyDictionary<Guid, bool> tradingStatusByInstrument)
+    {
+        var updates = 0;
+        var now = DateTime.UtcNow;
+
+        foreach (var kvp in tradingStatusByInstrument)
+        {
+            if (!trackedInstruments.TryGetValue(kvp.Key, out var instrument) || instrument.IsTrading == kvp.Value)
+            {
+                continue;
+            }
+
+            instrument.IsTrading = kvp.Value;
+            instrument.UpdatedAt = now;
+            updates++;
+        }
+
+        return updates;
     }
 
     private sealed record InstrumentCandidate(Guid Id, string Ticker, string CurrencyId, InstrumentType Type);

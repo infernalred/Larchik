@@ -166,6 +166,20 @@ public class BackgroundJobSchedulerService(
             tbank.MaxAttempts,
             tbank.RetryDelayMinutes,
             tbank.LockTimeoutMinutes);
+
+        var tbankInstrumentInfo = options.TbankInstrumentInfoDaily;
+        await EnsureDefinition(
+            context,
+            now,
+            cancellationToken,
+            BackgroundJobConstants.TbankInstrumentInfoDailyDefinitionName,
+            BackgroundJobConstants.TbankInstrumentInfoDailyJobType,
+            tbankInstrumentInfo.Enabled,
+            tbankInstrumentInfo.HourUtc,
+            tbankInstrumentInfo.MinuteUtc,
+            tbankInstrumentInfo.MaxAttempts,
+            tbankInstrumentInfo.RetryDelayMinutes,
+            tbankInstrumentInfo.LockTimeoutMinutes);
     }
 
     private async Task EnsureDefinition(

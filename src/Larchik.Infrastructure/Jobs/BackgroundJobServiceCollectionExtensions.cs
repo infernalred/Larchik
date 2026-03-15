@@ -14,9 +14,11 @@ public static class BackgroundJobServiceCollectionExtensions
         services.AddScoped<IBackgroundJobHandler, FxCbrDailyJobHandler>();
         services.AddScoped<IBackgroundJobHandler, MoexPricesDailyJobHandler>();
         services.AddScoped<IBackgroundJobHandler, TbankPricesDailyJobHandler>();
+        services.AddScoped<IBackgroundJobHandler, TbankInstrumentInfoDailyJobHandler>();
         services.AddSingleton<IJobRunPlanner, FxCbrDailyRunPlanner>();
         services.AddSingleton<IJobRunPlanner, MoexPricesDailyRunPlanner>();
         services.AddSingleton<IJobRunPlanner, TbankPricesDailyRunPlanner>();
+        services.AddSingleton<IJobRunPlanner, TbankInstrumentInfoDailyRunPlanner>();
 
         services.AddHostedService<BackgroundJobSchedulerService>();
         services.AddHostedService<BackgroundJobExecutorService>();

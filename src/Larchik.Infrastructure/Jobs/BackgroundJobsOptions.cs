@@ -9,6 +9,7 @@ public class BackgroundJobsOptions
     public FxCbrDailyJobOptions FxCbrDaily { get; set; } = new();
     public MoexPricesDailyJobOptions MoexPricesDaily { get; set; } = new();
     public TbankPricesDailyJobOptions TbankPricesDaily { get; set; } = new();
+    public TbankInstrumentInfoDailyJobOptions TbankInstrumentInfoDaily { get; set; } = new();
 }
 
 public class FxCbrDailyJobOptions
@@ -48,6 +49,22 @@ public class TbankPricesDailyJobOptions
     public string? Token { get; set; }
     public bool AllowInvalidTls { get; set; }
     public int MaxHistoryLookbackDays { get; set; } = 7;
+    public int MaxParallelism { get; set; } = 6;
+    public string[] CountryExclusions { get; set; } = ["RU"];
+}
+
+public class TbankInstrumentInfoDailyJobOptions
+{
+    public bool Enabled { get; set; } = false;
+    public int HourUtc { get; set; } = 20;
+    public int MinuteUtc { get; set; } = 30;
+    public int MaxAttempts { get; set; } = 8;
+    public int RetryDelayMinutes { get; set; } = 20;
+    public int LockTimeoutMinutes { get; set; } = 20;
+    public string BaseUrl { get; set; } =
+        "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.InstrumentsService/GetInstrumentBy";
+    public string? Token { get; set; }
+    public bool AllowInvalidTls { get; set; }
     public int MaxParallelism { get; set; } = 6;
     public string[] CountryExclusions { get; set; } = ["RU"];
 }

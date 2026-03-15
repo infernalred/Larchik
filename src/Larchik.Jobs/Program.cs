@@ -1,6 +1,7 @@
 using Larchik.Application.FxRates.SyncCbrFxRates;
 using Larchik.Application.Prices.SyncMoexPrices;
 using Larchik.Application.Prices.SyncTbankPrices;
+using Larchik.Application.Stocks.SyncTbankInstrumentInfo;
 using Larchik.Infrastructure.Jobs;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,7 @@ try
             services.AddScoped<SyncCbrFxRatesCommandHandler>();
             services.AddScoped<SyncMoexPricesCommandHandler>();
             services.AddScoped<SyncTbankPricesCommandHandler>();
+            services.AddScoped<SyncTbankInstrumentInfoCommandHandler>();
 
             services.AddBackgroundJobs(context.Configuration);
         })
