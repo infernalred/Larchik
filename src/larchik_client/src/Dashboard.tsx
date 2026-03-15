@@ -30,6 +30,7 @@ import {
   PositionHolding,
   PortfoliosSummary,
   PortfolioSummary,
+  RecalculatePortfolioResult,
 } from './types';
 import { SummaryCards } from './SummaryCards';
 import { PositionsTable } from './PositionsTable';
@@ -351,6 +352,29 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     }
   }
 
+  async function handleRecalculatePortfolio(): Promise<RecalculatePortfolioResult> {
+    if (!selectedPortfolio) {
+      throw new Error('Сначала выберите портфель.');
+    }
+
+    try {
+      const result = await api.recalculatePortfolio(selectedPortfolio);
+
+      await Promise.all([
+        loadSummary(selectedPortfolio, valuationMethod),
+        loadPerformance(selectedPortfolio, valuationMethod),
+      ]);
+
+      if (portfolioPage === 'operations') {
+        await loadOperations(selectedPortfolio, operationsPage, operationsPageSize);
+      }
+
+      return result;
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error, 'Не удалось пересчитать портфель.'));
+    }
+  }
+
   const searchInstruments = useCallback((query: string): Promise<InstrumentLookup[]> => {
     return api.searchInstruments(query);
   }, []);
@@ -615,6 +639,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                 onCreate={handleCreateOperation}
                 onImport={handleImportOperations}
                 onClearPortfolioData={handleClearPortfolioData}
+                onRecalculatePortfolio={handleRecalculatePortfolio}
                 canImport={canImportOperations}
                 importDisabledReason="Для брокера выбранного счета импорт пока не настроен."
                 onUpdate={handleUpdateOperation}

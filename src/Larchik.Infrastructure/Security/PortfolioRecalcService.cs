@@ -269,6 +269,23 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                 break;
             case OperationType.BondPartialRedemption when op.InstrumentId != null:
+                if (usesBrokerCashLedger)
+                {
+                    if (cashEffective && op.Fee != 0)
+                    {
+                        AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
+                    }
+
+                    break;
+                }
+
+                if (!cashEffective)
+                {
+                    break;
+                }
+
+                AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                break;
             case OperationType.BondMaturity when op.InstrumentId != null:
                 if (usesBrokerCashLedger)
                 {

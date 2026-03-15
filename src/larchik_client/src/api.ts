@@ -10,6 +10,7 @@ import {
   PortfolioPerformance,
   PortfoliosSummary,
   PortfolioSummary,
+  RecalculatePortfolioResult,
   User,
 } from './types';
 
@@ -144,6 +145,12 @@ export const api = {
   async clearPortfolioData(id: string): Promise<ClearPortfolioDataResult> {
     return request<ClearPortfolioDataResult>(`/api/portfolios/${id}/data`, {
       method: 'DELETE',
+    });
+  },
+
+  async recalculatePortfolio(id: string): Promise<RecalculatePortfolioResult> {
+    return request<RecalculatePortfolioResult>(`/api/portfolios/${id}/recalculate`, {
+      method: 'POST',
     });
   },
 

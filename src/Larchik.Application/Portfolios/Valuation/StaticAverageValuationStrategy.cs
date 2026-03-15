@@ -25,8 +25,10 @@ public class StaticAverageValuationStrategy : IValuationStrategy
                     position.RollingCost -= op.Quantity * op.Price + op.Fee;
                     position.Quantity += op.Quantity;
                     break;
-                case OperationType.Sell:
                 case OperationType.BondPartialRedemption:
+                    position.RollingCost += op.Quantity * op.Price - op.Fee;
+                    break;
+                case OperationType.Sell:
                 case OperationType.BondMaturity:
                     var avg = position.Quantity != 0 ? -position.RollingCost / position.Quantity : 0;
                     realized = op.Quantity * op.Price - op.Fee - avg * op.Quantity;

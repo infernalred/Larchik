@@ -15,6 +15,12 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     private static readonly string InvalidExtensionMessage = "Неверное расширение файла. Загрузите отчет в формате .xlsx.";
     private static readonly Regex ReportPeriodRegex =
         new(@"(?<start>\d{4}-\d{2}-\d{2})-(?<end>\d{4}-\d{2}-\d{2})", RegexOptions.Compiled);
+    private static readonly Regex CorporateActionIsinRegex =
+        new(@"ISIN:\s*(?<isin>[A-Z0-9]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex CorporateActionQuantityRegex =
+        new(@"Количество:\s*(?<qty>[0-9]+(?:[.,][0-9]+)?)\s*шт", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex CorporateActionPerUnitRegex =
+        new(@"Выплата на 1 бумагу:\s*(?<amount>[0-9]+(?:[.,][0-9]+)?)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public Task<BrokerReportParseResult> ParseAsync(Stream fileStream, string fileName, CancellationToken cancellationToken)
     {
@@ -474,6 +480,13 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             }
 
             var note = noteCol > 0 ? row.GetString(noteCol) : opText;
+            var corporateAction = TryParseCorporateAction(note, signedAmount, currentCurrency, tradeDate, opText);
+            if (corporateAction is not null)
+            {
+                parsed.Add(corporateAction);
+                continue;
+            }
+
             var mapped = MapCashOperation(opText, signedAmount);
             if (mapped is null)
             {
@@ -497,6 +510,59 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
 
             parsed.Add(new ParsedOperation(operation, null, false));
         }
+    }
+
+    private static ParsedOperation? TryParseCorporateAction(
+        string? note,
+        decimal signedAmount,
+        string currency,
+        DateTime tradeDate,
+        string opText)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return null;
+        }
+
+        var normalized = Normalize(note);
+        var operationType = normalized switch
+        {
+            var value when value.Contains("тип кд: частичное погашение") => OperationType.BondPartialRedemption,
+            var value when value.Contains("тип кд: погашение в уст. срок") => OperationType.BondMaturity,
+            _ => (OperationType?)null
+        };
+
+        if (operationType is null)
+        {
+            return null;
+        }
+
+        var isin = NormalizeCode(CorporateActionIsinRegex.Match(note).Groups["isin"].Value);
+        var quantity = ParseLooseDecimal(CorporateActionQuantityRegex.Match(note).Groups["qty"].Value);
+        if (string.IsNullOrWhiteSpace(isin) || quantity is null or <= 0)
+        {
+            return null;
+        }
+
+        var perUnit = ParseLooseDecimal(CorporateActionPerUnitRegex.Match(note).Groups["amount"].Value);
+        var price = perUnit is > 0 ? perUnit.Value : decimal.Abs(signedAmount) / quantity.Value;
+
+        var operation = new Operation
+        {
+            Id = Guid.NewGuid(),
+            Type = operationType.Value,
+            Quantity = quantity.Value,
+            Price = price,
+            Fee = 0,
+            CurrencyId = currency,
+            TradeDate = tradeDate,
+            SettlementDate = tradeDate,
+            Note = string.IsNullOrWhiteSpace(opText) ? note : $"{opText}: {note}",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        return new ParsedOperation(operation, isin, true);
     }
 
     private static OperationType? ParseTradeType(string value)
@@ -609,6 +675,19 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         var feeCurrency = currencyCol > 0 ? NormalizeCurrency(row.GetString(currencyCol)) ?? currency : currency;
         if (!string.Equals(feeCurrency, currency, StringComparison.OrdinalIgnoreCase)) return 0;
         return row.GetDecimal(valueCol) ?? 0;
+    }
+
+    private static decimal? ParseLooseDecimal(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var normalized = value.Replace(" ", string.Empty).Replace(',', '.');
+        return decimal.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
     }
 
     private static Dictionary<string, int> BuildHeaderMap(ReportRow row)

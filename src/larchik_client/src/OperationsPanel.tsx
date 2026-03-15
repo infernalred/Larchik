@@ -23,6 +23,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import {
   ClearPortfolioDataResult,
   ImportResult,
@@ -30,6 +31,7 @@ import {
   Operation,
   OperationModel,
   OperationType,
+  RecalculatePortfolioResult,
 } from './types';
 import { ImportOperationsDialog } from './ImportOperationsDialog';
 import { OperationForm } from './OperationForm';
@@ -45,6 +47,7 @@ interface Props {
   onCreate: (model: OperationModel) => Promise<void>;
   onImport: (file: File) => Promise<ImportResult>;
   onClearPortfolioData: () => Promise<ClearPortfolioDataResult>;
+  onRecalculatePortfolio: () => Promise<RecalculatePortfolioResult>;
   canImport: boolean;
   importDisabledReason?: string;
   onUpdate: (id: string, model: OperationModel) => Promise<void>;
@@ -82,6 +85,7 @@ export function OperationsPanel({
   onCreate,
   onImport,
   onClearPortfolioData,
+  onRecalculatePortfolio,
   canImport,
   importDisabledReason,
   onUpdate,
@@ -94,6 +98,7 @@ export function OperationsPanel({
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importError, setImportError] = useState('');
   const [importSummary, setImportSummary] = useState('');
@@ -143,6 +148,22 @@ export function OperationsPanel({
     }
   };
 
+  const handleRecalculatePortfolio = async () => {
+    setRecalculating(true);
+    setImportError('');
+    setImportSummary('');
+    try {
+      const result = await onRecalculatePortfolio();
+      setImportSummary(
+        `Портфель пересчитан. Операций учтено: ${result.operationCount}. Пересчет начат с ${fmtDate(result.recalculatedFromDate)}.`,
+      );
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'Не удалось пересчитать портфель.');
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
   return (
     <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, backgroundImage: 'none' }}>
       <Stack
@@ -158,11 +179,22 @@ export function OperationsPanel({
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
           {totalCount > 0 && (
             <Button
+              startIcon={<AutorenewIcon />}
+              variant="outlined"
+              onClick={handleRecalculatePortfolio}
+              disabled={recalculating || clearing || importing}
+              sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
+            >
+              Пересчитать портфель
+            </Button>
+          )}
+          {totalCount > 0 && (
+            <Button
               startIcon={<DeleteSweepIcon />}
               variant="outlined"
               color="warning"
               onClick={handleClearPortfolioData}
-              disabled={clearing || importing}
+              disabled={clearing || importing || recalculating}
               sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
             >
               Очистить портфель
@@ -175,7 +207,7 @@ export function OperationsPanel({
               setImportError('');
               setImportDialogOpen(true);
             }}
-            disabled={!canImport || clearing}
+            disabled={!canImport || clearing || recalculating}
             title={!canImport ? importDisabledReason : undefined}
             sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
           >
@@ -185,7 +217,7 @@ export function OperationsPanel({
             startIcon={<AddIcon />}
             variant="contained"
             onClick={() => setCreating(true)}
-            disabled={clearing}
+            disabled={clearing || recalculating}
             sx={{ textTransform: 'none', alignSelf: { xs: 'stretch', sm: 'auto' } }}
           >
             Новая операция

@@ -157,6 +157,11 @@ export interface ClearPortfolioDataResult {
   deletedCashBalances: number;
 }
 
+export interface RecalculatePortfolioResult {
+  recalculatedFromDate: string;
+  operationCount: number;
+}
+
 export interface PagedResult<T> {
   items: T[];
   page: number;

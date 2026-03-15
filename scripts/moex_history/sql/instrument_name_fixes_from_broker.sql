@@ -1,5 +1,6 @@
 UPDATE instruments
 SET name = CASE isin
+    WHEN 'RU000A0HL5M1' THEN 'Novabev Group'
     WHEN 'RU000A1014L8' THEN 'ВИМ - Ликвидность'
     WHEN 'RU000A107662' THEN 'Хэдхантер'
     WHEN 'RU000A107T19' THEN 'Яндекс'
@@ -13,6 +14,7 @@ SET name = CASE isin
     ELSE name
 END
 WHERE isin IN (
+    'RU000A0HL5M1',
     'RU000A1014L8',
     'RU000A107662',
     'RU000A107T19',

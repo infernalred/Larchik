@@ -9,6 +9,7 @@ using Larchik.Application.Portfolios.GetPortfolioPerformance;
 using Larchik.Application.Portfolios.GetPortfolios;
 using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Application.Portfolios.GetPortfolioSummary;
+using Larchik.Application.Portfolios.RecalculatePortfolio;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -60,6 +61,14 @@ public class PortfoliosController : BaseApiController
     public async Task<ActionResult<ClearPortfolioDataResultDto>> ClearData(Guid id)
     {
         return HandleResult(await Mediator.Send(new ClearPortfolioDataCommand(id), HttpContext.RequestAborted));
+    }
+
+    [HttpPost("{id:guid}/recalculate")]
+    [ProducesResponseType(typeof(RecalculatePortfolioResultDto), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<ActionResult<RecalculatePortfolioResultDto>> Recalculate(Guid id)
+    {
+        return HandleResult(await Mediator.Send(new RecalculatePortfolioCommand(id), HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:guid}/summary")]

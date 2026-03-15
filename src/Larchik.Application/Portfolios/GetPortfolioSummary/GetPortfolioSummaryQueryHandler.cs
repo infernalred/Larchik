@@ -153,6 +153,20 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
                     }
                     break;
                 case OperationType.BondPartialRedemption when op.InstrumentId != null:
+                    if (usesBrokerCashLedger)
+                    {
+                        if (cashEffective && op.Fee != 0)
+                        {
+                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
+                        }
+                        break;
+                    }
+
+                    if (cashEffective)
+                    {
+                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                    }
+                    break;
                 case OperationType.BondMaturity when op.InstrumentId != null:
                     if (usesBrokerCashLedger)
                     {

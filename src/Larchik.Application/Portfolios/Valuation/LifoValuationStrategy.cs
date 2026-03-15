@@ -42,8 +42,25 @@ public class LifoValuationStrategy : IValuationStrategy
                     position.RollingCost -= totalCost;
                     break;
                 }
-                case OperationType.Sell:
                 case OperationType.BondPartialRedemption:
+                {
+                    var remaining = op.Quantity;
+                    foreach (var lot in lots)
+                    {
+                        if (remaining <= 0)
+                        {
+                            break;
+                        }
+
+                        var take = Math.Min(remaining, lot.Quantity);
+                        lot.CostPerUnit = Math.Max(0, lot.CostPerUnit - op.Price);
+                        remaining -= take;
+                    }
+
+                    position.RollingCost += op.Quantity * op.Price - op.Fee;
+                    break;
+                }
+                case OperationType.Sell:
                 case OperationType.BondMaturity:
                 {
                     var remaining = op.Quantity;

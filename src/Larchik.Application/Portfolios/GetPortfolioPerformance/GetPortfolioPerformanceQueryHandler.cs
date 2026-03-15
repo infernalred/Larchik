@@ -207,7 +207,6 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     }
                     break;
                 case OperationType.Sell when op.InstrumentId != null:
-                case OperationType.BondPartialRedemption when op.InstrumentId != null:
                 case OperationType.BondMaturity when op.InstrumentId != null:
                     if (usesBrokerCashLedger)
                     {
@@ -224,6 +223,21 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                         {
                             AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
                             AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                        }
+                        break;
+                    }
+
+                    if (cashEffective)
+                    {
+                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
+                    }
+                    break;
+                case OperationType.BondPartialRedemption when op.InstrumentId != null:
+                    if (usesBrokerCashLedger)
+                    {
+                        if (cashEffective && op.Fee != 0)
+                        {
+                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
                         }
                         break;
                     }
