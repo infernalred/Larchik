@@ -91,6 +91,7 @@ export interface PositionHolding {
   instrumentId: string;
   instrumentName: string;
   instrumentType?: InstrumentType;
+  categoryName?: string;
   currencyId: string;
   quantity: number;
   lastPrice?: number;
@@ -118,7 +119,7 @@ export interface PortfolioPerformance {
   endNavBase: number;
   netInflowBase: number;
   pnlBase: number;
-  returnPct: number;
+  returnPct: number | null;
   realizedBase: number;
   unrealizedBase: number;
 }

@@ -39,6 +39,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             .ToArray();
 
         var instruments = await context.Instruments
+            .Include(x => x.Category)
             .Where(x => instrumentIds.Contains(x.Id))
             .AsNoTracking()
             .ToDictionaryAsync(x => x.Id, cancellationToken);
@@ -313,6 +314,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
                 InstrumentId = kvp.Key,
                 InstrumentName = instrument.Name,
                 InstrumentType = instrument.Type.ToString(),
+                CategoryName = instrument.Category?.Name,
                 CurrencyId = instrument.CurrencyId,
                 Quantity = kvp.Value,
                 LastPrice = lastPrice,

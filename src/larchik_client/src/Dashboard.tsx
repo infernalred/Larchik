@@ -34,11 +34,13 @@ import {
 } from './types';
 import { SummaryCards } from './SummaryCards';
 import { PositionsTable } from './PositionsTable';
-import { PerformanceTable } from './PerformanceTable';
+import { PerformanceAnalytics } from './PerformanceAnalytics';
 import { PortfolioSidebar } from './PortfolioSidebar';
 import { QuickDeposit } from './QuickDeposit';
 import { OperationsPanel } from './OperationsPanel';
 import { CreatePortfolioDialog } from './CreatePortfolioDialog';
+
+type PortfolioRoute = 'overview' | 'operations' | 'analytics';
 
 const VALUATION_METHODS = [
   { value: 'adjustingAvg', label: 'Adjusting Avg' },
@@ -49,8 +51,8 @@ const VALUATION_METHODS = [
 
 interface Props {
   onLogout: () => void;
-  route: 'overview' | 'operations';
-  onRouteChange: (route: 'overview' | 'operations') => void;
+  route: PortfolioRoute;
+  onRouteChange: (route: PortfolioRoute) => void;
 }
 
 const formatMoney = (value: number) => value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -73,6 +75,7 @@ function buildDisplayPositions(summary: PortfolioSummary): PositionHolding[] {
     instrumentId: `cash:${cash.currencyId}`,
     instrumentName: CASH_LABELS[cash.currencyId] ?? cash.currencyId,
     instrumentType: 'Currency',
+    categoryName: 'Деньги',
     currencyId: cash.currencyId,
     quantity: cash.amount,
     marketValueBase: cash.amountInBase,
@@ -114,6 +117,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   const [performance, setPerformance] = useState<PortfolioPerformance[]>([]);
   const [valuationMethod, setValuationMethod] = useState('adjustingAvg');
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [loadingPerformance, setLoadingPerformance] = useState(false);
   const [loadingAllSummary, setLoadingAllSummary] = useState(false);
   const [allSummaryError, setAllSummaryError] = useState('');
   const [operations, setOperations] = useState<Operation[]>([]);
@@ -144,10 +148,16 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   }, [viewMode, valuationMethod, portfolios, selectedPortfolio]);
 
   useEffect(() => {
-    if (viewMode !== 'portfolio' || portfolioPage !== 'overview') return;
+    if (viewMode !== 'portfolio' || (portfolioPage !== 'overview' && portfolioPage !== 'analytics')) return;
     if (!selectedPortfolio) return;
 
     loadSummary(selectedPortfolio, valuationMethod);
+  }, [selectedPortfolio, valuationMethod, viewMode, portfolioPage]);
+
+  useEffect(() => {
+    if (viewMode !== 'portfolio' || portfolioPage !== 'analytics') return;
+    if (!selectedPortfolio) return;
+
     loadPerformance(selectedPortfolio, valuationMethod);
   }, [selectedPortfolio, valuationMethod, viewMode, portfolioPage]);
 
@@ -187,6 +197,9 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     try {
       const data = await api.getPortfolioSummary(id, method);
       setSummary(data);
+    } catch (error) {
+      console.error(error);
+      setSummary(null);
     } finally {
       setLoadingSummary(false);
     }
@@ -208,8 +221,16 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   }
 
   async function loadPerformance(id: string, method: string) {
-    const data = await api.getPerformance(id, method);
-    setPerformance(data);
+    setLoadingPerformance(true);
+    try {
+      const data = await api.getPerformance(id, method);
+      setPerformance(data);
+    } catch (error) {
+      console.error(error);
+      setPerformance([]);
+    } finally {
+      setLoadingPerformance(false);
+    }
   }
 
   async function loadOperations(id: string, page: number, pageSize: number) {
@@ -268,7 +289,6 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
       note,
     });
     await loadSummary(selectedPortfolio, valuationMethod);
-    await loadPerformance(selectedPortfolio, valuationMethod);
   }
 
   async function handleCreateOperation(model: OperationModel) {
@@ -301,11 +321,6 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
       } else {
         await loadOperations(selectedPortfolio, 1, operationsPageSize);
       }
-
-      await Promise.all([
-        loadSummary(selectedPortfolio, valuationMethod),
-        loadPerformance(selectedPortfolio, valuationMethod),
-      ]);
 
       return result;
     } catch (error) {
@@ -341,11 +356,6 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
         await loadOperations(selectedPortfolio, 1, operationsPageSize);
       }
 
-      await Promise.all([
-        loadSummary(selectedPortfolio, valuationMethod),
-        loadPerformance(selectedPortfolio, valuationMethod),
-      ]);
-
       return result;
     } catch (error) {
       throw new Error(getApiErrorMessage(error, 'Не удалось очистить данные портфеля.'));
@@ -359,11 +369,6 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
 
     try {
       const result = await api.recalculatePortfolio(selectedPortfolio);
-
-      await Promise.all([
-        loadSummary(selectedPortfolio, valuationMethod),
-        loadPerformance(selectedPortfolio, valuationMethod),
-      ]);
 
       if (portfolioPage === 'operations') {
         await loadOperations(selectedPortfolio, operationsPage, operationsPageSize);
@@ -407,14 +412,31 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     setSidebarOpen(false);
   }
 
+  function handleShowAnalytics() {
+    if (!selectedPortfolio) return;
+    setViewMode('portfolio');
+    onRouteChange('analytics');
+    setSidebarOpen(false);
+  }
+
   const activePortfolio = portfolios.find((x) => x.id === selectedPortfolio) ?? null;
   const activeBroker = brokers.find((x) => x.id === activePortfolio?.brokerId) ?? null;
   const canImportOperations = Boolean(activeBroker?.supportsImport && activeBroker.code);
+  const performanceCurrency = performance[0]?.reportingCurrencyId;
   const currency =
     viewMode === 'all'
       ? allSummary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—'
-      : summary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—';
-  const isLoadingCurrent = viewMode === 'all' ? loadingAllSummary : portfolioPage === 'overview' ? loadingSummary : false;
+      : portfolioPage === 'analytics'
+        ? performanceCurrency ?? activePortfolio?.reportingCurrencyId ?? summary?.reportingCurrencyId ?? '—'
+        : summary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—';
+  const isLoadingCurrent =
+    viewMode === 'all'
+      ? loadingAllSummary
+      : portfolioPage === 'overview'
+        ? loadingSummary
+        : portfolioPage === 'analytics'
+          ? loadingSummary || loadingPerformance
+          : false;
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', color: 'text.primary' }}>
@@ -546,6 +568,14 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                     >
                       Операции
                     </Button>
+                    <Button
+                      variant={portfolioPage === 'analytics' ? 'contained' : 'outlined'}
+                      onClick={handleShowAnalytics}
+                      sx={{ textTransform: 'none' }}
+                      fullWidth={isMobile}
+                    >
+                      Аналитика
+                    </Button>
                   </Stack>
                 )}
                 <Stack
@@ -616,9 +646,14 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
 
               <Stack spacing={1}>
                 <Typography variant="h6" fontWeight={700}>
-                  Помесячная доходность
+                  Аналитика
                 </Typography>
-                <PerformanceTable items={performance} />
+                <Typography variant="body2" color="text.secondary">
+                  Доходность и графики вынесены на отдельную страницу, чтобы обзор портфеля загружался быстрее.
+                </Typography>
+                <Button variant="outlined" onClick={handleShowAnalytics} sx={{ alignSelf: 'flex-start' }}>
+                  Открыть аналитику
+                </Button>
               </Stack>
             </Stack>
           )}
@@ -647,6 +682,14 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                 searchInstruments={searchInstruments}
               />
             </Stack>
+          )}
+
+          {viewMode === 'portfolio' && portfolioPage === 'analytics' && !loadingSummary && !loadingPerformance && selectedPortfolio && (
+            <PerformanceAnalytics
+              summary={summary}
+              items={performance}
+              currency={performanceCurrency ?? activePortfolio?.reportingCurrencyId ?? summary?.reportingCurrencyId ?? currency}
+            />
           )}
 
           {viewMode === 'all' && !loadingAllSummary && allSummary && (
@@ -719,6 +762,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
               <Typography color="text.secondary">Не удалось загрузить обзор портфеля</Typography>
             </Paper>
           )}
+
         </Container>
       </Box>
       <CreatePortfolioDialog

@@ -315,7 +315,7 @@ export function OperationsPanel({
           )}
         </Stack>
       ) : (
-        <TableContainer component={Box} sx={{ borderRadius: 2, maxHeight: 520 }}>
+        <TableContainer component={Box} sx={{ borderRadius: 2, overflowX: 'auto' }}>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>

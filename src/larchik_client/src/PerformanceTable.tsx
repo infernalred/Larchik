@@ -33,7 +33,7 @@ export function PerformanceTable({ items }: Props) {
             <Stack spacing={1.25}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                 <Typography fontWeight={700}>{row.period}</Typography>
-                <Typography color={row.returnPct >= 0 ? 'success.main' : 'error.main'} fontWeight={700}>
+                <Typography color={(row.returnPct ?? 0) >= 0 ? 'success.main' : 'error.main'} fontWeight={700}>
                   {row.returnPct == null ? '—' : `${(row.returnPct * 100).toFixed(2)}%`}
                 </Typography>
               </Stack>

@@ -5,8 +5,19 @@ import { AuthForm } from './AuthForm';
 import { Dashboard } from './Dashboard';
 import { User } from './types';
 
-const resolveRoute = (pathname: string): 'overview' | 'operations' =>
-  pathname === '/operations' || pathname.startsWith('/operations/') ? 'operations' : 'overview';
+type DashboardRoute = 'overview' | 'operations' | 'analytics';
+
+const resolveRoute = (pathname: string): DashboardRoute => {
+  if (pathname === '/operations' || pathname.startsWith('/operations/')) {
+    return 'operations';
+  }
+
+  if (pathname === '/analytics' || pathname.startsWith('/analytics/')) {
+    return 'analytics';
+  }
+
+  return 'overview';
+};
 
 const theme = createTheme({
   palette: {
@@ -112,7 +123,7 @@ export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [booting, setBooting] = useState(true);
-  const [route, setRoute] = useState<'overview' | 'operations'>(() => resolveRoute(window.location.pathname));
+  const [route, setRoute] = useState<DashboardRoute>(() => resolveRoute(window.location.pathname));
 
   const applyRouteFromLocation = useCallback(() => {
     setRoute(resolveRoute(window.location.pathname));
@@ -137,8 +148,8 @@ export function App() {
     return () => window.removeEventListener('popstate', handler);
   }, [applyRouteFromLocation]);
 
-  const navigateRoute = useCallback((nextRoute: 'overview' | 'operations') => {
-    const nextPath = nextRoute === 'operations' ? '/operations' : '/';
+  const navigateRoute = useCallback((nextRoute: DashboardRoute) => {
+    const nextPath = nextRoute === 'operations' ? '/operations' : nextRoute === 'analytics' ? '/analytics' : '/';
     if (window.location.pathname !== nextPath) {
       window.history.pushState({}, '', nextPath);
     }
