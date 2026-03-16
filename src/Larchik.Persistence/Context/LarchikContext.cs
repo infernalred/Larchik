@@ -14,6 +14,7 @@ public class LarchikContext(DbContextOptions<LarchikContext> options)
     public DbSet<Instrument> Instruments { get; set; } = null!;
     public DbSet<InstrumentAlias> InstrumentAliases { get; set; } = null!;
     public DbSet<InstrumentCorporateAction> InstrumentCorporateActions { get; set; } = null!;
+    public DbSet<InstrumentListingHistory> InstrumentListingHistories { get; set; } = null!;
     public DbSet<Broker> Brokers { get; set; } = null!;
     public DbSet<Portfolio> Portfolios { get; set; } = null!;
     public DbSet<CashBalance> CashBalances { get; set; } = null!;

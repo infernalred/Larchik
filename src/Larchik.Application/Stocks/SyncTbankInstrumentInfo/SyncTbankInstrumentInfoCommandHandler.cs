@@ -50,9 +50,28 @@ public class SyncTbankInstrumentInfoCommandHandler(
             candidatesQuery = candidatesQuery.Where(x => x.Country == null || !excludedCountries.Contains(x.Country.ToUpper()));
         }
 
-        var candidates = await candidatesQuery
-            .Select(x => new InstrumentCandidate(x.Id, x.Figi!, x.Ticker, x.Isin, x.IsTrading))
+        var instrumentStates = await candidatesQuery
+            .Select(x => new InstrumentState(x.Id, x.Figi!, x.Ticker, x.Isin, x.IsTrading, x.Exchange, x.CurrencyId))
             .ToListAsync(cancellationToken);
+        var listingHistories = await InstrumentListingHistoryResolver.LoadAsync(
+            context,
+            instrumentStates.Select(x => x.Id),
+            cancellationToken);
+        var candidates = instrumentStates
+            .Select(x =>
+            {
+                var activeListing = InstrumentListingHistoryResolver.Resolve(
+                    x.Id,
+                    x.Ticker,
+                    x.Figi,
+                    x.Exchange,
+                    x.CurrencyId,
+                    listingHistories,
+                    DateTime.UtcNow);
+                var figi = string.IsNullOrWhiteSpace(activeListing.Figi) ? x.Figi : activeListing.Figi!;
+                return new InstrumentCandidate(x.Id, figi, x.Ticker, x.Isin, x.IsTrading);
+            })
+            .ToList();
 
         if (candidates.Count == 0)
         {
@@ -275,5 +294,6 @@ public class SyncTbankInstrumentInfoCommandHandler(
     }
 
     private sealed record InstrumentCandidate(Guid Id, string Figi, string Ticker, string Isin, bool IsTrading);
+    private sealed record InstrumentState(Guid Id, string Figi, string Ticker, string Isin, bool IsTrading, string? Exchange, string CurrencyId);
     private sealed record InstrumentTradingInfo(bool IsTrading, string? TradingStatus);
 }

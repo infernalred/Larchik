@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, ButtonBase, Divider, Grid, Paper, Stack, Typography } from '@mui/material';
 import { PortfolioPerformance, PortfolioSummary } from './types';
 
@@ -13,6 +13,7 @@ type PortfolioRange = '3m' | '6m' | '1y' | 'all';
 
 interface AnalyticsPoint {
   period: string;
+  date: Date;
   longLabel: string;
   shortLabel: string;
   returnPct: number;
@@ -35,6 +36,8 @@ interface CompositionSection {
 
 const LONG_MONTH_FORMATTER = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' });
 const SHORT_MONTH_FORMATTER = new Intl.DateTimeFormat('ru-RU', { month: 'short' });
+const MONTH_ONLY_FORMATTER = new Intl.DateTimeFormat('ru-RU', { month: 'long' });
+const YEAR_FORMATTER = new Intl.DateTimeFormat('ru-RU', { year: 'numeric' });
 
 const TAB_LABELS: Record<AnalyticsTab, string> = {
   assets: 'Активы',
@@ -105,6 +108,7 @@ function buildPoints(items: PortfolioPerformance[]): AnalyticsPoint[] {
       const date = toPeriodDate(item.period);
       return {
         period: item.period,
+        date,
         longLabel: capitalize(LONG_MONTH_FORMATTER.format(date)),
         shortLabel: SHORT_MONTH_FORMATTER.format(date).replace('.', ''),
         returnPct: item.returnPct ?? 0,
@@ -318,7 +322,15 @@ function CompositionView({
   );
 }
 
-function PortfolioValueChart({ points, currency }: { points: AnalyticsPoint[]; currency: string }) {
+function PortfolioValueChart({
+  points,
+  currency,
+  range,
+}: {
+  points: AnalyticsPoint[];
+  currency: string;
+  range: PortfolioRange;
+}) {
   if (!points.length) {
     return (
       <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', backgroundImage: 'none' }}>
@@ -327,28 +339,90 @@ function PortfolioValueChart({ points, currency }: { points: AnalyticsPoint[]; c
     );
   }
 
+  const [selectedPeriod, setSelectedPeriod] = useState(points[points.length - 1]?.period ?? points[0]?.period);
+
+  useEffect(() => {
+    setSelectedPeriod(points[points.length - 1]?.period ?? points[0]?.period);
+  }, [points]);
+
   const width = 760;
   const height = 300;
-  const padding = { top: 18, right: 18, bottom: 44, left: 18 };
+  const isAllTime = range === 'all';
+  const padding = { top: isAllTime ? 42 : 18, right: 18, bottom: isAllTime ? 18 : 44, left: 18 };
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
   const values = points.map((point) => point.endNavBase);
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
   const baseValue = minValue > 0 ? minValue * 0.92 : 0;
-  const range = Math.max(maxValue - baseValue, 1);
+  const valueRange = Math.max(maxValue - baseValue, 1);
   const step = innerWidth / Math.max(points.length, 1);
   const barWidth = Math.max(16, Math.min(26, step * 0.56));
   const labelStep = points.length > 8 ? Math.ceil(points.length / 6) : 1;
+  const selectedPoint = points.find((point) => point.period === selectedPeriod) ?? points[points.length - 1];
+  const selectedIndex = Math.max(
+    points.findIndex((point) => point.period === selectedPoint.period),
+    0,
+  );
+  const yearMarkers = isAllTime
+    ? points
+        .map((point, index) => ({ point, index }))
+        .filter(({ point, index }) => index === 0 || point.date.getUTCFullYear() !== points[index - 1].date.getUTCFullYear())
+    : [];
+
+  const selectedBarHeight = ((selectedPoint.endNavBase - baseValue) / valueRange) * innerHeight;
+  const selectedX = padding.left + step * selectedIndex + (step - barWidth) / 2;
+  const selectedY = padding.top + innerHeight - selectedBarHeight;
+  const tooltipWidth = 168;
+  const tooltipHeight = 62;
+  const tooltipX = Math.min(
+    Math.max(selectedX + barWidth / 2 - tooltipWidth / 2, padding.left),
+    width - padding.right - tooltipWidth,
+  );
+  const tooltipY = Math.max(selectedY - tooltipHeight - 10, padding.top + 6);
+  const tooltipMonth = MONTH_ONLY_FORMATTER.format(selectedPoint.date);
+  const tooltipYear = YEAR_FORMATTER.format(selectedPoint.date);
 
   return (
     <Box component="svg" viewBox={`0 0 ${width} ${height}`} sx={{ width: '100%', height: { xs: 250, md: 300 }, display: 'block' }}>
+      {yearMarkers.map(({ point, index }) => {
+        const x = padding.left + step * index;
+        return (
+          <g key={`year-${point.period}`}>
+            <line
+              x1={x}
+              x2={x}
+              y1={padding.top}
+              y2={padding.top + innerHeight}
+              stroke="rgba(148,163,184,0.22)"
+              strokeDasharray="4 5"
+            />
+            <text
+              x={Math.min(x + 4, width - padding.right - 24)}
+              y={padding.top - 10}
+              fill="rgba(148,163,184,0.78)"
+              fontSize="12"
+              textAnchor="start"
+            >
+              {YEAR_FORMATTER.format(point.date)}
+            </text>
+          </g>
+        );
+      })}
+
       {Array.from({ length: 4 }).map((_, index) => {
         const y = padding.top + (innerHeight / 3) * index;
         const value = maxValue - ((maxValue - baseValue) / 3) * index;
         return (
           <g key={index}>
-            <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="rgba(148,163,184,0.15)" />
+            <line
+              x1={padding.left}
+              x2={width - padding.right}
+              y1={y}
+              y2={y}
+              stroke={index === 3 ? 'rgba(148,163,184,0.28)' : 'rgba(148,163,184,0.15)'}
+              strokeDasharray={isAllTime ? '4 5' : undefined}
+            />
             <text x={width - padding.right} y={y - 6} fill="rgba(148,163,184,0.88)" fontSize="12" textAnchor="end">
               {`${formatMoney(value)} ${currency}`}
             </text>
@@ -357,20 +431,31 @@ function PortfolioValueChart({ points, currency }: { points: AnalyticsPoint[]; c
       })}
 
       {points.map((point, index) => {
-        const barHeight = ((point.endNavBase - baseValue) / range) * innerHeight;
+        const barHeight = ((point.endNavBase - baseValue) / valueRange) * innerHeight;
         const x = padding.left + step * index + (step - barWidth) / 2;
         const y = padding.top + innerHeight - barHeight;
         const isLast = index === points.length - 1;
+        const isSelected = point.period === selectedPoint.period;
         return (
           <g key={point.period}>
-            <rect x={x} y={y} width={barWidth} height={Math.max(barHeight, 3)} rx={barWidth / 2} fill="#65a8e8" opacity={isLast ? 1 : 0.92} />
-            {(index % labelStep === 0 || isLast) && (
+            <rect
+              x={x}
+              y={y}
+              width={barWidth}
+              height={Math.max(barHeight, 3)}
+              rx={Math.min(barWidth / 2, 8)}
+              fill={isSelected ? '#7db8ff' : '#65a8e8'}
+              opacity={isSelected || isLast ? 1 : 0.92}
+              style={{ cursor: 'pointer' }}
+              onClick={() => setSelectedPeriod(point.period)}
+            />
+            {!isAllTime && (index % labelStep === 0 || isLast) && (
               <text
                 x={x + barWidth / 2}
                 y={height - 16}
-                fill={isLast ? '#f8fafc' : 'rgba(148,163,184,0.9)'}
+                fill={isSelected || isLast ? '#f8fafc' : 'rgba(148,163,184,0.9)'}
                 fontSize="12"
-                fontWeight={isLast ? 700 : 500}
+                fontWeight={isSelected || isLast ? 700 : 500}
                 textAnchor="middle"
               >
                 {point.shortLabel}
@@ -379,6 +464,31 @@ function PortfolioValueChart({ points, currency }: { points: AnalyticsPoint[]; c
           </g>
         );
       })}
+
+      <g>
+        <line
+          x1={selectedX + barWidth / 2}
+          x2={selectedX + barWidth / 2}
+          y1={padding.top}
+          y2={padding.top + innerHeight}
+          stroke="rgba(255,255,255,0.18)"
+          strokeDasharray="4 4"
+        />
+        <rect
+          x={tooltipX}
+          y={tooltipY}
+          width={tooltipWidth}
+          height={tooltipHeight}
+          rx={16}
+          fill="#f8fafc"
+        />
+        <text x={tooltipX + 16} y={tooltipY + 24} fill="#111827" fontSize="13" fontWeight={500}>
+          {isAllTime ? `${tooltipMonth} ${tooltipYear}` : tooltipMonth}
+        </text>
+        <text x={tooltipX + 16} y={tooltipY + 47} fill="#020617" fontSize="15" fontWeight={800}>
+          {`${formatMoney(selectedPoint.endNavBase)} ${currency}`}
+        </text>
+      </g>
     </Box>
   );
 }
@@ -508,7 +618,7 @@ function PortfolioView({
                   ))}
                 </Stack>
               </Stack>
-              <PortfolioValueChart points={visiblePoints} currency={currency} />
+              <PortfolioValueChart points={visiblePoints} currency={currency} range={range} />
             </Stack>
           </Paper>
         </Grid>

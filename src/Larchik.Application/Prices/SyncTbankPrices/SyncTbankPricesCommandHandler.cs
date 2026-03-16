@@ -63,9 +63,28 @@ public class SyncTbankPricesCommandHandler(
             instrumentsQuery = instrumentsQuery.Where(x => x.Country == null || !excludedCountries.Contains(x.Country.ToUpper()));
         }
 
-        var instruments = await instrumentsQuery
-            .Select(x => new InstrumentCandidate(x.Id, x.Figi!, x.CurrencyId.ToUpperInvariant(), x.Ticker, x.Isin))
+        var instrumentStates = await instrumentsQuery
+            .Select(x => new InstrumentState(x.Id, x.Figi!, x.CurrencyId.ToUpperInvariant(), x.Ticker, x.Isin, x.Exchange))
             .ToListAsync(cancellationToken);
+        var listingHistories = await InstrumentListingHistoryResolver.LoadAsync(
+            context,
+            instrumentStates.Select(x => x.Id),
+            cancellationToken);
+        var instruments = instrumentStates
+            .Select(x =>
+            {
+                var activeListing = InstrumentListingHistoryResolver.Resolve(
+                    x.Id,
+                    x.Ticker,
+                    x.Figi,
+                    x.Exchange,
+                    x.CurrencyId,
+                    listingHistories,
+                    date.ToDateTime(TimeOnly.MinValue));
+                var figi = string.IsNullOrWhiteSpace(activeListing.Figi) ? x.Figi : activeListing.Figi!;
+                return new InstrumentCandidate(x.Id, figi, x.CurrencyId, x.Ticker, x.Isin, x.Exchange);
+            })
+            .ToList();
 
         if (instruments.Count == 0)
         {
@@ -134,6 +153,7 @@ public class SyncTbankPricesCommandHandler(
             .OrderByDescending(x => x.UpdatedAt)
             .GroupBy(x => new { x.InstrumentId, Date = DateOnly.FromDateTime(x.Date) })
             .ToDictionary(x => x.Key, x => x.First());
+        var instrumentStateById = instrumentStates.ToDictionary(x => x.Id);
 
         var inserted = 0;
         var updated = 0;
@@ -141,11 +161,25 @@ public class SyncTbankPricesCommandHandler(
 
         foreach (var point in points)
         {
+            if (!instrumentStateById.TryGetValue(point.InstrumentId, out var instrumentState))
+            {
+                continue;
+            }
+
+            var activeListing = InstrumentListingHistoryResolver.Resolve(
+                instrumentState.Id,
+                instrumentState.Ticker,
+                instrumentState.Figi,
+                instrumentState.Exchange,
+                instrumentState.CurrencyId,
+                listingHistories,
+                point.Date.ToDateTime(TimeOnly.MinValue));
             var existingKey = new { point.InstrumentId, point.Date };
             if (existingByInstrumentDate.TryGetValue(existingKey, out var price))
             {
                 price.Value = point.Value;
-                price.CurrencyId = point.CurrencyId;
+                price.CurrencyId = instrumentState.CurrencyId;
+                price.SourceCurrencyId = activeListing.CurrencyId;
                 price.Provider = provider;
                 price.UpdatedAt = now;
                 updated++;
@@ -158,7 +192,8 @@ public class SyncTbankPricesCommandHandler(
                 InstrumentId = point.InstrumentId,
                 Date = point.Date.ToDateTime(TimeOnly.MinValue),
                 Value = point.Value,
-                CurrencyId = point.CurrencyId,
+                CurrencyId = instrumentState.CurrencyId,
+                SourceCurrencyId = activeListing.CurrencyId,
                 Provider = provider,
                 CreatedAt = now,
                 UpdatedAt = now
@@ -358,6 +393,7 @@ public class SyncTbankPricesCommandHandler(
         return normalized.Length <= 180 ? normalized : normalized[..180];
     }
 
-    private sealed record InstrumentCandidate(Guid Id, string Figi, string CurrencyId, string Ticker, string Isin);
+    private sealed record InstrumentCandidate(Guid Id, string Figi, string CurrencyId, string Ticker, string Isin, string? Exchange);
+    private sealed record InstrumentState(Guid Id, string Figi, string CurrencyId, string Ticker, string Isin, string? Exchange);
     private sealed record TbankPricePoint(Guid InstrumentId, DateOnly Date, decimal Value, string CurrencyId, string Ticker, string Isin);
 }

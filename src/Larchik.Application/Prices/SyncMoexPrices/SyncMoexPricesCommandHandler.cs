@@ -66,6 +66,10 @@ public class SyncMoexPricesCommandHandler(
                 x.Ticker != "")
             .Select(x => new InstrumentCandidate(x.Id, x.Ticker.ToUpper(), x.CurrencyId.ToUpperInvariant(), x.Type))
             .ToListAsync(cancellationToken);
+        var listingHistories = await InstrumentListingHistoryResolver.LoadAsync(
+            context,
+            instruments.Select(x => x.Id),
+            cancellationToken);
 
         if (instruments.Count == 0)
         {
@@ -145,6 +149,20 @@ public class SyncMoexPricesCommandHandler(
             }
         }
 
+        foreach (var listing in listingHistories.Values.SelectMany(x => x))
+        {
+            if (string.IsNullOrWhiteSpace(listing.Ticker))
+            {
+                continue;
+            }
+
+            if (instrumentsById.TryGetValue(listing.InstrumentId, out var instrument) &&
+                !codeMap.ContainsKey(listing.Ticker))
+            {
+                codeMap[listing.Ticker] = instrument;
+            }
+        }
+
         foreach (var alias in aliasCodes)
         {
             if (codeMap.ContainsKey(alias.NormalizedAliasCode))
@@ -207,6 +225,7 @@ public class SyncMoexPricesCommandHandler(
             })
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Select(x => x!.ToUpperInvariant())
+            .Concat(listingHistories.Values.SelectMany(x => x).Select(x => x.CurrencyId.ToUpperInvariant()))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var fxRates = neededCurrencies.Length == 0
@@ -236,6 +255,14 @@ public class SyncMoexPricesCommandHandler(
         {
             var instrument = matched.Instrument;
             var point = matched.Point;
+            var activeListing = InstrumentListingHistoryResolver.Resolve(
+                instrument.Id,
+                instrument.Ticker,
+                null,
+                null,
+                instrument.CurrencyId,
+                listingHistories,
+                point.Date.ToDateTime(TimeOnly.MinValue));
             var normalizedValue = NormalizeStoredPrice(instrument, point, data);
             var existingKey = new { InstrumentId = instrument.Id, Date = point.Date };
 
@@ -243,6 +270,7 @@ public class SyncMoexPricesCommandHandler(
             {
                 price.Value = normalizedValue;
                 price.CurrencyId = instrument.CurrencyId;
+                price.SourceCurrencyId = point.CurrencyId ?? activeListing.CurrencyId;
                 price.Provider = provider;
                 price.UpdatedAt = DateTime.UtcNow;
                 updated++;
@@ -256,6 +284,7 @@ public class SyncMoexPricesCommandHandler(
                     Date = point.Date.ToDateTime(TimeOnly.MinValue),
                     Value = normalizedValue,
                     CurrencyId = instrument.CurrencyId,
+                    SourceCurrencyId = point.CurrencyId ?? activeListing.CurrencyId,
                     Provider = provider,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow

@@ -21,4 +21,5 @@ public class Instrument
 
     public Currency? Currency { get; set; }
     public Category? Category { get; set; }
+    public ICollection<InstrumentListingHistory> ListingHistory { get; set; } = [];
 }
