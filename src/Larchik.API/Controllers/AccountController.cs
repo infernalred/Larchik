@@ -117,6 +117,18 @@ public class AccountController(
         return NoContent();
     }
 
+    [HttpPost("refresh")]
+    public async Task<ActionResult<UserDto>> Refresh()
+    {
+        var user = await userManager.GetUserAsync(User);
+        if (user is null) return Unauthorized();
+
+        await signInManager.RefreshSignInAsync(user);
+
+        var roles = await userManager.GetRolesAsync(user);
+        return Ok(BuildUserDto(user, roles));
+    }
+
     [AllowAnonymous]
     [HttpGet("confirm-email")]
     public async Task<IActionResult> ConfirmEmail([FromQuery] Guid userId, [FromQuery] string token)

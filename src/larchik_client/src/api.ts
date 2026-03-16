@@ -20,6 +20,16 @@ let csrfToken: string | null = null;
 let csrfPromise: Promise<string> | null = null;
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function ensureCsrfToken(): Promise<string> {
   if (csrfToken) return csrfToken;
   if (!csrfPromise) {
@@ -80,13 +90,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       resetCsrfToken();
       res = await send();
     } else {
-      throw new Error(body || `Request failed: ${res.status}`);
+      throw new ApiError(body || `Request failed: ${res.status}`, res.status);
     }
   }
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `Request failed: ${res.status}`);
+    throw new ApiError(text || `Request failed: ${res.status}`, res.status);
   }
 
   if (res.status === 204) return {} as T;
@@ -94,10 +104,26 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  async login(email: string, password: string): Promise<User> {
+  async register(email: string, username: string, password: string): Promise<User> {
+    return request<User>('/api/account/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, userName: username, password }),
+    });
+  },
+
+  async login(email: string, password: string, rememberMe = true): Promise<User> {
     const user = await request<User>('/api/account/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, rememberMe }),
+    });
+    resetCsrfToken();
+    await ensureCsrfToken();
+    return user;
+  },
+
+  async refreshSession(): Promise<User> {
+    const user = await request<User>('/api/account/refresh', {
+      method: 'POST',
     });
     resetCsrfToken();
     await ensureCsrfToken();

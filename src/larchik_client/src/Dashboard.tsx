@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
   CircularProgress,
@@ -10,6 +11,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  Snackbar,
   Stack,
   Typography,
   useMediaQuery,
@@ -39,6 +41,7 @@ import { PortfolioSidebar } from './PortfolioSidebar';
 import { QuickDeposit } from './QuickDeposit';
 import { OperationsPanel } from './OperationsPanel';
 import { CreatePortfolioDialog } from './CreatePortfolioDialog';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
 
 type PortfolioRoute = 'overview' | 'operations' | 'analytics';
 
@@ -128,6 +131,8 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createPortfolioLoading, setCreatePortfolioLoading] = useState(false);
   const [createPortfolioError, setCreatePortfolioError] = useState('');
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const portfolioPage = route;
   const displayPositions = summary ? buildDisplayPositions(summary) : [];
@@ -259,6 +264,15 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   function handleCloseCreatePortfolio() {
     if (createPortfolioLoading) return;
     setCreateDialogOpen(false);
+  }
+
+  function handleOpenChangePassword() {
+    setSidebarOpen(false);
+    setChangePasswordOpen(true);
+  }
+
+  function handleCloseChangePassword() {
+    setChangePasswordOpen(false);
   }
 
   async function handleCreatePortfolio(model: { name: string; brokerId: string; reportingCurrencyId: string }) {
@@ -449,6 +463,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
             onCreate={handleOpenCreatePortfolio}
             onShowAllSummary={handleShowAllSummary}
             showAllSelected={viewMode === 'all'}
+            onChangePassword={handleOpenChangePassword}
             onLogout={onLogout}
           />
         </Box>
@@ -472,6 +487,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
           onCreate={handleOpenCreatePortfolio}
           onShowAllSummary={handleShowAllSummary}
           showAllSelected={viewMode === 'all'}
+          onChangePassword={handleOpenChangePassword}
           onLogout={onLogout}
           mobile
         />
@@ -773,6 +789,21 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
         onClose={handleCloseCreatePortfolio}
         onSubmit={handleCreatePortfolio}
       />
+      <ChangePasswordDialog
+        open={changePasswordOpen}
+        onClose={handleCloseChangePassword}
+        onSuccess={() => setChangePasswordSuccess('Пароль обновлен.')}
+      />
+      <Snackbar
+        open={Boolean(changePasswordSuccess)}
+        autoHideDuration={3000}
+        onClose={() => setChangePasswordSuccess('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setChangePasswordSuccess('')} severity="success" sx={{ width: '100%' }}>
+          {changePasswordSuccess}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

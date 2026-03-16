@@ -1,5 +1,6 @@
 import { Button, Divider, IconButton, List, ListItem, ListItemButton, ListItemText, Stack, Tooltip, Typography } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import LockResetIcon from '@mui/icons-material/LockReset';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { Portfolio } from './types';
 
@@ -10,6 +11,7 @@ interface Props {
   onCreate: () => void;
   onShowAllSummary: () => void;
   showAllSelected?: boolean;
+  onChangePassword: () => void;
   onLogout: () => void;
   mobile?: boolean;
 }
@@ -21,6 +23,7 @@ export function PortfolioSidebar({
   onCreate,
   onShowAllSummary,
   showAllSelected = false,
+  onChangePassword,
   onLogout,
   mobile = false,
 }: Props) {
@@ -40,11 +43,18 @@ export function PortfolioSidebar({
         <Typography variant="h6" fontWeight={800}>
           Larchik
         </Typography>
-        <Tooltip title="Выйти">
-          <IconButton size="small" onClick={onLogout}>
-            <LogoutIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Stack direction="row" spacing={0.5}>
+          <Tooltip title="Сменить пароль">
+            <IconButton size="small" onClick={onChangePassword}>
+              <LockResetIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Выйти">
+            <IconButton size="small" onClick={onLogout}>
+              <LogoutIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
       </Stack>
 
       <Button

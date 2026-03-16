@@ -8,6 +8,6 @@ public record ChangePasswordDto
     public string CurrentPassword { get; init; } = string.Empty;
 
     [Required]
-    [RegularExpression("(?=.*\\d)(?=.*[a-z])(?=.*[A-Z]).{4,8}$", ErrorMessage = "Password must be stronger")]
+    [RegularExpression("(?=.*\\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$", ErrorMessage = "Password must be stronger")]
     public string NewPassword { get; init; } = string.Empty;
 }

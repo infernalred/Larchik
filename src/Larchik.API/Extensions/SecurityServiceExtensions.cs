@@ -42,7 +42,7 @@ public static class SecurityServiceExtensions
                     cookie.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                     cookie.Cookie.SameSite = SameSiteMode.None;
                     cookie.SlidingExpiration = true;
-                    cookie.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+                    cookie.ExpireTimeSpan = TimeSpan.FromDays(7);
                 });
             });
 

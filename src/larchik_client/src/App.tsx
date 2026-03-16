@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, CssBaseline, Stack, ThemeProvider, createTheme } from '@mui/material';
-import { api } from './api';
+import { ApiError, api } from './api';
 import { AuthForm } from './AuthForm';
 import { Dashboard } from './Dashboard';
 import { User } from './types';
 
 type DashboardRoute = 'overview' | 'operations' | 'analytics';
+const SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 const resolveRoute = (pathname: string): DashboardRoute => {
   if (pathname === '/operations' || pathname.startsWith('/operations/')) {
@@ -148,6 +149,29 @@ export function App() {
     return () => window.removeEventListener('popstate', handler);
   }, [applyRouteFromLocation]);
 
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const refreshSession = async () => {
+      try {
+        const refreshed = await api.refreshSession();
+        setUser(refreshed);
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          setUser(null);
+        }
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void refreshSession();
+    }, SESSION_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [user]);
+
   const navigateRoute = useCallback((nextRoute: DashboardRoute) => {
     const nextPath = nextRoute === 'operations' ? '/operations' : nextRoute === 'analytics' ? '/analytics' : '/';
     if (window.location.pathname !== nextPath) {
@@ -157,14 +181,18 @@ export function App() {
     setRoute(nextRoute);
   }, []);
 
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
     setAuthLoading(true);
     try {
-      const logged = await api.login(email, password);
+      const logged = await api.login(email, password, rememberMe);
       setUser(logged);
     } finally {
       setAuthLoading(false);
     }
+  };
+
+  const handleRegister = async (email: string, username: string, password: string) => {
+    await api.register(email, username, password);
   };
 
   const handleLogout = () => {
@@ -190,7 +218,7 @@ export function App() {
     if (!user) {
       return (
         <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2 }}>
-          <AuthForm onSubmit={handleLogin} />
+          <AuthForm onLogin={handleLogin} onRegister={handleRegister} />
         </Box>
       );
     }
