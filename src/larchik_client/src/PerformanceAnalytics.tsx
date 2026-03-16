@@ -469,10 +469,9 @@ function PortfolioView({
   points: AnalyticsPoint[];
   currency: string;
 }) {
-  const [range, setRange] = useState<PortfolioRange>('6m');
+  const [range, setRange] = useState<PortfolioRange>('all');
   const visiblePoints = points.slice(-RANGE_LIMITS[range]);
-  const totalPnl = summary.realizedBase + summary.unrealizedBase;
-  const averageReturn = points.length > 0 ? points.reduce((sum, point) => sum + point.returnPct, 0) / points.length : null;
+  const totalReturn = summary.navBase - summary.netInflowBase;
 
   return (
     <Stack spacing={{ xs: 2, md: 3 }}>
@@ -517,22 +516,23 @@ function PortfolioView({
         <Grid item xs={12} lg={4}>
           <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, backgroundImage: 'none', height: '100%' }}>
             <Typography variant="h6" fontWeight={700} sx={{ mb: 1.5 }}>
-              Статистика портфеля
+              Статистика движения средств
             </Typography>
             <Stack divider={<Divider flexItem />} spacing={0}>
               {[
-                { label: 'Доходность', value: totalPnl, color: totalPnl >= 0 ? 'success.main' : 'error.main' },
-                { label: 'Реализовано', value: summary.realizedBase },
-                { label: 'Нереализовано', value: summary.unrealizedBase },
+                { label: 'Доходность', value: totalReturn, color: totalReturn >= 0 ? 'success.main' : 'error.main' },
+                { label: 'Чистый поток', value: summary.netInflowBase },
                 { label: 'Пополнения', value: summary.grossDepositsBase },
                 { label: 'Выводы', value: summary.grossWithdrawalsBase },
+                { label: 'Позиции', value: summary.positionsValueBase },
                 { label: 'Наличность', value: summary.cashBase },
-                { label: 'Средняя месячная доходность', value: averageReturn == null ? null : averageReturn * 100, percent: true },
+                { label: 'Реализовано', value: summary.realizedBase },
+                { label: 'Нереализовано', value: summary.unrealizedBase },
               ].map((item) => (
                 <Stack key={item.label} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1.25 }}>
                   <Typography color="text.secondary">{item.label}</Typography>
                   <Typography fontWeight={700} color={item.color}>
-                    {item.value == null ? '—' : item.percent ? formatShare(item.value) : `${formatMoney(item.value)} ${currency}`}
+                    {item.value == null ? '—' : `${formatMoney(item.value)} ${currency}`}
                   </Typography>
                 </Stack>
               ))}

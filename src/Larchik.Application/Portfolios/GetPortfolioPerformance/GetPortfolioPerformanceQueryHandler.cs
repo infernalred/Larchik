@@ -308,7 +308,7 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             var pricePoint = data.GetPrice(instrumentId, asOfDate);
             var priceValue = pricePoint?.Value;
             var marketValueBase = priceValue.HasValue
-                ? data.Convert(qty * priceValue.Value, pricePoint!.CurrencyId, baseCurrency, asOfDate)
+                ? data.Convert(qty * priceValue.Value, instrumentCurrency, baseCurrency, asOfDate)
                 : 0m;
             var avgCost = position.AverageCost;
             var costBase = data.Convert(avgCost * qty, instrumentCurrency, baseCurrency, asOfDate);

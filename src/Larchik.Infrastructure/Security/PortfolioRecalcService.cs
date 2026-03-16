@@ -149,7 +149,7 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 var price = data.GetPrice(instrumentId, date);
                 var lastPrice = price?.Value;
                 var marketValueBase = lastPrice.HasValue
-                    ? data.Convert(qty * lastPrice.Value, price!.CurrencyId, baseCurrency, date)
+                    ? data.Convert(qty * lastPrice.Value, instrumentCurrency, baseCurrency, date)
                     : 0m;
                 var avgCost = position.AverageCost;
                 var costBase = data.Convert(avgCost * qty, instrumentCurrency, baseCurrency, date);

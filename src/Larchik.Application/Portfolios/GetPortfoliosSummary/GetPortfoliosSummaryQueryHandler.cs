@@ -356,7 +356,7 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
             var price = data.GetPrice(kvp.Key, asOfDate);
             var lastPrice = price?.Value;
             var marketValueBase = lastPrice.HasValue
-                ? data.Convert(kvp.Value * lastPrice.Value, price!.CurrencyId, baseCurrency, asOfDate)
+                ? data.Convert(kvp.Value * lastPrice.Value, instrument.CurrencyId, baseCurrency, asOfDate)
                 : 0;
             var avgCost = cost?.AverageCost ?? 0;
             var costBase = data.Convert(avgCost * kvp.Value, instrument.CurrencyId, baseCurrency, asOfDate);
