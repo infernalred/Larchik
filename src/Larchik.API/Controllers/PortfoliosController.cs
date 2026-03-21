@@ -4,6 +4,8 @@ using Larchik.Application.Portfolios.ClearPortfolioData;
 using Larchik.Application.Portfolios.CreatePortfolio;
 using Larchik.Application.Portfolios.DeletePortfolio;
 using Larchik.Application.Portfolios.EditPortfolio;
+using Larchik.Application.Portfolios.GetAggregatePortfolioPerformance;
+using Larchik.Application.Portfolios.GetAggregatePortfolioSummary;
 using Larchik.Application.Portfolios.GetPortfolio;
 using Larchik.Application.Portfolios.GetPortfolioPerformance;
 using Larchik.Application.Portfolios.GetPortfolios;
@@ -89,6 +91,16 @@ public class PortfoliosController : BaseApiController
         return HandleResult(await Mediator.Send(new GetPortfoliosSummaryQuery(method, currency), HttpContext.RequestAborted));
     }
 
+    [HttpGet("aggregate/summary")]
+    [ProducesResponseType(typeof(PortfolioSummaryDto), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+    public async Task<ActionResult<PortfolioSummaryDto>> GetAggregateSummary(
+        [FromQuery] string? method,
+        [FromQuery] string? currency)
+    {
+        return HandleResult(await Mediator.Send(new GetAggregatePortfolioSummaryQuery(method, currency), HttpContext.RequestAborted));
+    }
+
     [HttpGet("{id:guid}/performance")]
     [ProducesResponseType(typeof(IEnumerable<PortfolioPerformanceDto>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -100,6 +112,20 @@ public class PortfoliosController : BaseApiController
     {
         return HandleResult(await Mediator.Send(
             new GetPortfolioPerformanceQuery(id, method, from, to),
+            HttpContext.RequestAborted));
+    }
+
+    [HttpGet("aggregate/performance")]
+    [ProducesResponseType(typeof(IEnumerable<PortfolioPerformanceDto>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+    public async Task<ActionResult<IEnumerable<PortfolioPerformanceDto>>> GetAggregatePerformance(
+        [FromQuery] string? method,
+        [FromQuery] string? currency,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null)
+    {
+        return HandleResult(await Mediator.Send(
+            new GetAggregatePortfolioPerformanceQuery(method, currency, from, to),
             HttpContext.RequestAborted));
     }
 }

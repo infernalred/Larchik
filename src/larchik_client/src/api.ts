@@ -192,10 +192,24 @@ export const api = {
     return request<PortfoliosSummary>(`/api/portfolios/summary${params.toString() ? `?${params}` : ''}`);
   },
 
+  async getAggregatePortfolioSummary(method?: string, currency?: string): Promise<PortfolioSummary> {
+    const params = new URLSearchParams();
+    if (method) params.append('method', method);
+    if (currency) params.append('currency', currency);
+    return request<PortfolioSummary>(`/api/portfolios/aggregate/summary${params.toString() ? `?${params}` : ''}`);
+  },
+
   async getPerformance(id: string, method?: string): Promise<PortfolioPerformance[]> {
     const params = new URLSearchParams();
     if (method) params.append('method', method);
     return request<PortfolioPerformance[]>(`/api/portfolios/${id}/performance${params.toString() ? `?${params}` : ''}`);
+  },
+
+  async getAggregatePerformance(method?: string, currency?: string): Promise<PortfolioPerformance[]> {
+    const params = new URLSearchParams();
+    if (method) params.append('method', method);
+    if (currency) params.append('currency', currency);
+    return request<PortfolioPerformance[]>(`/api/portfolios/aggregate/performance${params.toString() ? `?${params}` : ''}`);
   },
 
   async listOperations(

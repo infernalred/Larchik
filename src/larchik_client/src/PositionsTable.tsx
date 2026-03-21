@@ -24,10 +24,29 @@ const fmt = (v: number | null | undefined) =>
 const fmtPct = (v: number | null | undefined) =>
   v == null ? '—' : `${v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 
+function buildCurrencyTotals(positions: PositionHolding[]) {
+  const totals = new Map<string, number>();
+
+  for (const position of positions) {
+    const localAmount = position.localAmount ?? (position.lastPrice != null ? position.quantity * position.lastPrice : null);
+    if (localAmount == null) {
+      continue;
+    }
+
+    totals.set(position.currencyId, (totals.get(position.currencyId) ?? 0) + localAmount);
+  }
+
+  return [...totals.entries()].map(([currencyId, amount]) => ({
+    currencyId,
+    amount,
+  }));
+}
+
 export function PositionsTable({ positions }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const totalBase = positions.reduce((sum, p) => sum + p.marketValueBase, 0);
+  const totalByCurrency = buildCurrencyTotals(positions);
 
   if (isMobile) {
     return (
@@ -90,9 +109,23 @@ export function PositionsTable({ positions }: Props) {
         })}
         {!!positions.length && (
           <Paper variant="outlined" sx={{ p: 1.5, backgroundImage: 'none' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography fontWeight={700}>Итого</Typography>
-              <Typography fontWeight={700}>{fmt(totalBase)}</Typography>
+            <Stack spacing={1}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography fontWeight={700}>Итого</Typography>
+                <Typography fontWeight={700}>{fmt(totalBase)}</Typography>
+              </Stack>
+              {!!totalByCurrency.length && (
+                <Stack spacing={0.25}>
+                  <Typography variant="caption" color="text.secondary">
+                    Сумма
+                  </Typography>
+                  {totalByCurrency.map((item) => (
+                    <Typography key={item.currencyId} variant="body2">
+                      {fmt(item.amount)} {item.currencyId}
+                    </Typography>
+                  ))}
+                </Stack>
+              )}
             </Stack>
           </Paper>
         )}
@@ -150,7 +183,19 @@ export function PositionsTable({ positions }: Props) {
               </TableCell>
               <TableCell align="right">—</TableCell>
               <TableCell align="right">—</TableCell>
-              <TableCell align="right">—</TableCell>
+              <TableCell align="right">
+                {totalByCurrency.length ? (
+                  <Stack spacing={0.25} alignItems="flex-end">
+                    {totalByCurrency.map((item) => (
+                      <Typography key={item.currencyId} variant="body2" fontWeight={600}>
+                        {fmt(item.amount)} {item.currencyId}
+                      </Typography>
+                    ))}
+                  </Stack>
+                ) : (
+                  '—'
+                )}
+              </TableCell>
               <TableCell align="right">{fmtPct(totalBase > 0 ? 100 : null)}</TableCell>
               <TableCell align="right">—</TableCell>
               <TableCell align="right">

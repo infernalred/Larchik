@@ -5,7 +5,6 @@ import {
   Button,
   CircularProgress,
   Container,
-  Divider,
   Drawer,
   Grid,
   MenuItem,
@@ -30,7 +29,6 @@ import {
   Portfolio,
   PortfolioPerformance,
   PositionHolding,
-  PortfoliosSummary,
   PortfolioSummary,
   RecalculatePortfolioResult,
 } from './types';
@@ -58,7 +56,6 @@ interface Props {
   onRouteChange: (route: PortfolioRoute) => void;
 }
 
-const formatMoney = (value: number) => value.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const CASH_LABELS: Record<string, string> = {
   RUB: 'Российский рубль',
   USD: 'Доллар США',
@@ -116,13 +113,15 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   const [selectedPortfolio, setSelectedPortfolio] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'portfolio' | 'all'>('portfolio');
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
-  const [allSummary, setAllSummary] = useState<PortfoliosSummary | null>(null);
+  const [aggregateSummary, setAggregateSummary] = useState<PortfolioSummary | null>(null);
   const [performance, setPerformance] = useState<PortfolioPerformance[]>([]);
+  const [aggregatePerformance, setAggregatePerformance] = useState<PortfolioPerformance[]>([]);
   const [valuationMethod, setValuationMethod] = useState('adjustingAvg');
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
-  const [loadingAllSummary, setLoadingAllSummary] = useState(false);
-  const [allSummaryError, setAllSummaryError] = useState('');
+  const [loadingAggregateSummary, setLoadingAggregateSummary] = useState(false);
+  const [loadingAggregatePerformance, setLoadingAggregatePerformance] = useState(false);
+  const [aggregateError, setAggregateError] = useState('');
   const [operations, setOperations] = useState<Operation[]>([]);
   const [operationsPage, setOperationsPage] = useState(1);
   const [operationsPageSize, setOperationsPageSize] = useState(25);
@@ -148,9 +147,14 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   }, []);
 
   useEffect(() => {
-    if (viewMode !== 'all') return;
-    loadAllSummary(valuationMethod);
-  }, [viewMode, valuationMethod, portfolios, selectedPortfolio]);
+    if (viewMode !== 'all' || (portfolioPage !== 'overview' && portfolioPage !== 'analytics')) return;
+    loadAggregateSummary(valuationMethod);
+  }, [viewMode, valuationMethod, portfolios, selectedPortfolio, portfolioPage]);
+
+  useEffect(() => {
+    if (viewMode !== 'all' || portfolioPage !== 'analytics') return;
+    loadAggregatePerformance(valuationMethod);
+  }, [viewMode, valuationMethod, portfolios, selectedPortfolio, portfolioPage]);
 
   useEffect(() => {
     if (viewMode !== 'portfolio' || (portfolioPage !== 'overview' && portfolioPage !== 'analytics')) return;
@@ -183,8 +187,9 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
 
     setSelectedPortfolio(null);
     setSummary(null);
-    setAllSummary(null);
+    setAggregateSummary(null);
     setPerformance([]);
+    setAggregatePerformance([]);
     setOperations([]);
     setOperationsTotalCount(0);
     setOperationsPage(1);
@@ -210,18 +215,32 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     }
   }
 
-  async function loadAllSummary(method: string) {
+  async function loadAggregateSummary(method: string) {
     const selectedCurrency = portfolios.find((x) => x.id === selectedPortfolio)?.reportingCurrencyId;
-    setLoadingAllSummary(true);
-    setAllSummaryError('');
+    setLoadingAggregateSummary(true);
+    setAggregateError('');
     try {
-      const data = await api.getPortfoliosSummary(method, selectedCurrency);
-      setAllSummary(data);
+      const data = await api.getAggregatePortfolioSummary(method, selectedCurrency);
+      setAggregateSummary(data);
     } catch (error) {
-      setAllSummary(null);
-      setAllSummaryError(getApiErrorMessage(error, 'Не удалось получить общий итог по всем счетам.'));
+      setAggregateSummary(null);
+      setAggregateError(getApiErrorMessage(error, 'Не удалось получить общий итог по всем счетам.'));
     } finally {
-      setLoadingAllSummary(false);
+      setLoadingAggregateSummary(false);
+    }
+  }
+
+  async function loadAggregatePerformance(method: string) {
+    const selectedCurrency = portfolios.find((x) => x.id === selectedPortfolio)?.reportingCurrencyId;
+    setLoadingAggregatePerformance(true);
+    try {
+      const data = await api.getAggregatePerformance(method, selectedCurrency);
+      setAggregatePerformance(data);
+    } catch (error) {
+      console.error(error);
+      setAggregatePerformance([]);
+    } finally {
+      setLoadingAggregatePerformance(false);
     }
   }
 
@@ -401,7 +420,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   function handleSelectPortfolio(id: string) {
     setViewMode('portfolio');
     setSelectedPortfolio(id);
-    setAllSummaryError('');
+    setAggregateError('');
     setOperationsPage(1);
     setSidebarOpen(false);
   }
@@ -409,6 +428,12 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   function handleShowAllSummary() {
     setViewMode('all');
     onRouteChange('overview');
+    setSidebarOpen(false);
+  }
+
+  function handleShowAllAnalytics() {
+    setViewMode('all');
+    onRouteChange('analytics');
     setSidebarOpen(false);
   }
 
@@ -437,15 +462,16 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   const activeBroker = brokers.find((x) => x.id === activePortfolio?.brokerId) ?? null;
   const canImportOperations = Boolean(activeBroker?.supportsImport && activeBroker.code);
   const performanceCurrency = performance[0]?.reportingCurrencyId;
+  const aggregatePerformanceCurrency = aggregatePerformance[0]?.reportingCurrencyId;
   const currency =
     viewMode === 'all'
-      ? allSummary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—'
+      ? aggregatePerformanceCurrency ?? aggregateSummary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—'
       : portfolioPage === 'analytics'
         ? performanceCurrency ?? activePortfolio?.reportingCurrencyId ?? summary?.reportingCurrencyId ?? '—'
         : summary?.reportingCurrencyId ?? activePortfolio?.reportingCurrencyId ?? '—';
   const isLoadingCurrent =
     viewMode === 'all'
-      ? loadingAllSummary
+      ? loadingAggregateSummary || (portfolioPage === 'analytics' && loadingAggregatePerformance)
       : portfolioPage === 'overview'
         ? loadingSummary
         : portfolioPage === 'analytics'
@@ -594,6 +620,26 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                     </Button>
                   </Stack>
                 )}
+                {viewMode === 'all' && (
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+                    <Button
+                      variant={portfolioPage === 'overview' ? 'contained' : 'outlined'}
+                      onClick={handleShowAllSummary}
+                      sx={{ textTransform: 'none' }}
+                      fullWidth={isMobile}
+                    >
+                      Обзор
+                    </Button>
+                    <Button
+                      variant={portfolioPage === 'analytics' ? 'contained' : 'outlined'}
+                      onClick={handleShowAllAnalytics}
+                      sx={{ textTransform: 'none' }}
+                      fullWidth={isMobile}
+                    >
+                      Аналитика
+                    </Button>
+                  </Stack>
+                )}
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}
                   spacing={1}
@@ -708,62 +754,42 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
             />
           )}
 
-          {viewMode === 'all' && !loadingAllSummary && allSummary && (
+          {viewMode === 'all' && portfolioPage === 'overview' && !loadingAggregateSummary && aggregateSummary && (
             <Stack spacing={{ xs: 2, md: 3 }}>
-              <SummaryCards
-                summary={{
-                  id: 'all-portfolios',
-                  name: 'Все счета',
-                  reportingCurrencyId: allSummary.reportingCurrencyId,
-                  netInflowBase: allSummary.netInflowBase,
-                  grossDepositsBase: allSummary.grossDepositsBase,
-                  grossWithdrawalsBase: allSummary.grossWithdrawalsBase,
-                  cashBase: allSummary.cashBase,
-                  positionsValueBase: allSummary.positionsValueBase,
-                  realizedBase: allSummary.realizedBase,
-                  unrealizedBase: allSummary.unrealizedBase,
-                  navBase: allSummary.navBase,
-                  valuationMethod: allSummary.valuationMethod,
-                  cash: [],
-                  positions: [],
-                  realizedByInstrument: [],
-                }}
-              />
-              <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, backgroundImage: 'none' }}>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={1.5}
-                  alignItems={{ xs: 'flex-start', sm: 'center' }}
-                  justifyContent="space-between"
-                >
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Итого по всем счетам ({allSummary.portfolioCount})
-                    </Typography>
-                    <Typography variant="h6" fontWeight={700}>
-                      Прибыль / убыток
-                    </Typography>
-                  </Box>
-                  <Typography
-                    variant="h5"
-                    fontWeight={800}
-                    color={allSummary.pnlBase >= 0 ? 'success.main' : 'error.main'}
-                    sx={{ whiteSpace: 'nowrap' }}
-                  >
-                    {formatMoney(allSummary.pnlBase)} {allSummary.reportingCurrencyId}
-                  </Typography>
-                </Stack>
-                <Divider sx={{ my: 1.5 }} />
-                <Typography variant="body2" color="text.secondary">
-                  Чтобы вернуться к деталям по одному счету, выберите нужный счет в списке слева.
+              <SummaryCards summary={aggregateSummary} />
+
+              <Stack spacing={1}>
+                <Typography variant="h6" fontWeight={700}>
+                  Активы по всем счетам ({portfolios.length})
                 </Typography>
-              </Paper>
+                <PositionsTable positions={buildDisplayPositions(aggregateSummary)} />
+              </Stack>
+
+              <Stack spacing={1}>
+                <Typography variant="h6" fontWeight={700}>
+                  Аналитика
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Общая структура и прибыль по всем брокерам в одной базовой валюте.
+                </Typography>
+                <Button variant="outlined" onClick={handleShowAllAnalytics} sx={{ alignSelf: 'flex-start' }}>
+                  Открыть аналитику
+                </Button>
+              </Stack>
             </Stack>
           )}
 
-          {viewMode === 'all' && !loadingAllSummary && !allSummary && allSummaryError && (
+          {viewMode === 'all' && portfolioPage === 'analytics' && !loadingAggregateSummary && !loadingAggregatePerformance && aggregateSummary && (
+            <PerformanceAnalytics
+              summary={aggregateSummary}
+              items={aggregatePerformance}
+              currency={aggregatePerformanceCurrency ?? aggregateSummary.reportingCurrencyId ?? currency}
+            />
+          )}
+
+          {viewMode === 'all' && !loadingAggregateSummary && !aggregateSummary && aggregateError && (
             <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, textAlign: 'center', backgroundImage: 'none' }}>
-              <Typography color="error.main">{allSummaryError}</Typography>
+              <Typography color="error.main">{aggregateError}</Typography>
             </Paper>
           )}
 
