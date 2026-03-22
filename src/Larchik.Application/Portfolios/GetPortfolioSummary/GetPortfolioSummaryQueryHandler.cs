@@ -68,6 +68,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
 
         var data = new HistoricalDataLookup(prices, fxRates);
         var usesBrokerCashLedger = BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio);
+        var accountingCurrencies = InstrumentAccountingCurrencyHelper.Build(operations, instruments, portfolio.ReportingCurrencyId);
 
         var cashByCurrency = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         var positions = new Dictionary<Guid, decimal>();
@@ -240,16 +241,16 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             if (op.InstrumentId is null) continue;
             if (instrument?.Type == InstrumentType.Currency) continue;
 
-            var instrumentCurrency = instrument?.CurrencyId ?? op.CurrencyId;
-            var priceInInstrument = data.Convert(op.Price, op.CurrencyId, instrumentCurrency, op.TradeDate);
-            var feeInInstrument = data.Convert(op.Fee, op.CurrencyId, instrumentCurrency, op.TradeDate);
+            var accountingCurrency = InstrumentAccountingCurrencyHelper.Get(op.InstrumentId.Value, accountingCurrencies, instruments, portfolio.ReportingCurrencyId);
+            var priceInAccounting = data.Convert(op.Price, op.CurrencyId, accountingCurrency, op.TradeDate);
+            var feeInAccounting = data.Convert(op.Fee, op.CurrencyId, accountingCurrency, op.TradeDate);
 
             valuationOperations.Add(new ValuationOperation(
                 op.InstrumentId.Value,
                 op.Type,
                 op.Quantity,
-                priceInInstrument,
-                feeInInstrument,
+                priceInAccounting,
+                feeInAccounting,
                 op.TradeDate,
                 op.CreatedAt));
         }
@@ -284,11 +285,12 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             var price = data.GetPrice(kvp.Key, asOfDate);
             var lastPrice = price?.Value;
             var quoteCurrency = price?.CurrencyId ?? instrument.CurrencyId;
+            var accountingCurrency = InstrumentAccountingCurrencyHelper.Get(kvp.Key, accountingCurrencies, instruments, portfolio.ReportingCurrencyId);
             var marketValueBase = lastPrice.HasValue
                 ? data.Convert(kvp.Value * lastPrice.Value, quoteCurrency, portfolio.ReportingCurrencyId, asOfDate)
                 : 0;
             var avgCost = cost?.AverageCost ?? 0;
-            var costBase = data.Convert(avgCost * kvp.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, asOfDate);
+            var costBase = data.Convert(avgCost * kvp.Value, accountingCurrency, portfolio.ReportingCurrencyId, asOfDate);
 
             positionDtos.Add(new PositionHoldingDto
             {
@@ -296,7 +298,9 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
                 InstrumentName = instrument.Name,
                 InstrumentType = instrument.Type.ToString(),
                 CategoryName = instrument.Category?.Name,
-                CurrencyId = instrument.CurrencyId,
+                CurrencyId = quoteCurrency,
+                PriceCurrencyId = quoteCurrency,
+                AverageCostCurrencyId = accountingCurrency,
                 Quantity = kvp.Value,
                 LastPrice = lastPrice,
                 MarketValueBase = marketValueBase,
@@ -310,14 +314,8 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
         var realizedBase = 0m;
         foreach (var kvp in valuation.RealizedByInstrument)
         {
-            if (instruments.TryGetValue(kvp.Key, out var instrument))
-            {
-                realizedBase += data.Convert(kvp.Value, instrument.CurrencyId, portfolio.ReportingCurrencyId, asOfDate);
-            }
-            else
-            {
-                realizedBase += kvp.Value;
-            }
+            var accountingCurrency = InstrumentAccountingCurrencyHelper.Get(kvp.Key, accountingCurrencies, instruments, portfolio.ReportingCurrencyId);
+            realizedBase += data.Convert(kvp.Value, accountingCurrency, portfolio.ReportingCurrencyId, asOfDate);
         }
 
         var realizedDtos = new List<RealizedPnlDto>();
@@ -326,16 +324,14 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             var instrumentName = instruments.TryGetValue(kvp.Key, out var instrument)
                 ? instrument.Name
                 : kvp.Key.ToString();
-            var instrumentCurrency = instruments.TryGetValue(kvp.Key, out var inst2)
-                ? inst2.CurrencyId
-                : portfolio.ReportingCurrencyId;
-            var realizedBaseValue = data.Convert(kvp.Value, instrumentCurrency, portfolio.ReportingCurrencyId, asOfDate);
+            var accountingCurrency = InstrumentAccountingCurrencyHelper.Get(kvp.Key, accountingCurrencies, instruments, portfolio.ReportingCurrencyId);
+            var realizedBaseValue = data.Convert(kvp.Value, accountingCurrency, portfolio.ReportingCurrencyId, asOfDate);
 
             realizedDtos.Add(new RealizedPnlDto
             {
                 InstrumentId = kvp.Key,
                 InstrumentName = instrumentName,
-                CurrencyId = instrumentCurrency,
+                CurrencyId = accountingCurrency,
                 Realized = kvp.Value,
                 RealizedBase = realizedBaseValue
             });

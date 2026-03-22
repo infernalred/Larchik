@@ -93,6 +93,8 @@ export interface PositionHolding {
   instrumentType?: InstrumentType;
   categoryName?: string;
   currencyId: string;
+  priceCurrencyId?: string;
+  averageCostCurrencyId?: string;
   quantity: number;
   lastPrice?: number;
   marketValueBase: number;

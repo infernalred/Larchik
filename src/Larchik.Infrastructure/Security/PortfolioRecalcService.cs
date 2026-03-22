@@ -59,6 +59,7 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
         var fxRates = await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
 
         var data = new HistoricalDataLookup(prices, fxRates);
+        var accountingCurrencies = InstrumentAccountingCurrencyHelper.Build(operations, instruments, baseCurrency);
 
         var earliestOpDate = operations.First().TradeDate.Date;
         var persistFrom = fromDate.Date < earliestOpDate ? earliestOpDate : fromDate.Date;
@@ -70,9 +71,8 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
         var valuationOperations = new List<ValuationOperation>();
         foreach (var op in operations.Where(o => o.InstrumentId != null))
         {
-            var instrumentCurrency = instruments.TryGetValue(op.InstrumentId!.Value, out var instrument)
-                ? instrument.CurrencyId
-                : op.CurrencyId;
+            var instrumentCurrency = InstrumentAccountingCurrencyHelper.Get(op.InstrumentId!.Value, accountingCurrencies, instruments, baseCurrency);
+            instruments.TryGetValue(op.InstrumentId!.Value, out var instrument);
             if (instrument?.Type == InstrumentType.Currency)
             {
                 continue;
@@ -136,9 +136,8 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 var instrumentId = kvp.Key;
                 var position = kvp.Value;
                 var qty = position.Quantity;
-                var instrumentCurrency = instruments.TryGetValue(instrumentId, out var instrument)
-                    ? instrument.CurrencyId
-                    : baseCurrency;
+                var instrumentCurrency = InstrumentAccountingCurrencyHelper.Get(instrumentId, accountingCurrencies, instruments, baseCurrency);
+                instruments.TryGetValue(instrumentId, out var instrument);
                 if (instrument?.Type == InstrumentType.Currency)
                 {
                     continue;

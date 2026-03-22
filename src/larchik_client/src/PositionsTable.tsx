@@ -28,12 +28,13 @@ function buildCurrencyTotals(positions: PositionHolding[]) {
   const totals = new Map<string, number>();
 
   for (const position of positions) {
+    const priceCurrency = position.priceCurrencyId ?? position.currencyId;
     const localAmount = position.localAmount ?? (position.lastPrice != null ? position.quantity * position.lastPrice : null);
     if (localAmount == null) {
       continue;
     }
 
-    totals.set(position.currencyId, (totals.get(position.currencyId) ?? 0) + localAmount);
+    totals.set(priceCurrency, (totals.get(priceCurrency) ?? 0) + localAmount);
   }
 
   return [...totals.entries()].map(([currencyId, amount]) => ({
@@ -52,10 +53,12 @@ export function PositionsTable({ positions }: Props) {
     return (
       <Stack spacing={1.5}>
         {positions.map((p) => {
+          const priceCurrency = p.priceCurrencyId ?? p.currencyId;
+          const averageCurrency = p.averageCostCurrencyId ?? p.currencyId;
           const localAmount = p.localAmount ?? (p.lastPrice != null ? p.quantity * p.lastPrice : null);
           const sharePct = totalBase > 0 ? (p.marketValueBase / totalBase) * 100 : null;
-          const priceLabel = p.isCash ? '—' : p.lastPrice != null ? `${fmt(p.lastPrice)} ${p.currencyId}` : '—';
-          const averageLabel = p.isCash ? '—' : `${fmt(p.averageCost)} ${p.currencyId}`;
+          const priceLabel = p.isCash ? '—' : p.lastPrice != null ? `${fmt(p.lastPrice)} ${priceCurrency}` : '—';
+          const averageLabel = p.isCash ? '—' : `${fmt(p.averageCost)} ${averageCurrency}`;
 
           return (
             <Paper key={p.instrumentId} variant="outlined" sx={{ p: 1.5, backgroundImage: 'none' }}>
@@ -82,7 +85,7 @@ export function PositionsTable({ positions }: Props) {
                     <Typography variant="caption" color="text.secondary">
                       Сумма
                     </Typography>
-                    <Typography variant="body2">{localAmount != null ? `${fmt(localAmount)} ${p.currencyId}` : '—'}</Typography>
+                    <Typography variant="body2">{localAmount != null ? `${fmt(localAmount)} ${priceCurrency}` : '—'}</Typography>
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="text.secondary">
@@ -154,10 +157,12 @@ export function PositionsTable({ positions }: Props) {
         </TableHead>
         <TableBody>
           {positions.map((p) => {
+            const priceCurrency = p.priceCurrencyId ?? p.currencyId;
+            const averageCurrency = p.averageCostCurrencyId ?? p.currencyId;
             const localAmount = p.localAmount ?? (p.lastPrice != null ? p.quantity * p.lastPrice : null);
             const sharePct = totalBase > 0 ? (p.marketValueBase / totalBase) * 100 : null;
-            const priceLabel = p.isCash ? '—' : p.lastPrice != null ? `${fmt(p.lastPrice)} ${p.currencyId}` : '—';
-            const averageLabel = p.isCash ? '—' : `${fmt(p.averageCost)} ${p.currencyId}`;
+            const priceLabel = p.isCash ? '—' : p.lastPrice != null ? `${fmt(p.lastPrice)} ${priceCurrency}` : '—';
+            const averageLabel = p.isCash ? '—' : `${fmt(p.averageCost)} ${averageCurrency}`;
 
             return (
               <TableRow key={p.instrumentId} hover>
@@ -169,7 +174,7 @@ export function PositionsTable({ positions }: Props) {
                 </TableCell>
                 <TableCell align="right">{fmt(p.quantity)}</TableCell>
                 <TableCell align="right">{priceLabel}</TableCell>
-                <TableCell align="right">{localAmount != null ? `${fmt(localAmount)} ${p.currencyId}` : '—'}</TableCell>
+                <TableCell align="right">{localAmount != null ? `${fmt(localAmount)} ${priceCurrency}` : '—'}</TableCell>
                 <TableCell align="right">{fmtPct(sharePct)}</TableCell>
                 <TableCell align="right">{averageLabel}</TableCell>
                 <TableCell align="right">{fmt(p.marketValueBase)}</TableCell>

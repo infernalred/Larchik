@@ -4,6 +4,13 @@ namespace Larchik.Application.Portfolios.Valuation;
 
 public static class BrokerCashLedgerHelper
 {
+    private static readonly string[] TradeCashLedgerMarkers =
+    [
+        "Покупка/продажа",
+        "Неттинг",
+        "DFP/RFP"
+    ];
+
     public static bool UsesBrokerCashLedger(Portfolio portfolio)
     {
         return string.Equals(portfolio.Broker?.Code, "tbank", StringComparison.OrdinalIgnoreCase);
@@ -22,8 +29,7 @@ public static class BrokerCashLedgerHelper
             x.Type == OperationType.CashAdjustment &&
             x.TradeDate.Date == effectiveDate &&
             string.Equals(x.CurrencyId, operation.CurrencyId, StringComparison.OrdinalIgnoreCase) &&
-            !string.IsNullOrWhiteSpace(x.Note) &&
-            x.Note.Contains("Покупка/продажа", StringComparison.OrdinalIgnoreCase));
+            MatchesTradeCashLedger(x.Note));
     }
 
     public static bool IsCashEffective(Operation operation, DateTime asOfDate)
@@ -36,5 +42,16 @@ public static class BrokerCashLedgerHelper
         return operation.InstrumentId is null
             ? operation.TradeDate.Date
             : (operation.SettlementDate ?? operation.TradeDate).Date;
+    }
+
+    private static bool MatchesTradeCashLedger(string? note)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return false;
+        }
+
+        return TradeCashLedgerMarkers.Any(marker =>
+            note.Contains(marker, StringComparison.OrdinalIgnoreCase));
     }
 }

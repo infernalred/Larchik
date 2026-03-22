@@ -123,6 +123,8 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
                     InstrumentType = first.InstrumentType,
                     CategoryName = first.CategoryName,
                     CurrencyId = first.CurrencyId,
+                    PriceCurrencyId = first.PriceCurrencyId,
+                    AverageCostCurrencyId = first.AverageCostCurrencyId,
                     Quantity = totalQuantity,
                     LastPrice = group.Select(x => x.LastPrice).FirstOrDefault(x => x.HasValue),
                     MarketValueBase = group.Sum(x => x.MarketValueBase),

@@ -22,6 +22,7 @@ internal sealed class PortfolioAnalyticsCalculator
         decimal grossWithdrawalsBase = 0;
         var valuationOperations = new List<ValuationOperation>();
         var usesBrokerCashLedger = BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio);
+        var accountingCurrencies = InstrumentAccountingCurrencyHelper.Build(operations, instruments, baseCurrency);
 
         foreach (var op in operations)
         {
@@ -200,16 +201,16 @@ internal sealed class PortfolioAnalyticsCalculator
                 continue;
             }
 
-            var instrumentCurrency = instrument?.CurrencyId ?? op.CurrencyId;
-            var priceInInstrument = data.Convert(op.Price, op.CurrencyId, instrumentCurrency, op.TradeDate);
-            var feeInInstrument = data.Convert(op.Fee, op.CurrencyId, instrumentCurrency, op.TradeDate);
+            var accountingCurrency = InstrumentAccountingCurrencyHelper.Get(op.InstrumentId.Value, accountingCurrencies, instruments, baseCurrency);
+            var priceInAccounting = data.Convert(op.Price, op.CurrencyId, accountingCurrency, op.TradeDate);
+            var feeInAccounting = data.Convert(op.Fee, op.CurrencyId, accountingCurrency, op.TradeDate);
 
             valuationOperations.Add(new ValuationOperation(
                 op.InstrumentId.Value,
                 op.Type,
                 op.Quantity,
-                priceInInstrument,
-                feeInInstrument,
+                priceInAccounting,
+                feeInAccounting,
                 op.TradeDate,
                 op.CreatedAt));
         }
@@ -245,11 +246,12 @@ internal sealed class PortfolioAnalyticsCalculator
             var price = data.GetPrice(kvp.Key, asOfDate);
             var lastPrice = price?.Value;
             var quoteCurrency = price?.CurrencyId ?? instrument.CurrencyId;
+            var accountingCurrency = InstrumentAccountingCurrencyHelper.Get(kvp.Key, accountingCurrencies, instruments, baseCurrency);
             var marketValueBase = lastPrice.HasValue
                 ? data.Convert(kvp.Value * lastPrice.Value, quoteCurrency, baseCurrency, asOfDate)
                 : 0;
             var avgCost = cost?.AverageCost ?? 0;
-            var costBase = data.Convert(avgCost * kvp.Value, instrument.CurrencyId, baseCurrency, asOfDate);
+            var costBase = data.Convert(avgCost * kvp.Value, accountingCurrency, baseCurrency, asOfDate);
 
             positionDtos.Add(new PositionHoldingDto
             {
@@ -257,7 +259,9 @@ internal sealed class PortfolioAnalyticsCalculator
                 InstrumentName = instrument.Name,
                 InstrumentType = instrument.Type.ToString(),
                 CategoryName = instrument.Category?.Name,
-                CurrencyId = instrument.CurrencyId,
+                CurrencyId = quoteCurrency,
+                PriceCurrencyId = quoteCurrency,
+                AverageCostCurrencyId = accountingCurrency,
                 Quantity = kvp.Value,
                 LastPrice = lastPrice,
                 MarketValueBase = marketValueBase,
@@ -275,17 +279,15 @@ internal sealed class PortfolioAnalyticsCalculator
             var instrumentName = instruments.TryGetValue(kvp.Key, out var instrument)
                 ? instrument.Name
                 : kvp.Key.ToString();
-            var instrumentCurrency = instruments.TryGetValue(kvp.Key, out var inst2)
-                ? inst2.CurrencyId
-                : baseCurrency;
-            var realizedBaseValue = data.Convert(kvp.Value, instrumentCurrency, baseCurrency, asOfDate);
+            var accountingCurrency = InstrumentAccountingCurrencyHelper.Get(kvp.Key, accountingCurrencies, instruments, baseCurrency);
+            var realizedBaseValue = data.Convert(kvp.Value, accountingCurrency, baseCurrency, asOfDate);
             realizedBase += realizedBaseValue;
 
             realizedDtos.Add(new RealizedPnlDto
             {
                 InstrumentId = kvp.Key,
                 InstrumentName = instrumentName,
-                CurrencyId = instrumentCurrency,
+                CurrencyId = accountingCurrency,
                 Realized = kvp.Value,
                 RealizedBase = realizedBaseValue
             });

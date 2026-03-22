@@ -67,7 +67,8 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         var cursor = new DateTime(fromDate.Year, fromDate.Month, 1);
         var lastMonthEnd = new DateTime(toDate.Year, toDate.Month, DateTime.DaysInMonth(toDate.Year, toDate.Month));
 
-        var valuationOperations = BuildValuationOperations(operations, instruments, data);
+        var accountingCurrencies = InstrumentAccountingCurrencyHelper.Build(operations, instruments, baseCurrency);
+        var valuationOperations = BuildValuationOperations(operations, instruments, data, baseCurrency);
         var valuationService = new ValuationService();
 
         var results = new List<PortfolioPerformanceDto>();
@@ -79,9 +80,9 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             var startBoundary = cursor.AddDays(-1);
 
             var startSnapshot = ComputeValuation(startBoundary, method, baseCurrency, data, instruments, operations,
-                valuationOperations, valuationService, BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio));
+                valuationOperations, valuationService, BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio), accountingCurrencies);
             var endSnapshot = ComputeValuation(monthEnd, method, baseCurrency, data, instruments, operations,
-                valuationOperations, valuationService, BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio));
+                valuationOperations, valuationService, BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio), accountingCurrencies);
 
             var netFlow = ComputeFlows(operations, data, baseCurrency, cursor, monthEnd);
 
@@ -121,8 +122,10 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
     private static IReadOnlyList<ValuationOperation> BuildValuationOperations(
         IEnumerable<Operation> operations,
         IReadOnlyDictionary<Guid, Instrument> instruments,
-        HistoricalDataLookup data)
+        HistoricalDataLookup data,
+        string baseCurrency)
     {
+        var accountingCurrencies = InstrumentAccountingCurrencyHelper.Build(operations, instruments, baseCurrency);
         var valuationOperations = new List<ValuationOperation>();
 
         foreach (var op in operations)
@@ -133,11 +136,9 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                 continue;
             }
 
-            var instrumentCurrency = instruments.TryGetValue(op.InstrumentId.Value, out instrument)
-                ? instrument.CurrencyId
-                : op.CurrencyId;
-            var price = data.Convert(op.Price, op.CurrencyId, instrumentCurrency, op.TradeDate);
-            var fee = data.Convert(op.Fee, op.CurrencyId, instrumentCurrency, op.TradeDate);
+            var accountingCurrency = InstrumentAccountingCurrencyHelper.Get(op.InstrumentId.Value, accountingCurrencies, instruments, baseCurrency);
+            var price = data.Convert(op.Price, op.CurrencyId, accountingCurrency, op.TradeDate);
+            var fee = data.Convert(op.Fee, op.CurrencyId, accountingCurrency, op.TradeDate);
 
             valuationOperations.Add(new ValuationOperation(
                 op.InstrumentId.Value,
@@ -161,7 +162,8 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         IReadOnlyList<Operation> operations,
         IReadOnlyList<ValuationOperation> valuationOperations,
         ValuationService valuationService,
-        bool usesBrokerCashLedger)
+        bool usesBrokerCashLedger,
+        IReadOnlyDictionary<Guid, string> accountingCurrencies)
     {
         var cashByCurrency = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
@@ -293,9 +295,10 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         foreach (var (instrumentId, position) in valuation.Positions)
         {
             var qty = position.Quantity;
-            var instrumentCurrency = instruments.TryGetValue(instrumentId, out var instrument)
-                ? instrument.CurrencyId
-                : baseCurrency;
+            var instrumentCurrency = InstrumentAccountingCurrencyHelper.Get(instrumentId, accountingCurrencies, instruments, baseCurrency);
+            var instrument = instruments.TryGetValue(instrumentId, out var resolvedInstrument)
+                ? resolvedInstrument
+                : null;
             if (instrument?.Type == InstrumentType.Currency)
             {
                 continue;
@@ -316,9 +319,7 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
 
         foreach (var kvp in valuation.RealizedByInstrument)
         {
-            var instrumentCurrency = instruments.TryGetValue(kvp.Key, out var instrument)
-                ? instrument.CurrencyId
-                : baseCurrency;
+            var instrumentCurrency = InstrumentAccountingCurrencyHelper.Get(kvp.Key, accountingCurrencies, instruments, baseCurrency);
             realizedBase += data.Convert(kvp.Value, instrumentCurrency, baseCurrency, asOfDate);
         }
 
