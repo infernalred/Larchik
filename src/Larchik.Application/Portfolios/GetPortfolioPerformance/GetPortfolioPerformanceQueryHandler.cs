@@ -57,10 +57,7 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         foreach (var op in operations) neededCurrencies.Add(op.CurrencyId);
         foreach (var instrument in instruments.Values) neededCurrencies.Add(instrument.CurrencyId);
 
-        var fxRates = await context.FxRates
-            .AsNoTracking()
-            .Where(x => neededCurrencies.Contains(x.BaseCurrencyId) && neededCurrencies.Contains(x.QuoteCurrencyId))
-            .ToListAsync(cancellationToken);
+        var fxRates = await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
 
         var data = new HistoricalDataLookup(prices, fxRates);
 
@@ -82,9 +79,9 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             var startBoundary = cursor.AddDays(-1);
 
             var startSnapshot = ComputeValuation(startBoundary, method, baseCurrency, data, instruments, operations,
-                valuationOperations, valuationService, UsesBrokerCashLedger(portfolio));
+                valuationOperations, valuationService, BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio));
             var endSnapshot = ComputeValuation(monthEnd, method, baseCurrency, data, instruments, operations,
-                valuationOperations, valuationService, UsesBrokerCashLedger(portfolio));
+                valuationOperations, valuationService, BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio));
 
             var netFlow = ComputeFlows(operations, data, baseCurrency, cursor, monthEnd);
 
@@ -175,14 +172,15 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             var instrument = op.InstrumentId is not null && instruments.TryGetValue(op.InstrumentId.Value, out var resolvedInstrument)
                 ? resolvedInstrument
                 : null;
-            var cashEffective = IsCashEffective(op, asOfDate);
+            var cashEffective = BrokerCashLedgerHelper.IsCashEffective(op, asOfDate);
             var amount = op.Price != 0 ? op.Price : op.Quantity;
             var tradeValue = op.Quantity * op.Price;
 
             switch (op.Type)
             {
                 case OperationType.Buy when op.InstrumentId != null:
-                    if (usesBrokerCashLedger)
+                    var hasBuyCashLedger = usesBrokerCashLedger && BrokerCashLedgerHelper.HasTradeCashLedger(op, operations);
+                    if (hasBuyCashLedger)
                     {
                         if (cashEffective && op.Fee != 0)
                         {
@@ -207,8 +205,8 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     }
                     break;
                 case OperationType.Sell when op.InstrumentId != null:
-                case OperationType.BondMaturity when op.InstrumentId != null:
-                    if (usesBrokerCashLedger)
+                    var hasSellCashLedger = usesBrokerCashLedger && BrokerCashLedgerHelper.HasTradeCashLedger(op, operations);
+                    if (hasSellCashLedger)
                     {
                         if (cashEffective && op.Fee != 0)
                         {
@@ -232,16 +230,13 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     }
                     break;
-                case OperationType.BondPartialRedemption when op.InstrumentId != null:
-                    if (usesBrokerCashLedger)
+                case OperationType.BondMaturity when op.InstrumentId != null:
+                    if (cashEffective)
                     {
-                        if (cashEffective && op.Fee != 0)
-                        {
-                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
-                        }
-                        break;
+                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     }
-
+                    break;
+                case OperationType.BondPartialRedemption when op.InstrumentId != null:
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
@@ -307,8 +302,9 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             }
             var pricePoint = data.GetPrice(instrumentId, asOfDate);
             var priceValue = pricePoint?.Value;
+            var quoteCurrency = pricePoint?.CurrencyId ?? instrumentCurrency;
             var marketValueBase = priceValue.HasValue
-                ? data.Convert(qty * priceValue.Value, instrumentCurrency, baseCurrency, asOfDate)
+                ? data.Convert(qty * priceValue.Value, quoteCurrency, baseCurrency, asOfDate)
                 : 0m;
             var avgCost = position.AverageCost;
             var costBase = data.Convert(avgCost * qty, instrumentCurrency, baseCurrency, asOfDate);
@@ -368,23 +364,6 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         }
 
         return flow;
-    }
-
-    private static bool IsCashEffective(Operation operation, DateTime asOfDate)
-    {
-        return GetCashEffectiveDate(operation) <= asOfDate.Date;
-    }
-
-    private static DateTime GetCashEffectiveDate(Operation operation)
-    {
-        return operation.InstrumentId is null
-            ? operation.TradeDate.Date
-            : (operation.SettlementDate ?? operation.TradeDate).Date;
-    }
-
-    private static bool UsesBrokerCashLedger(Portfolio portfolio)
-    {
-        return string.Equals(portfolio.Broker?.Code, "tbank", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AddCash(string currencyId, decimal amount, IDictionary<string, decimal> cashByCurrency)

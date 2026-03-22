@@ -59,10 +59,7 @@ public class SyncPricesCommandHandler(LarchikContext context)
             .ToArray();
         var fxRates = neededCurrencies.Length == 0
             ? []
-            : await context.FxRates
-                .AsNoTracking()
-                .Where(x => neededCurrencies.Contains(x.BaseCurrencyId) && neededCurrencies.Contains(x.QuoteCurrencyId))
-                .ToListAsync(cancellationToken);
+            : await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
         var data = new HistoricalDataLookup([], fxRates);
         var missingRates = normalizedInputs
             .Where(x =>

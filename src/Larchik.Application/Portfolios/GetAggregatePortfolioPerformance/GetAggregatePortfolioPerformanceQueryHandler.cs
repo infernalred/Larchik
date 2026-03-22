@@ -76,10 +76,7 @@ public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context
             neededCurrencies.Add(instrument.CurrencyId);
         }
 
-        var fxRates = await context.FxRates
-            .AsNoTracking()
-            .Where(x => neededCurrencies.Contains(x.BaseCurrencyId) && neededCurrencies.Contains(x.QuoteCurrencyId))
-            .ToListAsync(cancellationToken);
+        var fxRates = await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
 
         var data = new HistoricalDataLookup(prices, fxRates);
         var method = request.Method ?? "adjustingAvg";

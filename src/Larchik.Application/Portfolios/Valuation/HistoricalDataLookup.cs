@@ -27,6 +27,7 @@ public class HistoricalDataLookup
             .ToDictionary(
                 g => g.Key,
                 g => g.OrderByDescending(r => r.Date)
+                      .ThenBy(r => GetFxSourcePriority(r.Source))
                       .ThenByDescending(r => r.CreatedAt)
                       .ToList());
     }
@@ -97,6 +98,17 @@ public class HistoricalDataLookup
             "MOEX" => 0,
             "TBANK" => 1,
             _ => 2
+        };
+    }
+
+    private static int GetFxSourcePriority(string? source)
+    {
+        return source?.ToUpperInvariant() switch
+        {
+            "MARKET_MOEX" => 0,
+            "MARKET_TBANK" => 1,
+            "CBR" => 2,
+            _ => 3
         };
     }
 }

@@ -17,7 +17,7 @@ public class SyncMoexPricesCommandHandler(
     ILogger<SyncMoexPricesCommandHandler> logger)
     : IRequestHandler<SyncMoexPricesCommand, Result<int>>
 {
-    private static readonly string[] DefaultBoards = ["TQBR", "TQTF", "TQIF", "TQCB", "TQOB"];
+    private static readonly string[] DefaultBoards = ["TQBR", "TQTF", "TQIF", "TQCB", "TQOB", "CETS", "MTQR"];
     private const int MaxHistoryLookbackDays = 7;
     private const int MaxTradingStatusParallelism = 6;
     private static readonly string[] PriceColumns =
@@ -60,7 +60,7 @@ public class SyncMoexPricesCommandHandler(
         var instruments = await context.Instruments
             .AsNoTracking()
             .Where(x =>
-                (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf) &&
+                (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf || x.Type == InstrumentType.Currency) &&
                 x.IsTrading &&
                 x.Ticker != null &&
                 x.Ticker != "")
@@ -230,10 +230,15 @@ public class SyncMoexPricesCommandHandler(
             .ToArray();
         var fxRates = neededCurrencies.Length == 0
             ? []
-            : await context.FxRates
-                .AsNoTracking()
-                .Where(x => neededCurrencies.Contains(x.BaseCurrencyId) && neededCurrencies.Contains(x.QuoteCurrencyId))
-                .ToListAsync(cancellationToken);
+            : await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
+        fxRates.AddRange(MarketFxRateLoader.BuildFromSamples(
+            matches
+                .Where(x => x.Instrument.Type == InstrumentType.Currency)
+                .Select(x => new MarketFxSample(
+                    x.Instrument.Ticker,
+                    x.Point.Date.ToDateTime(TimeOnly.MinValue),
+                    x.Point.Value,
+                    provider))));
         var data = new HistoricalDataLookup([], fxRates);
 
         var existing = await context.Prices
@@ -264,12 +269,13 @@ public class SyncMoexPricesCommandHandler(
                 listingHistories,
                 point.Date.ToDateTime(TimeOnly.MinValue));
             var normalizedValue = NormalizeStoredPrice(instrument, point, data);
+            var storedCurrencyId = ResolveStoredCurrency(instrument, point, activeListing.CurrencyId);
             var existingKey = new { InstrumentId = instrument.Id, Date = point.Date };
 
             if (existingByInstrumentDate.TryGetValue(existingKey, out var price))
             {
                 price.Value = normalizedValue;
-                price.CurrencyId = instrument.CurrencyId;
+                price.CurrencyId = storedCurrencyId;
                 price.SourceCurrencyId = point.CurrencyId ?? activeListing.CurrencyId;
                 price.Provider = provider;
                 price.UpdatedAt = DateTime.UtcNow;
@@ -283,7 +289,7 @@ public class SyncMoexPricesCommandHandler(
                     InstrumentId = instrument.Id,
                     Date = point.Date.ToDateTime(TimeOnly.MinValue),
                     Value = normalizedValue,
-                    CurrencyId = instrument.CurrencyId,
+                    CurrencyId = storedCurrencyId,
                     SourceCurrencyId = point.CurrencyId ?? activeListing.CurrencyId,
                     Provider = provider,
                     CreatedAt = DateTime.UtcNow,
@@ -335,8 +341,8 @@ public class SyncMoexPricesCommandHandler(
         try
         {
             var client = httpClientFactory.CreateClient();
-            var markets = new[] { "shares", "bonds" };
             const int pageSize = 100;
+            var routes = GetBoardRoutes(board);
 
             for (var dayOffset = 0; dayOffset < MaxHistoryLookbackDays; dayOffset++)
             {
@@ -344,13 +350,13 @@ public class SyncMoexPricesCommandHandler(
                 var prices = new Dictionary<string, MoexPricePoint>(StringComparer.OrdinalIgnoreCase);
                 var gotAnyData = false;
 
-                foreach (var market in markets)
+                foreach (var route in routes)
                 {
                     var marketHasData = false;
                     for (var start = 0; ; start += pageSize)
                     {
                         var url =
-                            $"{baseUrl}/history/engines/stock/markets/{market}/boards/{board}/securities.json" +
+                            $"{baseUrl}/history/engines/{route.Engine}/markets/{route.Market}/boards/{board}/securities.json" +
                             $"?date={probeDate:yyyy-MM-dd}&start={start}&iss.meta=off&iss.only=history&history.columns={HistoryColumns}";
 
                         var response = await client.GetAsync(url, cancellationToken);
@@ -358,7 +364,7 @@ public class SyncMoexPricesCommandHandler(
                         {
                             if (start == 0) break;
                             return Result<MoexBoardPrices>.Failure(
-                                $"MOEX request failed for board '{board}' ({market}): {(int)response.StatusCode}");
+                                $"MOEX request failed for board '{board}' ({route.Engine}/{route.Market}): {(int)response.StatusCode}");
                         }
 
                         var json = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -793,6 +799,19 @@ public class SyncMoexPricesCommandHandler(
         return cleanInInstrumentCurrency + accruedInInstrumentCurrency;
     }
 
+    private static string ResolveStoredCurrency(
+        InstrumentCandidate instrument,
+        MoexPricePoint point,
+        string? activeListingCurrencyId)
+    {
+        if (instrument.Type == InstrumentType.Bond)
+        {
+            return instrument.CurrencyId;
+        }
+
+        return (point.CurrencyId ?? activeListingCurrencyId ?? instrument.CurrencyId).ToUpperInvariant();
+    }
+
     private static string? NormalizeMoexCurrency(string? rawCurrency)
     {
         if (string.IsNullOrWhiteSpace(rawCurrency))
@@ -806,6 +825,21 @@ public class SyncMoexPricesCommandHandler(
             "EUR" => "EUR",
             var value => value
         };
+    }
+
+    private static IReadOnlyList<MoexBoardRoute> GetBoardRoutes(string board)
+    {
+        if (string.Equals(board, "CETS", StringComparison.OrdinalIgnoreCase))
+        {
+            return [new MoexBoardRoute("currency", "selt")];
+        }
+
+        if (string.Equals(board, "MTQR", StringComparison.OrdinalIgnoreCase))
+        {
+            return [new MoexBoardRoute("otc", "shares")];
+        }
+
+        return [new MoexBoardRoute("stock", "shares"), new MoexBoardRoute("stock", "bonds")];
     }
 
     private static int ApplyTradingStateUpdates(
@@ -832,6 +866,7 @@ public class SyncMoexPricesCommandHandler(
 
     private sealed record InstrumentCandidate(Guid Id, string Ticker, string CurrencyId, InstrumentType Type);
     private sealed record InstrumentAliasCandidate(Guid InstrumentId, string NormalizedAliasCode);
+    private sealed record MoexBoardRoute(string Engine, string Market);
     private sealed record MatchedPricePoint(InstrumentCandidate Instrument, MoexPricePoint Point);
     private sealed record MoexPricePoint(
         string SecId,

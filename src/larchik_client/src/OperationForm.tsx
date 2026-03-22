@@ -35,6 +35,7 @@ const TYPE_OPTIONS: { value: OperationType; label: string }[] = [
 const INSTRUMENT_OPERATION_TYPES = new Set<OperationType>([
   'Buy',
   'Sell',
+  'Dividend',
   'BondPartialRedemption',
   'BondMaturity',
   'Split',
@@ -74,6 +75,23 @@ const createInitialForm = (initial?: Partial<OperationModel>): OperationModel =>
   note: initial?.note,
 });
 
+const createInitialInstrument = (initial?: Partial<OperationModel> & { instrumentTicker?: string }): InstrumentLookup | null => {
+  if (!initial?.instrumentId) {
+    return null;
+  }
+
+  const ticker = initial.instrumentTicker?.trim();
+
+  return {
+    id: initial.instrumentId,
+    ticker: ticker && ticker.length > 0 ? ticker : initial.instrumentId,
+    name: ticker && ticker.length > 0 ? ticker : initial.instrumentId,
+    isin: ticker && ticker.length > 0 ? ticker : initial.instrumentId,
+    figi: undefined,
+    currencyId: initial.currencyId ?? 'RUB',
+  };
+};
+
 export function OperationForm({ open, initial, onClose, onSubmit, searchInstruments }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -89,9 +107,10 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
   useEffect(() => {
     if (!open) return;
     setForm(createInitialForm(initial));
-    setSelectedInstrument(null);
-    setInstrumentSearch('');
-    setInstrumentOptions([]);
+    const presetInstrument = createInitialInstrument(initial as (Partial<OperationModel> & { instrumentTicker?: string }) | undefined);
+    setSelectedInstrument(presetInstrument);
+    setInstrumentSearch(presetInstrument?.ticker ?? '');
+    setInstrumentOptions(presetInstrument ? [presetInstrument] : []);
     setInstrumentError(null);
   }, [open, initial]);
 
@@ -142,6 +161,12 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
 
   const isSplitType = form.type === 'Split' || form.type === 'ReverseSplit';
   const isInstrumentType = INSTRUMENT_OPERATION_TYPES.has(form.type);
+  const quantityLabel = isSplitType ? 'Коэффициент' : 'Количество';
+  const quantityHelperText = isSplitType
+    ? '1:10 = 10, 10:1 = 0.1'
+    : isInstrumentType
+      ? undefined
+      : 'Для денежных операций можно оставить 0';
 
   const selectedInstrumentValue = useMemo(() => {
     if (!form.instrumentId) return null;
@@ -251,11 +276,11 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              label={isSplitType ? 'Коэффициент' : 'Количество'}
+              label={quantityLabel}
               type="number"
               value={form.quantity}
               onChange={(e) => update('quantity', Number(e.target.value))}
-              helperText={isSplitType ? '1:10 = 10, 10:1 = 0.1' : undefined}
+              helperText={quantityHelperText}
               fullWidth
             />
             <TextField

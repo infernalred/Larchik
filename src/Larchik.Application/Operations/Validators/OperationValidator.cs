@@ -13,7 +13,12 @@ public class OperationValidator : AbstractValidator<OperationModel>
             .NotEmpty()
             .When(x => OperationTypeRules.RequiresInstrument(x.Type))
             .WithMessage("Instrument is required for instrument operations.");
-        RuleFor(x => x.Quantity).GreaterThan(0);
+        RuleFor(x => x.Quantity)
+            .GreaterThan(0)
+            .When(x => OperationTypeRules.RequiresPositiveQuantity(x.Type));
+        RuleFor(x => x.Quantity)
+            .GreaterThanOrEqualTo(0)
+            .When(x => OperationTypeRules.AllowsZeroQuantity(x.Type));
         RuleFor(x => x.Quantity)
             .NotEqual(1m)
             .When(x => x.Type is OperationType.Split or OperationType.ReverseSplit)

@@ -74,10 +74,7 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
             neededCurrencies.Add(instrument.CurrencyId);
         }
 
-        var fxRates = await context.FxRates
-            .AsNoTracking()
-            .Where(x => neededCurrencies.Contains(x.BaseCurrencyId) && neededCurrencies.Contains(x.QuoteCurrencyId))
-            .ToListAsync(cancellationToken);
+        var fxRates = await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
 
         var data = new HistoricalDataLookup(prices, fxRates);
         var operationsByPortfolio = operations
@@ -107,7 +104,7 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                     method,
                     baseCurrency,
                     asOfDate,
-                    UsesBrokerCashLedger(portfolio));
+                    BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio));
 
             totalNetInflowBase += netInflowBase;
             totalGrossDepositsBase += grossDepositsBase;
@@ -161,13 +158,14 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
             var instrument = op.InstrumentId is not null && instruments.TryGetValue(op.InstrumentId.Value, out var resolvedInstrument)
                 ? resolvedInstrument
                 : null;
-            var cashEffective = IsCashEffective(op, asOfDate);
+            var cashEffective = BrokerCashLedgerHelper.IsCashEffective(op, asOfDate);
             var amount = op.Price != 0 ? op.Price : op.Quantity;
             var tradeValue = op.Quantity * op.Price;
             switch (op.Type)
             {
                 case OperationType.Buy when op.InstrumentId != null:
-                    if (usesBrokerCashLedger)
+                    var hasBuyCashLedger = usesBrokerCashLedger && BrokerCashLedgerHelper.HasTradeCashLedger(op, operations);
+                    if (hasBuyCashLedger)
                     {
                         if (instrument?.Type != InstrumentType.Currency)
                         {
@@ -199,8 +197,8 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                     }
                     break;
                 case OperationType.Sell when op.InstrumentId != null:
-                case OperationType.BondMaturity when op.InstrumentId != null:
-                    if (usesBrokerCashLedger)
+                    var hasSellCashLedger = usesBrokerCashLedger && BrokerCashLedgerHelper.HasTradeCashLedger(op, operations);
+                    if (hasSellCashLedger)
                     {
                         if (instrument?.Type != InstrumentType.Currency)
                         {
@@ -231,17 +229,14 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     }
                     break;
-                case OperationType.BondPartialRedemption when op.InstrumentId != null:
-                    if (usesBrokerCashLedger)
+                case OperationType.BondMaturity when op.InstrumentId != null:
+                    AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
+                    if (cashEffective)
                     {
-                        if (cashEffective && op.Fee != 0)
-                        {
-                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
-                        }
-
-                        break;
+                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     }
-
+                    break;
+                case OperationType.BondPartialRedemption when op.InstrumentId != null:
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
@@ -355,8 +350,9 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
             positionCosts.TryGetValue(kvp.Key, out var cost);
             var price = data.GetPrice(kvp.Key, asOfDate);
             var lastPrice = price?.Value;
+            var quoteCurrency = price?.CurrencyId ?? instrument.CurrencyId;
             var marketValueBase = lastPrice.HasValue
-                ? data.Convert(kvp.Value * lastPrice.Value, instrument.CurrencyId, baseCurrency, asOfDate)
+                ? data.Convert(kvp.Value * lastPrice.Value, quoteCurrency, baseCurrency, asOfDate)
                 : 0;
             var avgCost = cost?.AverageCost ?? 0;
             var costBase = data.Convert(avgCost * kvp.Value, instrument.CurrencyId, baseCurrency, asOfDate);
@@ -437,20 +433,4 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
             : updated;
     }
 
-    private static bool IsCashEffective(Operation operation, DateTime asOfDate)
-    {
-        return GetCashEffectiveDate(operation) <= asOfDate;
-    }
-
-    private static DateTime GetCashEffectiveDate(Operation operation)
-    {
-        return operation.InstrumentId is null
-            ? operation.TradeDate.Date
-            : (operation.SettlementDate ?? operation.TradeDate).Date;
-    }
-
-    private static bool UsesBrokerCashLedger(Portfolio portfolio)
-    {
-        return string.Equals(portfolio.Broker?.Code, "tbank", StringComparison.OrdinalIgnoreCase);
-    }
 }

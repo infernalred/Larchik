@@ -56,10 +56,7 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
         foreach (var op in operations) neededCurrencies.Add(op.CurrencyId);
         foreach (var instrument in instruments.Values) neededCurrencies.Add(instrument.CurrencyId);
 
-        var fxRates = await context.FxRates
-            .AsNoTracking()
-            .Where(x => neededCurrencies.Contains(x.BaseCurrencyId) && neededCurrencies.Contains(x.QuoteCurrencyId))
-            .ToListAsync(cancellationToken);
+        var fxRates = await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
 
         var data = new HistoricalDataLookup(prices, fxRates);
 
@@ -94,7 +91,7 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
         }
 
         var valuationService = new ValuationService();
-        var usesBrokerCashLedger = UsesBrokerCashLedger(portfolio);
+        var usesBrokerCashLedger = BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio);
         var cashByCurrency = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         var netFlowByDate = new Dictionary<DateTime, decimal>();
         var portfolioSnapshots = new List<PortfolioSnapshot>();
@@ -102,7 +99,7 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
 
         var positionOpIndex = 0;
         var cashOperations = operations
-            .OrderBy(GetCashEffectiveDate)
+            .OrderBy(BrokerCashLedgerHelper.GetCashEffectiveDate)
             .ThenBy(x => x.CreatedAt)
             .ToList();
         var cashOpIndex = 0;
@@ -117,10 +114,10 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 TrackFlows(op, baseCurrency, op.TradeDate, data, netFlowByDate);
             }
 
-            while (cashOpIndex < cashOperations.Count && GetCashEffectiveDate(cashOperations[cashOpIndex]) <= date)
+            while (cashOpIndex < cashOperations.Count && BrokerCashLedgerHelper.GetCashEffectiveDate(cashOperations[cashOpIndex]) <= date)
             {
                 var op = cashOperations[cashOpIndex++];
-                ApplyCash(op, cashByCurrency, usesBrokerCashLedger, date);
+                ApplyCash(op, operations, cashByCurrency, usesBrokerCashLedger, date);
             }
 
             while (valuationCount < valuationOperations.Count && valuationOperations[valuationCount].TradeDate.Date <= date)
@@ -148,8 +145,9 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 }
                 var price = data.GetPrice(instrumentId, date);
                 var lastPrice = price?.Value;
+                var quoteCurrency = price?.CurrencyId ?? instrumentCurrency;
                 var marketValueBase = lastPrice.HasValue
-                    ? data.Convert(qty * lastPrice.Value, instrumentCurrency, baseCurrency, date)
+                    ? data.Convert(qty * lastPrice.Value, quoteCurrency, baseCurrency, date)
                     : 0m;
                 var avgCost = position.AverageCost;
                 var costBase = data.Convert(avgCost * qty, instrumentCurrency, baseCurrency, date);
@@ -224,16 +222,22 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
             portfolioId, persistFrom, calculationEnd, portfolioSnapshots.Count);
     }
 
-    private static void ApplyCash(Operation op, IDictionary<string, decimal> cashByCurrency, bool usesBrokerCashLedger, DateTime asOfDate)
+    private static void ApplyCash(
+        Operation op,
+        IReadOnlyList<Operation> operations,
+        IDictionary<string, decimal> cashByCurrency,
+        bool usesBrokerCashLedger,
+        DateTime asOfDate)
     {
         var amount = op.Price != 0 ? op.Price : op.Quantity;
         var tradeValue = op.Quantity * op.Price;
-        var cashEffective = GetCashEffectiveDate(op) <= asOfDate.Date;
+        var cashEffective = BrokerCashLedgerHelper.GetCashEffectiveDate(op) <= asOfDate.Date;
 
         switch (op.Type)
         {
             case OperationType.Buy when op.InstrumentId != null:
-                if (usesBrokerCashLedger)
+                var hasBuyCashLedger = usesBrokerCashLedger && BrokerCashLedgerHelper.HasTradeCashLedger(op, operations);
+                if (hasBuyCashLedger)
                 {
                     if (cashEffective && op.Fee != 0)
                     {
@@ -251,7 +255,8 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
                 break;
             case OperationType.Sell when op.InstrumentId != null:
-                if (usesBrokerCashLedger)
+                var hasSellCashLedger = usesBrokerCashLedger && BrokerCashLedgerHelper.HasTradeCashLedger(op, operations);
+                if (hasSellCashLedger)
                 {
                     if (cashEffective && op.Fee != 0)
                     {
@@ -269,16 +274,6 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                 break;
             case OperationType.BondPartialRedemption when op.InstrumentId != null:
-                if (usesBrokerCashLedger)
-                {
-                    if (cashEffective && op.Fee != 0)
-                    {
-                        AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
-                    }
-
-                    break;
-                }
-
                 if (!cashEffective)
                 {
                     break;
@@ -287,16 +282,6 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                 break;
             case OperationType.BondMaturity when op.InstrumentId != null:
-                if (usesBrokerCashLedger)
-                {
-                    if (cashEffective && op.Fee != 0)
-                    {
-                        AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
-                    }
-
-                    break;
-                }
-
                 if (!cashEffective)
                 {
                     break;
@@ -329,18 +314,6 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 AddCash(op.CurrencyId, -amount, cashByCurrency);
                 break;
         }
-    }
-
-    private static DateTime GetCashEffectiveDate(Operation operation)
-    {
-        return operation.InstrumentId is null
-            ? operation.TradeDate.Date
-            : (operation.SettlementDate ?? operation.TradeDate).Date;
-    }
-
-    private static bool UsesBrokerCashLedger(Portfolio portfolio)
-    {
-        return string.Equals(portfolio.Broker?.Code, "tbank", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AddCash(string currencyId, decimal amount, IDictionary<string, decimal> cashByCurrency)
