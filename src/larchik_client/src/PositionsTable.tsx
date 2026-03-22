@@ -188,19 +188,7 @@ export function PositionsTable({ positions }: Props) {
               </TableCell>
               <TableCell align="right">—</TableCell>
               <TableCell align="right">—</TableCell>
-              <TableCell align="right">
-                {totalByCurrency.length ? (
-                  <Stack spacing={0.25} alignItems="flex-end">
-                    {totalByCurrency.map((item) => (
-                      <Typography key={item.currencyId} variant="body2" fontWeight={600}>
-                        {fmt(item.amount)} {item.currencyId}
-                      </Typography>
-                    ))}
-                  </Stack>
-                ) : (
-                  '—'
-                )}
-              </TableCell>
+              <TableCell align="right">—</TableCell>
               <TableCell align="right">{fmtPct(totalBase > 0 ? 100 : null)}</TableCell>
               <TableCell align="right">—</TableCell>
               <TableCell align="right">

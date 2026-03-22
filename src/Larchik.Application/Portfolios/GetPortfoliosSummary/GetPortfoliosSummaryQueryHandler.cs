@@ -165,7 +165,7 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
             switch (op.Type)
             {
                 case OperationType.Buy when op.InstrumentId != null:
-                    var hasBuyCashLedger = usesBrokerCashLedger && BrokerCashLedgerHelper.HasTradeCashLedger(op, operations);
+                    var hasBuyCashLedger = BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger);
                     if (hasBuyCashLedger)
                     {
                         if (instrument?.Type != InstrumentType.Currency)
@@ -198,7 +198,7 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                     }
                     break;
                 case OperationType.Sell when op.InstrumentId != null:
-                    var hasSellCashLedger = usesBrokerCashLedger && BrokerCashLedgerHelper.HasTradeCashLedger(op, operations);
+                    var hasSellCashLedger = BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger);
                     if (hasSellCashLedger)
                     {
                         if (instrument?.Type != InstrumentType.Currency)
@@ -232,12 +232,22 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                     break;
                 case OperationType.BondMaturity when op.InstrumentId != null:
                     AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
+                    if (BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger))
+                    {
+                        break;
+                    }
+
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     }
                     break;
                 case OperationType.BondPartialRedemption when op.InstrumentId != null:
+                    if (BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger))
+                    {
+                        break;
+                    }
+
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
@@ -259,7 +269,10 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                     AddCash(op.CurrencyId, amount != 0 ? -amount : -op.Fee, cashByCurrency);
                     break;
                 case OperationType.CashAdjustment:
-                    AddCash(op.CurrencyId, op.Price, cashByCurrency);
+                    if (BrokerCashLedgerHelper.AffectsCashBalance(op, usesBrokerCashLedger))
+                    {
+                        AddCash(op.CurrencyId, op.Price, cashByCurrency);
+                    }
                     break;
                 case OperationType.Deposit:
                     AddCash(op.CurrencyId, amount, cashByCurrency);

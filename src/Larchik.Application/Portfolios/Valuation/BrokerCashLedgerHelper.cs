@@ -4,11 +4,10 @@ namespace Larchik.Application.Portfolios.Valuation;
 
 public static class BrokerCashLedgerHelper
 {
-    private static readonly string[] TradeCashLedgerMarkers =
+    private static readonly string[] NonBalanceCashAdjustmentMarkers =
     [
-        "Покупка/продажа",
-        "Неттинг",
-        "DFP/RFP"
+        "DFP/RFP",
+        "DVP/RVP"
     ];
 
     public static bool UsesBrokerCashLedger(Portfolio portfolio)
@@ -16,20 +15,9 @@ public static class BrokerCashLedgerHelper
         return string.Equals(portfolio.Broker?.Code, "tbank", StringComparison.OrdinalIgnoreCase);
     }
 
-    public static bool HasTradeCashLedger(Operation operation, IReadOnlyList<Operation> operations)
+    public static bool IsImportedBrokerOperation(Operation operation, bool usesBrokerCashLedger)
     {
-        if (operation.Type is not OperationType.Buy and not OperationType.Sell)
-        {
-            return false;
-        }
-
-        var effectiveDate = GetCashEffectiveDate(operation).Date;
-
-        return operations.Any(x =>
-            x.Type == OperationType.CashAdjustment &&
-            x.TradeDate.Date == effectiveDate &&
-            string.Equals(x.CurrencyId, operation.CurrencyId, StringComparison.OrdinalIgnoreCase) &&
-            MatchesTradeCashLedger(x.Note));
+        return usesBrokerCashLedger && !string.IsNullOrWhiteSpace(operation.BrokerOperationKey);
     }
 
     public static bool IsCashEffective(Operation operation, DateTime asOfDate)
@@ -39,19 +27,29 @@ public static class BrokerCashLedgerHelper
 
     public static DateTime GetCashEffectiveDate(Operation operation)
     {
+        if (string.IsNullOrWhiteSpace(operation.BrokerOperationKey))
+        {
+            return operation.TradeDate.Date;
+        }
+
         return operation.InstrumentId is null
             ? operation.TradeDate.Date
             : (operation.SettlementDate ?? operation.TradeDate).Date;
     }
 
-    private static bool MatchesTradeCashLedger(string? note)
+    public static bool AffectsCashBalance(Operation operation, bool usesBrokerCashLedger)
     {
-        if (string.IsNullOrWhiteSpace(note))
+        if (!usesBrokerCashLedger || operation.Type != OperationType.CashAdjustment)
         {
-            return false;
+            return true;
         }
 
-        return TradeCashLedgerMarkers.Any(marker =>
-            note.Contains(marker, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(operation.Note))
+        {
+            return true;
+        }
+
+        return !NonBalanceCashAdjustmentMarkers.Any(marker =>
+            operation.Note.Contains(marker, StringComparison.OrdinalIgnoreCase));
     }
 }

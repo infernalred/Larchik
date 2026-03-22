@@ -70,6 +70,7 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         var accountingCurrencies = InstrumentAccountingCurrencyHelper.Build(operations, instruments, baseCurrency);
         var valuationOperations = BuildValuationOperations(operations, instruments, data, baseCurrency);
         var valuationService = new ValuationService();
+        var usesBrokerCashLedger = BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio);
 
         var results = new List<PortfolioPerformanceDto>();
 
@@ -80,9 +81,9 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             var startBoundary = cursor.AddDays(-1);
 
             var startSnapshot = ComputeValuation(startBoundary, method, baseCurrency, data, instruments, operations,
-                valuationOperations, valuationService, BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio), accountingCurrencies);
+                valuationOperations, valuationService, usesBrokerCashLedger, accountingCurrencies);
             var endSnapshot = ComputeValuation(monthEnd, method, baseCurrency, data, instruments, operations,
-                valuationOperations, valuationService, BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio), accountingCurrencies);
+                valuationOperations, valuationService, usesBrokerCashLedger, accountingCurrencies);
 
             var netFlow = ComputeFlows(operations, data, baseCurrency, cursor, monthEnd);
 
@@ -181,7 +182,7 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             switch (op.Type)
             {
                 case OperationType.Buy when op.InstrumentId != null:
-                    var hasBuyCashLedger = usesBrokerCashLedger && BrokerCashLedgerHelper.HasTradeCashLedger(op, operations);
+                    var hasBuyCashLedger = BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger);
                     if (hasBuyCashLedger)
                     {
                         if (cashEffective && op.Fee != 0)
@@ -207,7 +208,7 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     }
                     break;
                 case OperationType.Sell when op.InstrumentId != null:
-                    var hasSellCashLedger = usesBrokerCashLedger && BrokerCashLedgerHelper.HasTradeCashLedger(op, operations);
+                    var hasSellCashLedger = BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger);
                     if (hasSellCashLedger)
                     {
                         if (cashEffective && op.Fee != 0)
@@ -233,12 +234,22 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     }
                     break;
                 case OperationType.BondMaturity when op.InstrumentId != null:
+                    if (BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger))
+                    {
+                        break;
+                    }
+
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     }
                     break;
                 case OperationType.BondPartialRedemption when op.InstrumentId != null:
+                    if (BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger))
+                    {
+                        break;
+                    }
+
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
@@ -254,7 +265,10 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     AddCash(op.CurrencyId, amount != 0 ? -amount : -op.Fee, cashByCurrency);
                     break;
                 case OperationType.CashAdjustment:
-                    AddCash(op.CurrencyId, op.Price, cashByCurrency);
+                    if (BrokerCashLedgerHelper.AffectsCashBalance(op, usesBrokerCashLedger))
+                    {
+                        AddCash(op.CurrencyId, op.Price, cashByCurrency);
+                    }
                     break;
                 case OperationType.Deposit:
                     AddCash(op.CurrencyId, amount, cashByCurrency);
