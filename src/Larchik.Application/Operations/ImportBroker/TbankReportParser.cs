@@ -529,6 +529,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         {
             var value when value.Contains("тип кд: частичное погашение") => OperationType.BondPartialRedemption,
             var value when value.Contains("тип кд: погашение в уст. срок") => OperationType.BondMaturity,
+            var value when value.Contains("тип кд: выплата дохода по облигациям") => OperationType.Dividend,
             _ => (OperationType?)null
         };
 
@@ -538,13 +539,38 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         }
 
         var isin = NormalizeCode(CorporateActionIsinRegex.Match(note).Groups["isin"].Value);
-        var quantity = ParseLooseDecimal(CorporateActionQuantityRegex.Match(note).Groups["qty"].Value);
-        if (string.IsNullOrWhiteSpace(isin) || quantity is null or <= 0)
+        if (string.IsNullOrWhiteSpace(isin))
         {
             return null;
         }
 
         var perUnit = ParseLooseDecimal(CorporateActionPerUnitRegex.Match(note).Groups["amount"].Value);
+        if (operationType == OperationType.Dividend)
+        {
+            var dividendOperation = new Operation
+            {
+                Id = Guid.NewGuid(),
+                Type = OperationType.Dividend,
+                Quantity = 0,
+                Price = decimal.Abs(signedAmount),
+                Fee = 0,
+                CurrencyId = currency,
+                TradeDate = tradeDate,
+                SettlementDate = tradeDate,
+                Note = string.IsNullOrWhiteSpace(opText) ? note : $"{opText}: {note}",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            return new ParsedOperation(dividendOperation, isin, true);
+        }
+
+        var quantity = ParseLooseDecimal(CorporateActionQuantityRegex.Match(note).Groups["qty"].Value);
+        if (quantity is null or <= 0)
+        {
+            return null;
+        }
+
         var price = perUnit is > 0 ? perUnit.Value : decimal.Abs(signedAmount) / quantity.Value;
 
         var operation = new Operation

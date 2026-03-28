@@ -1,5 +1,6 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
+using Larchik.Application.Operations.ImportBroker;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
@@ -15,6 +16,7 @@ public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
             .AsNoTracking()
+            .Include(x => x.Broker)
             .FirstOrDefaultAsync(x => x.Id == request.PortfolioId && x.UserId == userId, cancellationToken);
 
         if (portfolio is null) return Result<Guid>.Failure("Portfolio not found");
@@ -26,13 +28,14 @@ public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor
             return Result<Guid>.Failure("Instrument is required for selected operation type.");
         }
 
+        Instrument? instrument = null;
         if (instrumentId is not null)
         {
-            var exists = await context.Instruments
+            instrument = await context.Instruments
                 .AsNoTracking()
-                .AnyAsync(x => x.Id == instrumentId.Value, cancellationToken);
+                .FirstOrDefaultAsync(x => x.Id == instrumentId.Value, cancellationToken);
 
-            if (!exists)
+            if (instrument is null)
             {
                 return Result<Guid>.Failure("Selected instrument was not found.");
             }
@@ -57,6 +60,21 @@ public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
+
+        var canonicalInstrumentCode = instrument is null
+            ? null
+            : !string.IsNullOrWhiteSpace(instrument.Isin)
+                ? instrument.Isin
+                : instrument.Ticker;
+
+        entity.BrokerOperationKey = await BrokerOperationIdentityHelper.BuildProvisionalManualKeyAsync(
+            context,
+            request.PortfolioId,
+            portfolio.Broker?.Code,
+            entity,
+            canonicalInstrumentCode,
+            excludeOperationId: null,
+            cancellationToken);
 
         await context.Operations.AddAsync(entity, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);

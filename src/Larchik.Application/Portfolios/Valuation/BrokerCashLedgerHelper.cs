@@ -1,3 +1,4 @@
+using Larchik.Application.Operations.ImportBroker;
 using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Portfolios.Valuation;
@@ -17,7 +18,7 @@ public static class BrokerCashLedgerHelper
 
     public static bool IsImportedBrokerOperation(Operation operation, bool usesBrokerCashLedger)
     {
-        return usesBrokerCashLedger && !string.IsNullOrWhiteSpace(operation.BrokerOperationKey);
+        return usesBrokerCashLedger && BrokerOperationIdentityHelper.IsConfirmedImportedKey(operation.BrokerOperationKey);
     }
 
     public static bool IsCashEffective(Operation operation, DateTime asOfDate)
@@ -27,7 +28,7 @@ public static class BrokerCashLedgerHelper
 
     public static DateTime GetCashEffectiveDate(Operation operation)
     {
-        if (string.IsNullOrWhiteSpace(operation.BrokerOperationKey))
+        if (!BrokerOperationIdentityHelper.IsConfirmedImportedKey(operation.BrokerOperationKey))
         {
             return operation.TradeDate.Date;
         }

@@ -1,6 +1,8 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
+using Larchik.Application.Operations.ImportBroker;
 using Larchik.Persistence.Context;
+using Larchik.Persistence.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,13 +28,14 @@ public class EditOperationCommandHandler(LarchikContext context, IUserAccessor u
             return Result<Unit>.Failure("Instrument is required for selected operation type.");
         }
 
+        Instrument? instrument = null;
         if (instrumentId is not null)
         {
-            var exists = await context.Instruments
+            instrument = await context.Instruments
                 .AsNoTracking()
-                .AnyAsync(x => x.Id == instrumentId.Value, cancellationToken);
+                .FirstOrDefaultAsync(x => x.Id == instrumentId.Value, cancellationToken);
 
-            if (!exists)
+            if (instrument is null)
             {
                 return Result<Unit>.Failure("Selected instrument was not found.");
             }
@@ -40,6 +43,11 @@ public class EditOperationCommandHandler(LarchikContext context, IUserAccessor u
 
         var tradeDate = OperationInputNormalizer.NormalizeUtc(request.Model.TradeDate);
         var settlementDate = OperationInputNormalizer.NormalizeUtc(request.Model.SettlementDate) ?? tradeDate;
+        var brokerCode = await context.Brokers
+            .AsNoTracking()
+            .Where(x => x.Id == op.Portfolio!.BrokerId)
+            .Select(x => x.Code)
+            .FirstOrDefaultAsync(cancellationToken);
 
         op.InstrumentId = instrumentId;
         op.Type = request.Model.Type;
@@ -50,6 +58,24 @@ public class EditOperationCommandHandler(LarchikContext context, IUserAccessor u
         op.TradeDate = tradeDate;
         op.SettlementDate = settlementDate;
         op.Note = request.Model.Note;
+        if (!BrokerOperationIdentityHelper.IsConfirmedImportedKey(op.BrokerOperationKey))
+        {
+            var canonicalInstrumentCode = instrument is null
+                ? null
+                : !string.IsNullOrWhiteSpace(instrument.Isin)
+                    ? instrument.Isin
+                    : instrument.Ticker;
+
+            op.BrokerOperationKey = await BrokerOperationIdentityHelper.BuildProvisionalManualKeyAsync(
+                context,
+                op.PortfolioId,
+                brokerCode,
+                op,
+                canonicalInstrumentCode,
+                op.Id,
+                cancellationToken);
+        }
+
         op.UpdatedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);

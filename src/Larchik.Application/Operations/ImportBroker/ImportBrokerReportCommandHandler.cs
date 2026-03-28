@@ -22,6 +22,7 @@ public class ImportBrokerReportCommandHandler(
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
             .AsNoTracking()
+            .Include(x => x.Broker)
             .FirstOrDefaultAsync(x => x.Id == request.PortfolioId && x.UserId == userId, cancellationToken);
 
         if (portfolio is null)
@@ -171,9 +172,11 @@ public class ImportBrokerReportCommandHandler(
             return Result<ImportResultDto>.Failure(string.Join("; ", errors));
         }
 
-        var operations = new List<Operation>(parseResult.Operations.Count);
+        var operationsToInsert = new List<Operation>(parseResult.Operations.Count);
+        var operationsToReconcile = new List<Operation>(parseResult.Operations.Count);
         var importedKeys = new HashSet<string>(StringComparer.Ordinal);
         var skippedCount = 0;
+        var reconciledCount = 0;
         var instrumentCodeById = new Dictionary<Guid, string>();
         var baseKeyOccurrences = new Dictionary<string, int>(StringComparer.Ordinal);
 
@@ -285,10 +288,12 @@ public class ImportBrokerReportCommandHandler(
                     baseKeyOccurrences[baseKey] = occurrence;
                     generatedOperation.BrokerOperationKey = BrokerOperationKeyBuilder.Build(generatedOperation, canonicalInstrumentCode, occurrence);
                     importedKeys.Add(generatedOperation.BrokerOperationKey);
-                    operations.Add(generatedOperation);
+                    operationsToReconcile.Add(generatedOperation);
                 }
             }
         }
+
+        operationsToReconcile.AddRange(parseResult.Operations.Select(x => x.Operation));
 
         var existingKeys = importedKeys.Count == 0
             ? new HashSet<string>(StringComparer.Ordinal)
@@ -300,38 +305,83 @@ public class ImportBrokerReportCommandHandler(
                 .ToListAsync(cancellationToken))
             .ToHashSet(StringComparer.Ordinal);
 
-        foreach (var parsed in parseResult.Operations)
+        var manualCandidates = Array.Empty<Operation>();
+        if (operationsToReconcile.Count > 0 &&
+            BrokerImportReconciliationHelper.SupportsManualReconciliation(portfolio.Broker?.Code))
         {
-            var brokerOperationKey = parsed.Operation.BrokerOperationKey!;
+            var (fromDate, toDate) = BrokerImportReconciliationHelper.GetManualCandidateWindow(operationsToReconcile);
+            manualCandidates = await context.Operations
+                .Where(x =>
+                    x.PortfolioId == portfolio.Id &&
+                    (x.BrokerOperationKey == null || x.BrokerOperationKey.StartsWith("manual:v2:")) &&
+                    x.TradeDate >= fromDate &&
+                    x.TradeDate <= toDate)
+                .ToArrayAsync(cancellationToken);
+        }
+
+        var reservedManualIds = new HashSet<Guid>();
+        DateTime? earliestTouchedDate = null;
+
+        foreach (var operation in operationsToReconcile.OrderBy(x => x.TradeDate).ThenBy(x => x.CreatedAt))
+        {
+            var brokerOperationKey = operation.BrokerOperationKey!;
             if (!existingKeys.Add(brokerOperationKey))
             {
                 skippedCount++;
                 continue;
             }
 
-            operations.Add(parsed.Operation);
+            var manualMatch = BrokerImportReconciliationHelper.TryFindManualMatch(
+                portfolio.Broker?.Code,
+                operation,
+                manualCandidates,
+                reservedManualIds);
+
+            if (manualMatch is not null)
+            {
+                reservedManualIds.Add(manualMatch.Id);
+                var originalTradeDate = manualMatch.TradeDate;
+                BrokerImportReconciliationHelper.ApplyImportedValues(manualMatch, operation);
+                earliestTouchedDate = earliestTouchedDate is null
+                    ? MinDate(originalTradeDate, operation.TradeDate)
+                    : MinDate(earliestTouchedDate.Value, MinDate(originalTradeDate, operation.TradeDate));
+                reconciledCount++;
+                continue;
+            }
+
+            operationsToInsert.Add(operation);
+            earliestTouchedDate = earliestTouchedDate is null
+                ? operation.TradeDate
+                : MinDate(earliestTouchedDate.Value, operation.TradeDate);
         }
 
-        if (skippedCount > 0)
+        if (skippedCount > 0 || reconciledCount > 0)
         {
             logger.LogInformation(
-                "Broker import: skipped {SkippedCount} duplicate operations for portfolio {PortfolioId} from file {FileName}",
+                "Broker import: skipped {SkippedCount} duplicates and reconciled {ReconciledCount} manual operations for portfolio {PortfolioId} from file {FileName}",
                 skippedCount,
+                reconciledCount,
                 portfolio.Id,
                 request.FileName);
         }
 
-        if (operations.Count > 0)
+        if (operationsToInsert.Count > 0)
         {
-            await context.Operations.AddRangeAsync(operations, cancellationToken);
-            await context.SaveChangesAsync(cancellationToken);
+            await context.Operations.AddRangeAsync(operationsToInsert, cancellationToken);
+        }
 
-            var earliest = operations.Min(o => o.TradeDate);
-            await recalc.ScheduleRebuild(portfolio.Id, earliest, cancellationToken);
+        if (operationsToInsert.Count > 0 || reconciledCount > 0)
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        if (earliestTouchedDate is not null)
+        {
+            await recalc.ScheduleRebuild(portfolio.Id, earliestTouchedDate.Value, cancellationToken);
         }
 
         var result = new ImportResultDto(
-            ImportedOperations: operations.Count,
+            ImportedOperations: operationsToInsert.Count,
             SkippedOperations: skippedCount,
             Errors: parseResult.Errors);
 
@@ -349,4 +399,6 @@ public class ImportBrokerReportCommandHandler(
             _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
         };
     }
+
+    private static DateTime MinDate(DateTime left, DateTime right) => left <= right ? left : right;
 }
