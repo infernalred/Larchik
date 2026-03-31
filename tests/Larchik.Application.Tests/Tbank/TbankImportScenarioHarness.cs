@@ -4,6 +4,8 @@ using Larchik.Application.Operations.CreateOperation;
 using Larchik.Application.Operations.DeleteOperation;
 using Larchik.Application.Operations.EditOperation;
 using Larchik.Application.Operations.ImportBroker;
+using Larchik.Application.Portfolios.GetPortfolioPerformance;
+using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Application.Portfolios.GetPortfolioSummary;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
@@ -27,6 +29,8 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
     private readonly DeleteOperationCommandHandler _deleteHandler;
     private readonly EditOperationCommandHandler _editHandler;
     private readonly ImportBrokerReportCommandHandler _importHandler;
+    private readonly GetPortfolioPerformanceQueryHandler _performanceHandler;
+    private readonly GetPortfoliosSummaryQueryHandler _portfoliosSummaryHandler;
     private readonly GetPortfolioSummaryQueryHandler _summaryHandler;
     private readonly Dictionary<string, Guid> _instrumentIdByTicker;
 
@@ -53,6 +57,8 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
             _recalc,
             [new TbankReportParser(NullLogger<TbankReportParser>.Instance)],
             NullLogger<ImportBrokerReportCommandHandler>.Instance);
+        _performanceHandler = new GetPortfolioPerformanceQueryHandler(_context, _userAccessor);
+        _portfoliosSummaryHandler = new GetPortfoliosSummaryQueryHandler(_context, _userAccessor);
         _summaryHandler = new GetPortfolioSummaryQueryHandler(_context, _userAccessor);
 
         SeedReferenceData(TbankReferenceData.Load());
@@ -71,6 +77,7 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
             CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
+        await NormalizeOperationTimestampsAsync();
         return result.Value!;
     }
 
@@ -89,6 +96,7 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
             CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
+        await NormalizeOperationTimestampsAsync();
         return result.Value!;
     }
 
@@ -98,6 +106,7 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
     {
         var result = await _createHandler.Handle(new CreateOperationCommand(PortfolioId, model), CancellationToken.None);
         Assert.True(result.IsSuccess, result.Error);
+        await NormalizeOperationTimestampsAsync();
         return result.Value;
     }
 
@@ -106,12 +115,14 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
         var result = await _editHandler.Handle(new EditOperationCommand(operationId, model), CancellationToken.None);
         Assert.NotNull(result);
         Assert.True(result!.IsSuccess, result.Error);
+        await NormalizeOperationTimestampsAsync();
     }
 
     public async Task DeleteOperationAsync(Guid operationId)
     {
         var result = await _deleteHandler.Handle(new DeleteOperationCommand(operationId), CancellationToken.None);
         Assert.True(result.IsSuccess, result.Error);
+        await NormalizeOperationTimestampsAsync();
     }
 
     public async Task ApplyManualOperationsAsync()
@@ -139,6 +150,7 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
         }
 
         await _context.SaveChangesAsync();
+        await NormalizeOperationTimestampsAsync();
     }
 
     public Task<PortfolioSummaryDto> GetSummaryAsync()
@@ -149,6 +161,28 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
     public async Task<PortfolioSummaryDto> GetSummaryAsync(Guid portfolioId)
     {
         var result = await _summaryHandler.Handle(new GetPortfolioSummaryQuery(portfolioId), CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.True(result!.IsSuccess, result.Error);
+        return result.Value!;
+    }
+
+    public async Task<PortfoliosSummaryDto> GetPortfoliosSummaryAsync(string? method = null, string? currency = null)
+    {
+        var result = await _portfoliosSummaryHandler.Handle(
+            new GetPortfoliosSummaryQuery(method, currency),
+            CancellationToken.None);
+        Assert.True(result.IsSuccess, result.Error);
+        return result.Value!;
+    }
+
+    public async Task<IReadOnlyCollection<PortfolioPerformanceDto>> GetPerformanceAsync(
+        DateTime? from = null,
+        DateTime? to = null,
+        string? method = null)
+    {
+        var result = await _performanceHandler.Handle(
+            new GetPortfolioPerformanceQuery(PortfolioId, method, from, to),
+            CancellationToken.None);
         Assert.NotNull(result);
         Assert.True(result!.IsSuccess, result.Error);
         return result.Value!;
@@ -334,6 +368,26 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
 
         public Task<BrokerReportParseResult> ParseAsync(Stream fileStream, string fileName, CancellationToken cancellationToken) =>
             Task.FromResult(new BrokerReportParseResult(operations.ToList(), []));
+    }
+
+    private async Task NormalizeOperationTimestampsAsync()
+    {
+        var baseTimestamp = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var operations = await _context.Operations
+            .Where(x => x.PortfolioId == PortfolioId)
+            .OrderBy(x => x.TradeDate)
+            .ThenBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .ToListAsync();
+
+        for (var i = 0; i < operations.Count; i++)
+        {
+            var timestamp = baseTimestamp.AddSeconds(i);
+            operations[i].CreatedAt = timestamp;
+            operations[i].UpdatedAt = timestamp;
+        }
+
+        await _context.SaveChangesAsync();
     }
 
     public sealed record PositionSnapshotItem(

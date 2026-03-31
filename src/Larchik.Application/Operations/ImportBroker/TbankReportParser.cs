@@ -394,10 +394,16 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
                     }
                 }
 
-                var fee = SumFee(row, currency, feeBrokerCol, feeBrokerCurCol);
-                fee += SumFee(row, currency, feeExchangeCol, feeExchangeCurCol);
-                fee += SumFee(row, currency, feeClearCol, feeClearCurCol);
-                fee += SumFee(row, currency, stampDutyCol, stampDutyCurCol);
+                // T-Bank has two trade table layouts in historical reports:
+                // 1) newer files expose итоговую клиентскую комиссию in "Комиссия брокера";
+                // 2) older files do not have that column and only expose exchange/clearing/stamp components.
+                // For portfolio accounting we should prefer the explicit client-withheld total when present,
+                // and only fall back to summing the legacy components when that total column is absent.
+                var fee = feeBrokerCol > 0
+                    ? SumFee(row, currency, feeBrokerCol, feeBrokerCurCol)
+                    : SumFee(row, currency, feeExchangeCol, feeExchangeCurCol)
+                      + SumFee(row, currency, feeClearCol, feeClearCurCol)
+                      + SumFee(row, currency, stampDutyCol, stampDutyCurCol);
 
                 var settlementText = settlementDateCol > 0 ? row.GetString(settlementDateCol) : null;
                 var settlementDate = ParseSettlementDate(settlementText);
@@ -731,7 +737,9 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     private static string Normalize(string? value) =>
         string.IsNullOrWhiteSpace(value)
             ? string.Empty
-            : value.Replace("\n", " ").Replace("\r", " ").Trim().ToLowerInvariant();
+            : Regex.Replace(value.Replace("\n", " ").Replace("\r", " "), "\\s+", " ")
+                .Trim()
+                .ToLowerInvariant();
 
     private static bool IsTradePager(string normalizedValue)
     {

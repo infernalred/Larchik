@@ -185,10 +185,6 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     var hasBuyCashLedger = BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger);
                     if (hasBuyCashLedger)
                     {
-                        if (cashEffective && op.Fee != 0)
-                        {
-                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
-                        }
                         break;
                     }
 
@@ -211,10 +207,6 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     var hasSellCashLedger = BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger);
                     if (hasSellCashLedger)
                     {
-                        if (cashEffective && op.Fee != 0)
-                        {
-                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
-                        }
                         break;
                     }
 
@@ -234,22 +226,12 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
                     }
                     break;
                 case OperationType.BondMaturity when op.InstrumentId != null:
-                    if (BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger))
-                    {
-                        break;
-                    }
-
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     }
                     break;
                 case OperationType.BondPartialRedemption when op.InstrumentId != null:
-                    if (BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger))
-                    {
-                        break;
-                    }
-
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);

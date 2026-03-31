@@ -173,11 +173,6 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                             AddPosition(op.InstrumentId.Value, op.Quantity, positions);
                         }
 
-                        if (cashEffective && op.Fee != 0)
-                        {
-                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
-                        }
-
                         break;
                     }
 
@@ -206,11 +201,6 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                             AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
                         }
 
-                        if (cashEffective && op.Fee != 0)
-                        {
-                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
-                        }
-
                         break;
                     }
 
@@ -232,22 +222,12 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
                     break;
                 case OperationType.BondMaturity when op.InstrumentId != null:
                     AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
-                    if (BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger))
-                    {
-                        break;
-                    }
-
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
                     }
                     break;
                 case OperationType.BondPartialRedemption when op.InstrumentId != null:
-                    if (BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger))
-                    {
-                        break;
-                    }
-
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);

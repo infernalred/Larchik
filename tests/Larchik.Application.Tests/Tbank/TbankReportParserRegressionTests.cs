@@ -212,6 +212,41 @@ public class TbankReportParserRegressionTests
         Assert.Equal("RUB", redemption.Operation.CurrencyId);
     }
 
+    [Fact]
+    public void Parse_2019_Report_UsesClientWithheldCommissionFromBrokerColumn()
+    {
+        var result = TbankReportFixtureHelper.Parse("broker-report-2019-11-01-2019-12-31.xlsx");
+
+        var buys = result.Operations.Where(x =>
+            x.Operation.Type == OperationType.Buy &&
+            string.Equals(x.InstrumentCode, "RU000A0JP5V6", StringComparison.OrdinalIgnoreCase) &&
+            x.Operation.TradeDate.Date == new DateTime(2019, 11, 19) &&
+            x.Operation.Quantity == 10000m).ToArray();
+
+        Assert.Equal(2, buys.Length);
+        Assert.All(buys, buy =>
+        {
+            Assert.Equal(1.4m, buy.Operation.Fee);
+            Assert.Equal("RUB", buy.Operation.CurrencyId);
+        });
+    }
+
+    [Fact]
+    public void Parse_2026_03_24_Report_UsesOnlyClientWithheldCommissionForMtsPlacement()
+    {
+        var result = TbankReportFixtureHelper.Parse("broker-report-2026-01-01-2026-03-24.xlsx");
+
+        var placement = Assert.Single(result.Operations, x =>
+            x.Operation.Type == OperationType.Buy &&
+            string.Equals(x.InstrumentCode, "RU000A10ELF6", StringComparison.OrdinalIgnoreCase) &&
+            x.Operation.TradeDate.Date == new DateTime(2026, 3, 18));
+
+        Assert.Equal(10m, placement.Operation.Quantity);
+        Assert.Equal(1000m, placement.Operation.Price);
+        Assert.Equal(0m, placement.Operation.Fee);
+        Assert.Equal("RUB", placement.Operation.CurrencyId);
+    }
+
     public sealed record OperationBreakdown(OperationType Type, int Count);
 
     private sealed record TradeSnapshot(

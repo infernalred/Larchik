@@ -49,11 +49,6 @@ internal sealed class PortfolioAnalyticsCalculator
                             AddPosition(op.InstrumentId.Value, op.Quantity, positions);
                         }
 
-                        if (cashEffective && op.Fee != 0)
-                        {
-                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
-                        }
-
                         break;
                     }
 
@@ -84,11 +79,6 @@ internal sealed class PortfolioAnalyticsCalculator
                             AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
                         }
 
-                        if (cashEffective && op.Fee != 0)
-                        {
-                            AddCash(op.CurrencyId, -op.Fee, cashByCurrency);
-                        }
-
                         break;
                     }
 
@@ -111,11 +101,6 @@ internal sealed class PortfolioAnalyticsCalculator
 
                     break;
                 case OperationType.BondPartialRedemption when op.InstrumentId != null:
-                    if (BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger))
-                    {
-                        break;
-                    }
-
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
@@ -124,11 +109,6 @@ internal sealed class PortfolioAnalyticsCalculator
                     break;
                 case OperationType.BondMaturity when op.InstrumentId != null:
                     AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
-                    if (BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger))
-                    {
-                        break;
-                    }
-
                     if (cashEffective)
                     {
                         AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
