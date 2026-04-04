@@ -7,7 +7,7 @@ namespace Larchik.Application.Tests.Valuation;
 public class BrokerCashLedgerHelperTests
 {
     [Fact]
-    public void AffectsCashBalance_TbankDfpRfpAdjustment_ReturnsFalse()
+    public void AffectsCashBalance_TbankDfpRfpAdjustment_RemainsInCashBalance()
     {
         var operation = new Operation
         {
@@ -16,11 +16,11 @@ public class BrokerCashLedgerHelperTests
             TradeDate = new DateTime(2026, 3, 20)
         };
 
-        Assert.False(BrokerCashLedgerHelper.AffectsCashBalance(operation, usesBrokerCashLedger: true));
+        Assert.True(BrokerCashLedgerHelper.AffectsCashBalance(operation, usesBrokerCashLedger: true));
     }
 
     [Fact]
-    public void AffectsCashBalance_TbankDvpRvpAdjustment_ReturnsFalse()
+    public void AffectsCashBalance_TbankDvpRvpAdjustment_RemainsInCashBalance()
     {
         var operation = new Operation
         {
@@ -29,7 +29,7 @@ public class BrokerCashLedgerHelperTests
             TradeDate = new DateTime(2026, 3, 20)
         };
 
-        Assert.False(BrokerCashLedgerHelper.AffectsCashBalance(operation, usesBrokerCashLedger: true));
+        Assert.True(BrokerCashLedgerHelper.AffectsCashBalance(operation, usesBrokerCashLedger: true));
     }
 
     [Fact]

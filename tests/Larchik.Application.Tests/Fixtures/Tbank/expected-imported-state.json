@@ -1,26 +1,26 @@
 {
-  "operationCount": 2384,
-  "cashBase": 3670.15,
-  "positionsValueBase": 1148604.36,
-  "navBase": 1152274.50,
-  "realizedBase": -9075.23,
-  "unrealizedBase": 73903.18,
+  "operationCount": 2388,
+  "cashBase": 1182.46,
+  "positionsValueBase": 1160237.78,
+  "navBase": 1161420.23,
+  "realizedBase": -10709.58,
+  "unrealizedBase": 74382.42,
   "netInflowBase": 836824.85,
   "breakdown": {
-    "Buy": 537,
-    "Sell": 164,
+    "Buy": 542,
+    "Sell": 163,
     "Dividend": 611,
-    "Fee": 382,
+    "Fee": 376,
     "Deposit": 287,
     "Withdraw": 32,
     "BondPartialRedemption": 29,
     "BondMaturity": 2,
     "ReverseSplit": 1,
-    "CashAdjustment": 339
+    "CashAdjustment": 345
   },
   "cash": {
     "EUR": 0.02,
-    "RUB": 3477.16,
+    "RUB": 989.47,
     "USD": 2.30
   },
   "positions": [
@@ -412,10 +412,10 @@
     {
       "ticker": "RU000A107T19",
       "instrumentName": "\u042F\u043D\u0434\u0435\u043A\u0441",
-      "quantity": 4.0,
+      "quantity": 5.0,
       "lastPrice": 4412.0,
-      "marketValueBase": 17648.00,
-      "averageCost": 4358.47,
+      "marketValueBase": 22060.00,
+      "averageCost": 4336.01,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -456,10 +456,10 @@
     {
       "ticker": "RU000A108X38",
       "instrumentName": "\u041A\u0426 \u0418\u041A\u0421 5",
-      "quantity": 37.0,
+      "quantity": 38.0,
       "lastPrice": 2454.0,
-      "marketValueBase": 90798.00,
-      "averageCost": 2862.94,
+      "marketValueBase": 93252.00,
+      "averageCost": 2850.56,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -599,10 +599,10 @@
     {
       "ticker": "RU000A10BVH7",
       "instrumentName": "\u041E\u0424\u0417 26250",
-      "quantity": 2.0,
+      "quantity": 3.0,
       "lastPrice": 907.28,
-      "marketValueBase": 1814.56,
-      "averageCost": 879.07,
+      "marketValueBase": 2721.84,
+      "averageCost": 889.25,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -687,10 +687,10 @@
     {
       "ticker": "RU000A10D517",
       "instrumentName": "\u041E\u0424\u0417 26253",
-      "quantity": 2.0,
+      "quantity": 3.0,
       "lastPrice": 987.07,
-      "marketValueBase": 1974.14,
-      "averageCost": 952.60,
+      "marketValueBase": 2961.21,
+      "averageCost": 964.58,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -698,10 +698,10 @@
     {
       "ticker": "RU000A10D533",
       "instrumentName": "\u041E\u0424\u0417 26254",
-      "quantity": 2.0,
+      "quantity": 3.0,
       "lastPrice": 983.07,
-      "marketValueBase": 1966.14,
-      "averageCost": 956.21,
+      "marketValueBase": 2949.21,
+      "averageCost": 965.57,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -889,17 +889,6 @@
       "lastPrice": 609.1,
       "marketValueBase": 45682.50,
       "averageCost": 406.77,
-      "currencyId": "RUB",
-      "priceCurrencyId": "RUB",
-      "averageCostCurrencyId": "RUB"
-    },
-    {
-      "ticker": "TGKN",
-      "instrumentName": "\u0422\u0413\u041A-14",
-      "quantity": -300000.0,
-      "lastPrice": 0.01,
-      "marketValueBase": -1890.00,
-      "averageCost": 0.01,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"

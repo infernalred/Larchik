@@ -1,26 +1,26 @@
 {
-  "operationCount": 2370,
-  "cashBase": 2744.14,
-  "positionsValueBase": 1148453.56,
-  "navBase": 1151197.69,
+  "operationCount": 2380,
+  "cashBase": 2300.65,
+  "positionsValueBase": 1193572.18,
+  "navBase": 1195872.82,
   "realizedBase": -10709.58,
-  "unrealizedBase": 74164.34,
+  "unrealizedBase": 74355.82,
   "netInflowBase": 836824.85,
   "breakdown": {
-    "Buy": 535,
+    "Buy": 545,
     "Sell": 163,
     "Dividend": 605,
-    "Fee": 381,
+    "Fee": 375,
     "Deposit": 287,
     "Withdraw": 32,
     "BondPartialRedemption": 29,
     "BondMaturity": 2,
     "ReverseSplit": 1,
-    "CashAdjustment": 335
+    "CashAdjustment": 341
   },
   "cash": {
     "EUR": 0.02,
-    "RUB": 2551.15,
+    "RUB": 2107.66,
     "USD": 2.30
   },
   "positions": [
@@ -214,10 +214,10 @@
     {
       "ticker": "OZPH",
       "instrumentName": "\u041E\u0437\u043E\u043D \u0424\u0430\u0440\u043C\u0430\u0446\u0435\u0432\u0442\u0438\u043A\u0430",
-      "quantity": 90.0,
+      "quantity": 130.0,
       "lastPrice": 51.02,
-      "marketValueBase": 4591.80,
-      "averageCost": 53.69,
+      "marketValueBase": 6632.60,
+      "averageCost": 52.90,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -412,10 +412,10 @@
     {
       "ticker": "RU000A107T19",
       "instrumentName": "\u042F\u043D\u0434\u0435\u043A\u0441",
-      "quantity": 4.0,
+      "quantity": 5.0,
       "lastPrice": 4412.0,
-      "marketValueBase": 17648.00,
-      "averageCost": 4358.47,
+      "marketValueBase": 22060.00,
+      "averageCost": 4336.01,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -456,10 +456,10 @@
     {
       "ticker": "RU000A108X38",
       "instrumentName": "\u041A\u0426 \u0418\u041A\u0421 5",
-      "quantity": 37.0,
+      "quantity": 38.0,
       "lastPrice": 2454.0,
-      "marketValueBase": 90798.00,
-      "averageCost": 2862.94,
+      "marketValueBase": 93252.00,
+      "averageCost": 2850.56,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -599,10 +599,10 @@
     {
       "ticker": "RU000A10BVH7",
       "instrumentName": "\u041E\u0424\u0417 26250",
-      "quantity": 2.0,
+      "quantity": 3.0,
       "lastPrice": 907.28,
-      "marketValueBase": 1814.56,
-      "averageCost": 879.07,
+      "marketValueBase": 2721.84,
+      "averageCost": 889.25,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -687,10 +687,10 @@
     {
       "ticker": "RU000A10D517",
       "instrumentName": "\u041E\u0424\u0417 26253",
-      "quantity": 2.0,
+      "quantity": 3.0,
       "lastPrice": 987.07,
-      "marketValueBase": 1974.14,
-      "averageCost": 952.60,
+      "marketValueBase": 2961.21,
+      "averageCost": 964.58,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -698,10 +698,10 @@
     {
       "ticker": "RU000A10D533",
       "instrumentName": "\u041E\u0424\u0417 26254",
-      "quantity": 2.0,
+      "quantity": 3.0,
       "lastPrice": 983.07,
-      "marketValueBase": 1966.14,
-      "averageCost": 956.21,
+      "marketValueBase": 2949.21,
+      "averageCost": 965.57,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"
@@ -819,9 +819,9 @@
     {
       "ticker": "RU000A10ELF6",
       "instrumentName": "\u041F\u0410\u041E \u041C\u0422\u0421 002P-17",
-      "quantity": 10.0,
+      "quantity": 20.0,
       "lastPrice": 998.94,
-      "marketValueBase": 9989.40,
+      "marketValueBase": 19978.80,
       "averageCost": 1000.0,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
@@ -874,10 +874,10 @@
     {
       "ticker": "T",
       "instrumentName": "\u0422-\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u0438 \u041C\u041A\u041F\u0410\u041E \u0430\u043E",
-      "quantity": 25.0,
+      "quantity": 32.0,
       "lastPrice": 3335.0,
-      "marketValueBase": 83375.00,
-      "averageCost": 3268.05,
+      "marketValueBase": 106720.00,
+      "averageCost": 3283.19,
       "currencyId": "RUB",
       "priceCurrencyId": "RUB",
       "averageCostCurrencyId": "RUB"

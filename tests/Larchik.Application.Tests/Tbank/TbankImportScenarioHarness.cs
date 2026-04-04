@@ -71,7 +71,7 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
 
     public async Task<ImportResultDto> ImportAsync(string fileName)
     {
-        await using var stream = File.OpenRead(Path.Combine(TbankReportFixtureHelper.FixturesRoot, fileName));
+        await using var stream = File.OpenRead(TbankReportFixtureHelper.ResolveFixturePath(fileName));
         var result = await _importHandler.Handle(
             new ImportBrokerReportCommand(PortfolioId, "tbank", stream, fileName),
             CancellationToken.None);

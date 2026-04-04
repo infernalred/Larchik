@@ -107,7 +107,7 @@ public class PortfolioOutputRegressionTests
 
         Assert.NotEmpty(performance);
         Assert.Equal("2019-11", performance[0].Period);
-        Assert.Equal("2026-03", performance[^1].Period);
+        Assert.Equal($"{DateTime.UtcNow:yyyy-MM}", performance[^1].Period);
 
         for (var i = 0; i < performance.Length; i++)
         {

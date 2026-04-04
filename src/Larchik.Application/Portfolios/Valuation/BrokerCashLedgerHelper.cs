@@ -5,12 +5,6 @@ namespace Larchik.Application.Portfolios.Valuation;
 
 public static class BrokerCashLedgerHelper
 {
-    private static readonly string[] NonBalanceCashAdjustmentMarkers =
-    [
-        "DFP/RFP",
-        "DVP/RVP"
-    ];
-
     public static bool UsesBrokerCashLedger(Portfolio portfolio)
     {
         return string.Equals(portfolio.Broker?.Code, "tbank", StringComparison.OrdinalIgnoreCase);
@@ -40,17 +34,8 @@ public static class BrokerCashLedgerHelper
 
     public static bool AffectsCashBalance(Operation operation, bool usesBrokerCashLedger)
     {
-        if (!usesBrokerCashLedger || operation.Type != OperationType.CashAdjustment)
-        {
-            return true;
-        }
-
-        if (string.IsNullOrWhiteSpace(operation.Note))
-        {
-            return true;
-        }
-
-        return !NonBalanceCashAdjustmentMarkers.Any(marker =>
-            operation.Note.Contains(marker, StringComparison.OrdinalIgnoreCase));
+        // T-Bank cash ledger rows are broker-authoritative for end-of-day balances.
+        // Excluding DFP/RFP or DVP/RVP breaks cash reconciliation with the report.
+        return true;
     }
 }

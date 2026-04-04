@@ -72,10 +72,10 @@ public class TbankReportParserRegressionTests
                 new OperationBreakdown(OperationType.Buy, 63),
                 new OperationBreakdown(OperationType.Sell, 8),
                 new OperationBreakdown(OperationType.Dividend, 58),
-                new OperationBreakdown(OperationType.Fee, 73),
+                new OperationBreakdown(OperationType.Fee, 72),
                 new OperationBreakdown(OperationType.Deposit, 40),
                 new OperationBreakdown(OperationType.BondPartialRedemption, 2),
-                new OperationBreakdown(OperationType.CashAdjustment, 49)
+                new OperationBreakdown(OperationType.CashAdjustment, 50)
             }
         ];
 
@@ -87,12 +87,12 @@ public class TbankReportParserRegressionTests
                 new OperationBreakdown(OperationType.Buy, 79),
                 new OperationBreakdown(OperationType.Sell, 123),
                 new OperationBreakdown(OperationType.Dividend, 230),
-                new OperationBreakdown(OperationType.Fee, 119),
+                new OperationBreakdown(OperationType.Fee, 115),
                 new OperationBreakdown(OperationType.Deposit, 88),
                 new OperationBreakdown(OperationType.Withdraw, 19),
                 new OperationBreakdown(OperationType.BondPartialRedemption, 15),
                 new OperationBreakdown(OperationType.BondMaturity, 1),
-                new OperationBreakdown(OperationType.CashAdjustment, 71)
+                new OperationBreakdown(OperationType.CashAdjustment, 75)
             }
         ];
 
@@ -104,26 +104,26 @@ public class TbankReportParserRegressionTests
                 new OperationBreakdown(OperationType.Buy, 166),
                 new OperationBreakdown(OperationType.Sell, 11),
                 new OperationBreakdown(OperationType.Dividend, 216),
-                new OperationBreakdown(OperationType.Fee, 90),
+                new OperationBreakdown(OperationType.Fee, 89),
                 new OperationBreakdown(OperationType.Deposit, 83),
                 new OperationBreakdown(OperationType.BondPartialRedemption, 11),
                 new OperationBreakdown(OperationType.BondMaturity, 1),
-                new OperationBreakdown(OperationType.CashAdjustment, 92)
+                new OperationBreakdown(OperationType.CashAdjustment, 93)
             }
         ];
 
         yield return
         [
-            "broker-report-2026-01-01-2026-03-17.xlsx",
+            "broker-report-2026-01-01-2026-03-31.xlsx",
             new[]
             {
-                new OperationBreakdown(OperationType.Buy, 104),
+                new OperationBreakdown(OperationType.Buy, 114),
                 new OperationBreakdown(OperationType.Sell, 8),
-                new OperationBreakdown(OperationType.Dividend, 87),
-                new OperationBreakdown(OperationType.Fee, 31),
-                new OperationBreakdown(OperationType.Deposit, 15),
-                new OperationBreakdown(OperationType.BondPartialRedemption, 1),
-                new OperationBreakdown(OperationType.CashAdjustment, 30)
+                new OperationBreakdown(OperationType.Dividend, 102),
+                new OperationBreakdown(OperationType.Fee, 34),
+                new OperationBreakdown(OperationType.Deposit, 21),
+                new OperationBreakdown(OperationType.BondPartialRedemption, 2),
+                new OperationBreakdown(OperationType.CashAdjustment, 36)
             }
         ];
     }
@@ -200,7 +200,7 @@ public class TbankReportParserRegressionTests
     [Fact]
     public void Parse_2026_Report_ParsesInterleasingPartialRedemption()
     {
-        var result = TbankReportFixtureHelper.Parse("broker-report-2026-01-01-2026-03-17.xlsx");
+        var result = TbankReportFixtureHelper.Parse("broker-report-2026-01-01-2026-03-31.xlsx");
 
         var redemption = Assert.Single(result.Operations, x =>
             x.Operation.Type == OperationType.BondPartialRedemption &&
@@ -234,7 +234,7 @@ public class TbankReportParserRegressionTests
     [Fact]
     public void Parse_2026_03_24_Report_UsesOnlyClientWithheldCommissionForMtsPlacement()
     {
-        var result = TbankReportFixtureHelper.Parse("broker-report-2026-01-01-2026-03-24.xlsx");
+        var result = TbankReportFixtureHelper.Parse("broker-report-2026-01-01-2026-03-31.xlsx");
 
         var placement = Assert.Single(result.Operations, x =>
             x.Operation.Type == OperationType.Buy &&
@@ -245,6 +245,47 @@ public class TbankReportParserRegressionTests
         Assert.Equal(1000m, placement.Operation.Price);
         Assert.Equal(0m, placement.Operation.Fee);
         Assert.Equal("RUB", placement.Operation.CurrencyId);
+    }
+
+    [Fact]
+    public void Parse_2026_03_31_Report_ParsesCashRowsWithoutExplicitHeaderCells()
+    {
+        var result = TbankReportFixtureHelper.Parse("broker-report-2026-01-01-2026-03-31.xlsx");
+
+        var deposits = result.Operations.Count(x => x.Operation.Type == OperationType.Deposit);
+        var cashAdjustments = result.Operations.Count(x => x.Operation.Type == OperationType.CashAdjustment);
+
+        Assert.Equal(21, deposits);
+        Assert.Equal(36, cashAdjustments);
+    }
+
+    [Fact]
+    public void Parse_2024_Report_ParsesTaxRefundsAsPositiveCashAdjustments()
+    {
+        var result = TbankReportFixtureHelper.Parse("broker-report-2024-01-01-2024-12-31.xlsx");
+
+        var refundAdjustments = result.Operations
+            .Where(x => x.Operation.Type == OperationType.CashAdjustment &&
+                        string.Equals(x.Operation.Note, "Налог", StringComparison.Ordinal) &&
+                        x.Operation.TradeDate.Date == new DateTime(2024, 7, 26))
+            .Select(x => x.Operation.Price)
+            .OrderBy(x => x)
+            .ToArray();
+
+        Assert.Equal([4858m, 4956m], refundAdjustments);
+    }
+
+    [Fact]
+    public void Parse_2025_Report_ParsesYearEndTaxRefundAsPositiveCashAdjustment()
+    {
+        var result = TbankReportFixtureHelper.Parse("broker-report-2025-01-01-2025-12-31.xlsx");
+
+        var refund = Assert.Single(result.Operations, x =>
+            x.Operation.Type == OperationType.CashAdjustment &&
+            string.Equals(x.Operation.Note, "Налог (по итогу года)", StringComparison.Ordinal));
+
+        Assert.Equal(2423m, refund.Operation.Price);
+        Assert.Equal(new DateTime(2025, 1, 20), refund.Operation.TradeDate.Date);
     }
 
     public sealed record OperationBreakdown(OperationType Type, int Count);

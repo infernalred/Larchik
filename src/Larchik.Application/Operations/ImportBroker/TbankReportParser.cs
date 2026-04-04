@@ -434,24 +434,21 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     {
         var headerRow = rows.FirstOrDefault(r => Normalize(r.GetString(1)) == "дата"
                                                  && r.Cells.Any(c => Normalize(c.Value) == "операция"));
-        if (headerRow is null) return;
+        var layout = headerRow is not null
+            ? BuildCashLayoutFromHeader(rows, headerRow)
+            : BuildCashLayoutFromSection(rows);
+        if (layout is null) return;
 
-        var headers = BuildHeaderMap(headerRow);
-        var dateCol = headers.GetValueOrDefault("дата");
-        var executionDateCol = headers.GetValueOrDefault("дата исполнения");
-        var timeCol = headers.GetValueOrDefault("время совершения");
-        var opCol = headers.GetValueOrDefault("операция");
-        var incomeCol = headers.GetValueOrDefault("сумма зачисления");
-        var outcomeCol = headers.GetValueOrDefault("сумма списания");
-        var noteCol = headers.GetValueOrDefault("примечание");
-
-        if (dateCol == 0 || opCol == 0) return;
-
-        var startIndex = headerRow.RowNumber + 1;
-        var currentCurrency = FindCurrentCashCurrency(rows, headerRow.RowNumber - 1) ?? "RUB";
+        var startIndex = layout.StartRow;
+        var currentCurrency = layout.InitialCurrency;
         for (var i = startIndex; i <= rows.Count; i++)
         {
             var row = rows[i - 1];
+            if (layout.IsSectionBoundary(row))
+            {
+                break;
+            }
+
             var rowCurrency = TryGetCashSectionCurrency(row);
             if (rowCurrency is not null)
             {
@@ -459,33 +456,33 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
                 continue;
             }
 
-            var opText = row.GetString(opCol);
-            var dateText = row.GetString(dateCol);
-            if (string.IsNullOrWhiteSpace(dateText) && executionDateCol > 0)
+            var opText = row.GetString(layout.OperationColumn);
+            var dateText = row.GetString(layout.DateColumn);
+            if (string.IsNullOrWhiteSpace(dateText) && layout.ExecutionDateColumn > 0)
             {
-                dateText = row.GetString(executionDateCol);
+                dateText = row.GetString(layout.ExecutionDateColumn);
             }
 
             if (string.IsNullOrWhiteSpace(dateText) && string.IsNullOrWhiteSpace(opText)) continue;
             if (string.IsNullOrWhiteSpace(opText)) continue;
             if (string.IsNullOrWhiteSpace(dateText)) continue;
 
-            var timeText = timeCol > 0 ? row.GetString(timeCol) : null;
+            var timeText = layout.TimeColumn > 0 ? row.GetString(layout.TimeColumn) : null;
             var tradeDate = ParseDateTime(dateText, timeText) ?? DateTime.UtcNow;
             if (reportPeriodEnd.HasValue && tradeDate.Date > reportPeriodEnd.Value.Date)
             {
                 continue;
             }
 
-            var income = incomeCol > 0 ? row.GetDecimal(incomeCol) ?? 0 : 0;
-            var outcome = outcomeCol > 0 ? row.GetDecimal(outcomeCol) ?? 0 : 0;
+            var income = layout.IncomeColumn > 0 ? row.GetDecimal(layout.IncomeColumn) ?? 0 : 0;
+            var outcome = layout.OutcomeColumn > 0 ? row.GetDecimal(layout.OutcomeColumn) ?? 0 : 0;
             var signedAmount = income - outcome;
             if (signedAmount == 0)
             {
                 continue;
             }
 
-            var note = noteCol > 0 ? row.GetString(noteCol) : opText;
+            var note = layout.NoteColumn > 0 ? row.GetString(layout.NoteColumn) : opText;
             var corporateAction = TryParseCorporateAction(note, signedAmount, currentCurrency, tradeDate, opText);
             if (corporateAction is not null)
             {
@@ -516,6 +513,87 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
 
             parsed.Add(new ParsedOperation(operation, null, false));
         }
+    }
+
+    private static CashLayout? BuildCashLayoutFromHeader(IReadOnlyList<ReportRow> rows, ReportRow headerRow)
+    {
+        var headers = BuildHeaderMap(headerRow);
+        var dateCol = headers.GetValueOrDefault("дата");
+        var opCol = headers.GetValueOrDefault("операция");
+        if (dateCol == 0 || opCol == 0)
+        {
+            return null;
+        }
+
+        return new CashLayout(
+            StartRow: headerRow.RowNumber + 1,
+            DateColumn: dateCol,
+            TimeColumn: headers.GetValueOrDefault("время совершения"),
+            ExecutionDateColumn: headers.GetValueOrDefault("дата исполнения"),
+            OperationColumn: opCol,
+            IncomeColumn: headers.GetValueOrDefault("сумма зачисления"),
+            OutcomeColumn: headers.GetValueOrDefault("сумма списания"),
+            NoteColumn: headers.GetValueOrDefault("примечание"),
+            InitialCurrency: FindCurrentCashCurrency(rows, headerRow.RowNumber - 1) ?? "RUB",
+            IsSectionBoundary: _ => false);
+    }
+
+    private static CashLayout? BuildCashLayoutFromSection(IReadOnlyList<ReportRow> rows)
+    {
+        var cashSectionRow = rows.FirstOrDefault(r => Normalize(r.GetString(1)) == "2. операции с денежными средствами");
+        if (cashSectionRow is null)
+        {
+            return null;
+        }
+
+        var detailedCashStart = rows
+            .Skip(cashSectionRow.RowNumber)
+            .FirstOrDefault(IsPositionedCashDataRow);
+        if (detailedCashStart is null)
+        {
+            return null;
+        }
+
+        var initialCurrency = rows
+            .Skip(cashSectionRow.RowNumber)
+            .Take(detailedCashStart.RowNumber - cashSectionRow.RowNumber)
+            .Select(row => NormalizeCurrency(row.GetString(1)))
+            .FirstOrDefault(currency => !string.IsNullOrWhiteSpace(currency))
+            ?? "RUB";
+
+        return new CashLayout(
+            StartRow: detailedCashStart.RowNumber,
+            DateColumn: 1,
+            TimeColumn: 11,
+            ExecutionDateColumn: 23,
+            OperationColumn: 38,
+            IncomeColumn: 53,
+            OutcomeColumn: 66,
+            NoteColumn: 77,
+            InitialCurrency: initialCurrency,
+            IsSectionBoundary: row =>
+            {
+                var firstCell = Normalize(row.GetString(1));
+                return firstCell is "наименование актива" or "наименование контракта";
+            });
+    }
+
+    private static bool IsPositionedCashDataRow(ReportRow row)
+    {
+        var operation = row.GetString(38);
+        if (string.IsNullOrWhiteSpace(operation))
+        {
+            return false;
+        }
+
+        var dateText = row.GetString(1);
+        var executionDateText = row.GetString(23);
+        if (string.IsNullOrWhiteSpace(dateText) && string.IsNullOrWhiteSpace(executionDateText))
+        {
+            return false;
+        }
+
+        return row.GetDecimal(53).HasValue || row.GetDecimal(66).HasValue;
     }
 
     private static ParsedOperation? TryParseCorporateAction(
@@ -622,12 +700,16 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
 
         if (normalized.Contains("комис"))
         {
-            return (OperationType.Fee, decimal.Abs(signedAmount));
+            return signedAmount >= 0
+                ? (OperationType.CashAdjustment, signedAmount)
+                : (OperationType.Fee, decimal.Abs(signedAmount));
         }
 
         if (normalized.Contains("налог"))
         {
-            return (OperationType.Fee, decimal.Abs(signedAmount));
+            return signedAmount >= 0
+                ? (OperationType.CashAdjustment, signedAmount)
+                : (OperationType.Fee, decimal.Abs(signedAmount));
         }
 
         if (normalized.Contains("дивиденд") ||
@@ -797,6 +879,18 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             return decimal.TryParse(value, NumberStyles.Number, RuCulture, out var local) ? local : null;
         }
     }
+
+    private sealed record CashLayout(
+        int StartRow,
+        int DateColumn,
+        int TimeColumn,
+        int ExecutionDateColumn,
+        int OperationColumn,
+        int IncomeColumn,
+        int OutcomeColumn,
+        int NoteColumn,
+        string InitialCurrency,
+        Func<ReportRow, bool> IsSectionBoundary);
 
     private sealed record LoadRowsResult(IReadOnlyList<ReportRow> Rows, string Source);
 }
