@@ -30,11 +30,9 @@ TINVEST_TOKEN='your_token_here' \
 
 ## Apply generated SQL
 
-You can reuse the generic apply script:
-
 ```bash
 DATABASE_URL='postgresql://postgres:postgres@localhost:5432/larchik' \
-./scripts/moex_history/apply_prices_sql.sh --from-year 2018 --to-year 2026 --sql-dir ./scripts/tbank_history/sql
+./scripts/tbank_history/apply_prices_sql.sh --from-year 2018 --to-year 2026 --sql-dir ./scripts/tbank_history/sql
 ```
 
 ## Notes

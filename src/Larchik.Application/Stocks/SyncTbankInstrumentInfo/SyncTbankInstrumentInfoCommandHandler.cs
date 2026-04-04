@@ -19,7 +19,7 @@ public class SyncTbankInstrumentInfoCommandHandler(
 {
     private const string DefaultBaseUrl =
         "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.InstrumentsService/GetInstrumentBy";
-    private static readonly string[] DefaultCountryExclusions = ["RU"];
+    private static readonly string[] DefaultCountryExclusions = [];
 
     public async Task<Result<int>> Handle(SyncTbankInstrumentInfoCommand request, CancellationToken cancellationToken)
     {

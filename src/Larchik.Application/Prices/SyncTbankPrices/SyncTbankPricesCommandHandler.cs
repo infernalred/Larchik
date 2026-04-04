@@ -20,7 +20,7 @@ public class SyncTbankPricesCommandHandler(
 {
     private const string DefaultBaseUrl =
         "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.MarketDataService/GetCandles";
-    private static readonly string[] DefaultCountryExclusions = ["RU"];
+    private static readonly string[] DefaultCountryExclusions = [];
 
     public async Task<Result<int>> Handle(SyncTbankPricesCommand request, CancellationToken cancellationToken)
     {
@@ -53,8 +53,7 @@ public class SyncTbankPricesCommandHandler(
         var instrumentsQuery = context.Instruments
             .AsNoTracking()
             .Where(x =>
-                (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Etf || x.Type == InstrumentType.Currency) &&
-                x.IsTrading &&
+                (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf || x.Type == InstrumentType.Currency) &&
                 x.Figi != null &&
                 x.Figi != "");
 

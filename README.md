@@ -105,7 +105,8 @@ Default Vite URL `http://localhost:5173` is included in development CORS config.
 
 Scheduled jobs in `Larchik.Jobs`:
 - `fx_cbr_daily` (`fx.cbr.daily`) - daily FX import from CBR
-- `moex_prices_daily` (`prices.moex.daily`) - daily prices import from public MOEX ISS (no API key)
+- `tbank_prices_daily` (`prices.tbank.daily`) - daily prices import from T-Bank Invest API
+- `moex_prices_daily` (`prices.moex.daily`) - legacy MOEX ISS price import, kept in codebase but disabled by config flag
 
 Operation types include bond redemption flows:
 

@@ -24,7 +24,7 @@ public class FxCbrDailyJobOptions
 
 public class MoexPricesDailyJobOptions
 {
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; } = false;
     public int HourUtc { get; set; } = 19;
     public int MinuteUtc { get; set; } = 20;
     public int MaxAttempts { get; set; } = 8;
@@ -37,7 +37,7 @@ public class MoexPricesDailyJobOptions
 
 public class TbankPricesDailyJobOptions
 {
-    public bool Enabled { get; set; } = false;
+    public bool Enabled { get; set; } = true;
     public int HourUtc { get; set; } = 21;
     public int MinuteUtc { get; set; } = 0;
     public int MaxAttempts { get; set; } = 8;
@@ -50,7 +50,7 @@ public class TbankPricesDailyJobOptions
     public bool AllowInvalidTls { get; set; }
     public int MaxHistoryLookbackDays { get; set; } = 7;
     public int MaxParallelism { get; set; } = 6;
-    public string[] CountryExclusions { get; set; } = ["RU"];
+    public string[] CountryExclusions { get; set; } = [];
 }
 
 public class TbankInstrumentInfoDailyJobOptions
@@ -66,5 +66,5 @@ public class TbankInstrumentInfoDailyJobOptions
     public string? Token { get; set; }
     public bool AllowInvalidTls { get; set; }
     public int MaxParallelism { get; set; } = 6;
-    public string[] CountryExclusions { get; set; } = ["RU"];
+    public string[] CountryExclusions { get; set; } = [];
 }

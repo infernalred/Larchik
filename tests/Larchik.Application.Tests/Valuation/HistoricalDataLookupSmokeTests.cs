@@ -7,7 +7,7 @@ namespace Larchik.Application.Tests.Valuation;
 public class HistoricalDataLookupSmokeTests
 {
     [Fact]
-    public void GetPrice_PrefersMoexOverTbank_OnSameDate()
+    public void GetPrice_PrefersTbankOverMoex_OnSameDate()
     {
         var instrumentId = Guid.NewGuid();
         var asOfDate = new DateTime(2026, 3, 20, 0, 0, 0, DateTimeKind.Utc);
@@ -36,8 +36,8 @@ public class HistoricalDataLookupSmokeTests
         var price = lookup.GetPrice(instrumentId, asOfDate);
 
         Assert.NotNull(price);
-        Assert.Equal(100m, price!.Value);
-        Assert.Equal("MOEX", price.Provider);
+        Assert.Equal(101m, price!.Value);
+        Assert.Equal("TBANK", price.Provider);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class HistoricalDataLookupSmokeTests
     }
 
     [Fact]
-    public void Convert_PrefersMarketMoexRate_OverMarketTbankAndCbr()
+    public void Convert_PrefersMarketTbankRate_OverMarketMoexAndCbr()
     {
         var asOfDate = new DateTime(2026, 3, 20, 0, 0, 0, DateTimeKind.Utc);
         var lookup = new HistoricalDataLookup(
@@ -104,7 +104,7 @@ public class HistoricalDataLookupSmokeTests
         var converted = lookup.Convert(2m, "USD", "RUB", asOfDate);
         var inverse = lookup.Convert(160m, "RUB", "USD", asOfDate);
 
-        Assert.Equal(160m, converted);
-        Assert.Equal(2m, inverse);
+        Assert.Equal(190m, converted);
+        Assert.Equal(160m / 95m, inverse);
     }
 }

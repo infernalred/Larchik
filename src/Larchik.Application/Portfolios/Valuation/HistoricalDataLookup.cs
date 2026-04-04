@@ -95,8 +95,8 @@ public class HistoricalDataLookup
     {
         return provider?.ToUpperInvariant() switch
         {
-            "MOEX" => 0,
-            "TBANK" => 1,
+            "TBANK" => 0,
+            "MOEX" => 1,
             _ => 2
         };
     }
@@ -105,8 +105,8 @@ public class HistoricalDataLookup
     {
         return source?.ToUpperInvariant() switch
         {
-            "MARKET_MOEX" => 0,
-            "MARKET_TBANK" => 1,
+            "MARKET_TBANK" => 0,
+            "MARKET_MOEX" => 1,
             "CBR" => 2,
             _ => 3
         };
