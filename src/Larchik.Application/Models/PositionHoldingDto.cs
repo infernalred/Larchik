@@ -1,0 +1,16 @@
+namespace Larchik.Application.Models;
+
+public class PositionHoldingDto
+{
+    public Guid InstrumentId { get; set; }
+    public string InstrumentName { get; set; } = null!;
+    public string? InstrumentType { get; set; }
+    public string? CategoryName { get; set; }
+    public string CurrencyId { get; set; } = null!;
+    public string? PriceCurrencyId { get; set; }
+    public string? AverageCostCurrencyId { get; set; }
+    public decimal Quantity { get; set; }
+    public decimal? LastPrice { get; set; }
+    public decimal MarketValueBase { get; set; }
+    public decimal AverageCost { get; set; }
+}

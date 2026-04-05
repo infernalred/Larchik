@@ -1,0 +1,79 @@
+[
+    {
+        "fee": 0.0000,
+        "note": "ручная транзакция",
+        "type": 1,
+        "price": 1000.000000,
+        "ticker": "RU000A10ELF6",
+        "quantity": 10.000000,
+        "tradeDate": "2026-03-18T00:00:00+00:00",
+        "currencyId": "RUB",
+        "settlementDate": "2026-03-21T00:00:00+00:00"
+    },
+    {
+        "fee": 0.0000,
+        "note": null,
+        "type": 3,
+        "price": 125.100000,
+        "ticker": "RU000A107HG1",
+        "quantity": 0.000000,
+        "tradeDate": "2026-03-18T00:00:00+00:00",
+        "currencyId": "RUB",
+        "settlementDate": "2026-03-18T00:00:00+00:00"
+    },
+    {
+        "fee": 0.0000,
+        "note": "ручная транзакция",
+        "type": 3,
+        "price": 425.200000,
+        "ticker": "RU000A10BU07",
+        "quantity": 0.000000,
+        "tradeDate": "2026-03-18T00:00:00+00:00",
+        "currencyId": "RUB",
+        "settlementDate": "2026-03-21T00:00:00+00:00"
+    },
+    {
+        "fee": 0.0000,
+        "note": null,
+        "type": 1,
+        "price": 3342.000000,
+        "ticker": "T",
+        "quantity": 2.000000,
+        "tradeDate": "2026-03-18T00:00:00+00:00",
+        "currencyId": "RUB",
+        "settlementDate": "2026-03-21T00:00:00+00:00"
+    },
+    {
+        "fee": 0.0000,
+        "note": null,
+        "type": 5,
+        "price": 16514.760000,
+        "ticker": null,
+        "quantity": 0.000000,
+        "tradeDate": "2026-03-18T00:00:00+00:00",
+        "currencyId": "RUB",
+        "settlementDate": "2026-03-21T00:00:00+00:00"
+    },
+    {
+        "fee": 0.0000,
+        "note": null,
+        "type": 1,
+        "price": 3335.400000,
+        "ticker": "T",
+        "quantity": 5.000000,
+        "tradeDate": "2026-03-20T00:00:00+00:00",
+        "currencyId": "RUB",
+        "settlementDate": "2026-03-23T00:00:00+00:00"
+    },
+    {
+        "fee": 0.0000,
+        "note": "пополнение счета",
+        "type": 5,
+        "price": 6686.680000,
+        "ticker": null,
+        "quantity": 0.000000,
+        "tradeDate": "2026-03-21T00:00:00+00:00",
+        "currencyId": "RUB",
+        "settlementDate": "2026-03-21T00:00:00+00:00"
+    }
+]
