@@ -121,7 +121,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=proxy"
-      - "traefik.http.routers.${APP_NAME}-web.rule=Host(`${WEB_HOST}`)"
+      - "traefik.http.routers.${APP_NAME}-web.rule=Host(`${WEB_HOST}`) && !PathPrefix(`/api`)"
       - "traefik.http.routers.${APP_NAME}-web.entrypoints=websecure"
       - "traefik.http.routers.${APP_NAME}-web.tls=true"
       - "traefik.http.routers.${APP_NAME}-web.priority=10"
