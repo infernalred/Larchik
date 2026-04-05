@@ -4,6 +4,7 @@ using Larchik.API.Services;
 using Larchik.Persistence.Context;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.CookiePolicy;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -42,6 +43,12 @@ try
         options.Secure = CookieSecurePolicy.Always;
         options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
     });
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
 
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddHttpClient();
@@ -65,6 +72,7 @@ try
 
     app.UseSerilogRequestLogging();
     app.UseMiddleware<ExceptionMiddleware>();
+    app.UseForwardedHeaders();
 
     if (app.Environment.IsDevelopment())
     {
