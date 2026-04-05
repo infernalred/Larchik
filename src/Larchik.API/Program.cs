@@ -7,9 +7,18 @@ using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .CreateBootstrapLogger();
+var bootstrapEnvironment =
+    Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
+    Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+
+var bootstrapLoggerConfiguration = new LoggerConfiguration();
+if (string.Equals(bootstrapEnvironment, "Development", StringComparison.OrdinalIgnoreCase) ||
+    string.Equals(bootstrapEnvironment, "Local", StringComparison.OrdinalIgnoreCase))
+{
+    bootstrapLoggerConfiguration = bootstrapLoggerConfiguration.WriteTo.Console();
+}
+
+Log.Logger = bootstrapLoggerConfiguration.CreateBootstrapLogger();
 
 try
 {
