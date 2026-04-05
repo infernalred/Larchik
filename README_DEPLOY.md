@@ -79,7 +79,7 @@ Workflow генерирует `.env` c этими значениями:
 3. Создает docker-сети `proxy` и `observability`, если их нет.
 4. Генерирует `.env` с переменными приложения.
 5. Выполняет `docker compose pull` и `docker compose up -d`.
-6. После старта контейнера синхронизирует пароль администратора Grafana через `grafana cli admin reset-admin-password`.
+6. После старта контейнеров выполняет только обычный `docker compose up -d`, без принудительного `grafana cli admin reset-admin-password`.
 
 ## Маршрутизация
 - frontend: `https://${WEB_HOST}`
@@ -117,3 +117,5 @@ docker logs --tail 200 larchik-grafana
 - Production логирование сейчас уходит в файл и Loki, без console sink.
 - Если `LARCHIK_TBANK_TOKEN` пустой, T-Bank jobs будут стартовать, но запросы к T-Bank API не пройдут.
 - Если внешний доступ к PostgreSQL не нужен, можно убрать публикацию порта `5434` из compose.
+- `GF_SECURITY_ADMIN_PASSWORD` в Grafana применяется надежно на первом старте с новым volume. На уже существующем `grafana-data-larchik` пароль автоматически не пересинхронизируется.
+- Если нужно сменить пароль на уже развернутой Grafana, делай это отдельно: либо вручную через `grafana cli`, когда контейнер остановлен, либо через UI/API, либо пересозданием Grafana volume.

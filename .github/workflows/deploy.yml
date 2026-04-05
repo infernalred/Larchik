@@ -130,8 +130,4 @@ jobs:
             docker compose -f docker-compose.prod.yml --env-file .env pull
             docker compose -f docker-compose.prod.yml --env-file .env up -d
 
-            if docker ps --format '{{.Names}}' | grep -qx "${APP_NAME}-grafana"; then
-              docker exec "${APP_NAME}-grafana" grafana cli admin reset-admin-password "${GRAFANA_ADMIN_PASSWORD}"
-            fi
-
             docker image prune -f
