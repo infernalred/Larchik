@@ -11481,8 +11481,21 @@ WHERE isin IN (
 -- Source: scripts/moex_history/sql/instrument_type_fixes_from_broker.sql
 
 UPDATE instruments
-SET type = 1
+SET
+    type = CASE
+        WHEN isin = 'RU000A1014L8' THEN 3
+        ELSE 1
+    END,
+    category_id = CASE
+        WHEN isin = 'RU000A1014L8' THEN 22
+        ELSE category_id
+    END,
+    exchange = CASE
+        WHEN isin = 'RU000A1014L8' THEN 'TQTF'
+        ELSE exchange
+    END
 WHERE isin IN (
+    'RU000A1014L8',
     'RU000A107662',
     'RU000A107T19'
 );

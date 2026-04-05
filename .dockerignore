@@ -1,0 +1,12 @@
+.git
+.github
+.idea
+.vs
+**/.DS_Store
+**/bin
+**/obj
+**/node_modules
+**/dist
+Tests
+docs
+
