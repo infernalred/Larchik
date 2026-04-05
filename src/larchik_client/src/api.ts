@@ -14,7 +14,11 @@ import {
   User,
 } from './types';
 
-const API_BASE = (import.meta.env.VITE_API_BASE ?? 'https://localhost:6001').replace(/\/$/, '');
+function normalizeApiBase(rawBase: string | undefined): string {
+  return (rawBase ?? '/api').trim().replace(/\/+$/, '');
+}
+
+const API_BASE = normalizeApiBase(import.meta.env.VITE_API_BASE);
 
 let csrfToken: string | null = null;
 let csrfPromise: Promise<string> | null = null;
@@ -33,7 +37,7 @@ export class ApiError extends Error {
 async function ensureCsrfToken(): Promise<string> {
   if (csrfToken) return csrfToken;
   if (!csrfPromise) {
-    csrfPromise = fetch(`${API_BASE}/api/account/antiforgery`, {
+    csrfPromise = fetch(`${API_BASE}/account/antiforgery`, {
       method: 'GET',
       credentials: 'include',
     })
@@ -105,14 +109,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   async register(email: string, username: string, password: string): Promise<User> {
-    return request<User>('/api/account/register', {
+    return request<User>('/account/register', {
       method: 'POST',
       body: JSON.stringify({ email, userName: username, password }),
     });
   },
 
   async login(email: string, password: string, rememberMe = true): Promise<User> {
-    const user = await request<User>('/api/account/login', {
+    const user = await request<User>('/account/login', {
       method: 'POST',
       body: JSON.stringify({ email, password, rememberMe }),
     });
@@ -122,7 +126,7 @@ export const api = {
   },
 
   async refreshSession(): Promise<User> {
-    const user = await request<User>('/api/account/refresh', {
+    const user = await request<User>('/account/refresh', {
       method: 'POST',
     });
     resetCsrfToken();
@@ -131,85 +135,85 @@ export const api = {
   },
 
   async me(): Promise<User> {
-    return request<User>('/api/account/me', { method: 'GET' });
+    return request<User>('/account/me', { method: 'GET' });
   },
 
   async logout(): Promise<void> {
-    await request<void>('/api/account/logout', { method: 'POST' });
+    await request<void>('/account/logout', { method: 'POST' });
     resetCsrfToken();
   },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    return request<void>('/api/account/change-password', {
+    return request<void>('/account/change-password', {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     });
   },
 
   async listPortfolios(): Promise<Portfolio[]> {
-    return request<Portfolio[]>('/api/portfolios');
+    return request<Portfolio[]>('/portfolios');
   },
 
   async listBrokers(): Promise<Broker[]> {
-    return request<Broker[]>('/api/brokers');
+    return request<Broker[]>('/brokers');
   },
 
   async searchInstruments(query: string, limit = 20): Promise<InstrumentLookup[]> {
     const params = new URLSearchParams();
     if (query.trim().length > 0) params.set('query', query.trim());
     params.set('limit', String(limit));
-    return request<InstrumentLookup[]>(`/api/instruments?${params.toString()}`);
+    return request<InstrumentLookup[]>(`/instruments?${params.toString()}`);
   },
 
   async createPortfolio(payload: { name: string; reportingCurrencyId: string; brokerId: string }) {
-    return request<string>('/api/portfolios', {
+    return request<string>('/portfolios', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
   },
 
   async clearPortfolioData(id: string): Promise<ClearPortfolioDataResult> {
-    return request<ClearPortfolioDataResult>(`/api/portfolios/${id}/data`, {
+    return request<ClearPortfolioDataResult>(`/portfolios/${id}/data`, {
       method: 'DELETE',
     });
   },
 
   async recalculatePortfolio(id: string): Promise<RecalculatePortfolioResult> {
-    return request<RecalculatePortfolioResult>(`/api/portfolios/${id}/recalculate`, {
+    return request<RecalculatePortfolioResult>(`/portfolios/${id}/recalculate`, {
       method: 'POST',
     });
   },
 
   async getPortfolioSummary(id: string, method?: string): Promise<PortfolioSummary> {
     const params = method ? `?method=${encodeURIComponent(method)}` : '';
-    return request<PortfolioSummary>(`/api/portfolios/${id}/summary${params}`);
+    return request<PortfolioSummary>(`/portfolios/${id}/summary${params}`);
   },
 
   async getPortfoliosSummary(method?: string, currency?: string): Promise<PortfoliosSummary> {
     const params = new URLSearchParams();
     if (method) params.append('method', method);
     if (currency) params.append('currency', currency);
-    return request<PortfoliosSummary>(`/api/portfolios/summary${params.toString() ? `?${params}` : ''}`);
+    return request<PortfoliosSummary>(`/portfolios/summary${params.toString() ? `?${params}` : ''}`);
   },
 
   async getAggregatePortfolioSummary(method?: string, currency?: string): Promise<PortfolioSummary> {
     const params = new URLSearchParams();
     if (method) params.append('method', method);
     if (currency) params.append('currency', currency);
-    return request<PortfolioSummary>(`/api/portfolios/aggregate/summary${params.toString() ? `?${params}` : ''}`);
+    return request<PortfolioSummary>(`/portfolios/aggregate/summary${params.toString() ? `?${params}` : ''}`);
   },
 
   async getPerformance(id: string, method?: string): Promise<PortfolioPerformance[]> {
     const params = new URLSearchParams();
     if (method) params.append('method', method);
-    return request<PortfolioPerformance[]>(`/api/portfolios/${id}/performance${params.toString() ? `?${params}` : ''}`);
+    return request<PortfolioPerformance[]>(`/portfolios/${id}/performance${params.toString() ? `?${params}` : ''}`);
   },
 
   async getAggregatePerformance(method?: string, currency?: string): Promise<PortfolioPerformance[]> {
     const params = new URLSearchParams();
     if (method) params.append('method', method);
     if (currency) params.append('currency', currency);
-    return request<PortfolioPerformance[]>(`/api/portfolios/aggregate/performance${params.toString() ? `?${params}` : ''}`);
+    return request<PortfolioPerformance[]>(`/portfolios/aggregate/performance${params.toString() ? `?${params}` : ''}`);
   },
 
   async listOperations(
@@ -221,25 +225,25 @@ export const api = {
     if (options.pageSize != null) params.set('pageSize', String(options.pageSize));
 
     const suffix = params.toString() ? `?${params.toString()}` : '';
-    return request<PagedResult<Operation>>(`/api/portfolios/${portfolioId}/operations${suffix}`);
+    return request<PagedResult<Operation>>(`/portfolios/${portfolioId}/operations${suffix}`);
   },
 
   async createOperation(portfolioId: string, model: OperationModel) {
-    return request<string>(`/api/portfolios/${portfolioId}/operations`, {
+    return request<string>(`/portfolios/${portfolioId}/operations`, {
       method: 'POST',
       body: JSON.stringify(model),
     });
   },
 
   async updateOperation(portfolioId: string, id: string, model: OperationModel) {
-    return request<void>(`/api/portfolios/${portfolioId}/operations/${id}`, {
+    return request<void>(`/portfolios/${portfolioId}/operations/${id}`, {
       method: 'PUT',
       body: JSON.stringify(model),
     });
   },
 
   async deleteOperation(portfolioId: string, id: string) {
-    return request<void>(`/api/portfolios/${portfolioId}/operations/${id}`, {
+    return request<void>(`/portfolios/${portfolioId}/operations/${id}`, {
       method: 'DELETE',
     });
   },
@@ -248,7 +252,7 @@ export const api = {
     const payload = new FormData();
     payload.set('file', file, file.name);
 
-    return request<ImportResult>(`/api/portfolios/${portfolioId}/imports/${encodeURIComponent(brokerCode)}`, {
+    return request<ImportResult>(`/portfolios/${portfolioId}/imports/${encodeURIComponent(brokerCode)}`, {
       method: 'POST',
       body: payload,
     });

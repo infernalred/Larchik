@@ -86,6 +86,10 @@ Workflow генерирует `.env` c этими значениями:
 - API: `https://${WEB_HOST}/api`
 - Grafana: `https://${GRAFANA_HOST}`
 
+## Frontend API base
+- Frontend настроен так же, как в `Sportivity`: `VITE_API_BASE` по умолчанию равен `/api`.
+- Поэтому endpoint paths в клиенте идут без префикса `/api`, а итоговый URL собирается как `${VITE_API_BASE}/...`.
+
 ## Проверка после деплоя
 На сервере:
 

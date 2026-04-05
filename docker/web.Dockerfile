@@ -22,4 +22,3 @@ COPY --from=build /app/dist /usr/share/caddy
 RUN printf ":80 {\n    root * /usr/share/caddy\n    try_files {path} /index.html\n    file_server\n}\n" > /etc/caddy/Caddyfile
 EXPOSE 80
 CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
-
