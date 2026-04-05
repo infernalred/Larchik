@@ -2,6 +2,7 @@ using Larchik.Application.Contracts;
 using Larchik.Infrastructure.Security;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Larchik.API.Services;
 
@@ -27,31 +28,39 @@ public static class SecurityServiceExtensions
             .AddSignInManager()
             .AddDefaultTokenProviders();
 
+        var keysPath = ResolveDataProtectionKeysPath(configuration);
+        Directory.CreateDirectory(keysPath);
+
+        services.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
+            .SetApplicationName("Larchik");
+
         services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
                 options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
                 options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
             })
-            .AddIdentityCookies(o =>
-            {
-                o.ApplicationCookie?.Configure(cookie =>
-                {
-                    cookie.Cookie.Name = "__Host-larchik-auth";
-                    cookie.Cookie.HttpOnly = true;
-                    cookie.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                    cookie.Cookie.SameSite = SameSiteMode.None;
-                    cookie.SlidingExpiration = true;
-                    cookie.ExpireTimeSpan = TimeSpan.FromDays(7);
-                });
-            });
+            .AddIdentityCookies();
+
+        services.ConfigureApplicationCookie(cookie =>
+        {
+            cookie.Cookie.Name = "__Host-larchik-auth";
+            cookie.Cookie.Path = "/";
+            cookie.Cookie.HttpOnly = true;
+            cookie.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            cookie.Cookie.SameSite = SameSiteMode.Lax;
+            cookie.SlidingExpiration = true;
+            cookie.ExpireTimeSpan = TimeSpan.FromDays(7);
+        });
 
         services.AddAntiforgery(options =>
         {
             options.Cookie.Name = "__Host-larchik-af";
+            options.Cookie.Path = "/";
             options.Cookie.HttpOnly = true;
             options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            options.Cookie.SameSite = SameSiteMode.None;
+            options.Cookie.SameSite = SameSiteMode.Lax;
             options.HeaderName = "X-XSRF-TOKEN";
         });
 
@@ -59,5 +68,16 @@ public static class SecurityServiceExtensions
         services.AddScoped<IEmailSender, LoggingEmailSender>();
 
         return services;
+    }
+
+    private static string ResolveDataProtectionKeysPath(IConfiguration configuration)
+    {
+        var configuredPath = configuration["DataProtection:KeysPath"];
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return configuredPath;
+        }
+
+        return Path.Combine(Path.GetTempPath(), "larchik-dpkeys");
     }
 }
