@@ -136,6 +136,73 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
   const portfolioPage = route;
   const displayPositions = summary ? buildDisplayPositions(summary) : [];
 
+  const loadPortfolios = useCallback(async (preferredId?: string) => {
+    const data = await api.listPortfolios();
+    setPortfolios(data);
+    if (data.length) {
+      setSelectedPortfolio((prev) => preferredId ?? prev ?? data[0].id);
+      return;
+    }
+
+    setSelectedPortfolio(null);
+    setSummary(null);
+    setAggregateSummary(null);
+    setPerformance([]);
+    setAggregatePerformance([]);
+    setOperations([]);
+    setOperationsTotalCount(0);
+    setOperationsPage(1);
+    onRouteChange('overview');
+    setViewMode('portfolio');
+  }, [onRouteChange]);
+
+  const loadBrokers = useCallback(async () => {
+    const data = await api.listBrokers();
+    setBrokers(data);
+  }, []);
+
+  const loadAggregateSummary = useCallback(async (method: string) => {
+    const selectedCurrency = portfolios.find((x) => x.id === selectedPortfolio)?.reportingCurrencyId;
+    setLoadingAggregateSummary(true);
+    setAggregateError('');
+    try {
+      const data = await api.getAggregatePortfolioSummary(method, selectedCurrency);
+      setAggregateSummary(data);
+    } catch (error) {
+      setAggregateSummary(null);
+      setAggregateError(getApiErrorMessage(error, 'Не удалось получить общий итог по всем счетам.'));
+    } finally {
+      setLoadingAggregateSummary(false);
+    }
+  }, [portfolios, selectedPortfolio]);
+
+  const loadAggregatePerformance = useCallback(async (method: string) => {
+    const selectedCurrency = portfolios.find((x) => x.id === selectedPortfolio)?.reportingCurrencyId;
+    setLoadingAggregatePerformance(true);
+    try {
+      const data = await api.getAggregatePerformance(method, selectedCurrency);
+      setAggregatePerformance(data);
+    } catch (error) {
+      console.error(error);
+      setAggregatePerformance([]);
+    } finally {
+      setLoadingAggregatePerformance(false);
+    }
+  }, [portfolios, selectedPortfolio]);
+
+  const loadOperations = useCallback(async (id: string, page: number, pageSize: number) => {
+    setLoadingOps(true);
+    try {
+      const data = await api.listOperations(id, { page, pageSize });
+      setOperations(data.items);
+      setOperationsTotalCount(data.totalCount);
+      if (data.page !== page) setOperationsPage(data.page);
+      if (data.pageSize !== pageSize) setOperationsPageSize(data.pageSize);
+    } finally {
+      setLoadingOps(false);
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
@@ -144,17 +211,17 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
         console.error(error);
       }
     })();
-  }, []);
+  }, [loadBrokers, loadPortfolios]);
 
   useEffect(() => {
     if (viewMode !== 'all' || (portfolioPage !== 'overview' && portfolioPage !== 'analytics')) return;
     loadAggregateSummary(valuationMethod);
-  }, [viewMode, valuationMethod, portfolios, selectedPortfolio, portfolioPage]);
+  }, [viewMode, valuationMethod, portfolioPage, loadAggregateSummary]);
 
   useEffect(() => {
     if (viewMode !== 'all' || portfolioPage !== 'analytics') return;
     loadAggregatePerformance(valuationMethod);
-  }, [viewMode, valuationMethod, portfolios, selectedPortfolio, portfolioPage]);
+  }, [viewMode, valuationMethod, portfolioPage, loadAggregatePerformance]);
 
   useEffect(() => {
     if (viewMode !== 'portfolio' || (portfolioPage !== 'overview' && portfolioPage !== 'analytics')) return;
@@ -175,32 +242,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     if (!selectedPortfolio) return;
 
     loadOperations(selectedPortfolio, operationsPage, operationsPageSize);
-  }, [selectedPortfolio, viewMode, portfolioPage, operationsPage, operationsPageSize]);
-
-  async function loadPortfolios(preferredId?: string) {
-    const data = await api.listPortfolios();
-    setPortfolios(data);
-    if (data.length) {
-      setSelectedPortfolio((prev) => preferredId ?? prev ?? data[0].id);
-      return;
-    }
-
-    setSelectedPortfolio(null);
-    setSummary(null);
-    setAggregateSummary(null);
-    setPerformance([]);
-    setAggregatePerformance([]);
-    setOperations([]);
-    setOperationsTotalCount(0);
-    setOperationsPage(1);
-    onRouteChange('overview');
-    setViewMode('portfolio');
-  }
-
-  async function loadBrokers() {
-    const data = await api.listBrokers();
-    setBrokers(data);
-  }
+  }, [selectedPortfolio, viewMode, portfolioPage, operationsPage, operationsPageSize, loadOperations]);
 
   async function loadSummary(id: string, method: string) {
     setLoadingSummary(true);
@@ -215,35 +257,6 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     }
   }
 
-  async function loadAggregateSummary(method: string) {
-    const selectedCurrency = portfolios.find((x) => x.id === selectedPortfolio)?.reportingCurrencyId;
-    setLoadingAggregateSummary(true);
-    setAggregateError('');
-    try {
-      const data = await api.getAggregatePortfolioSummary(method, selectedCurrency);
-      setAggregateSummary(data);
-    } catch (error) {
-      setAggregateSummary(null);
-      setAggregateError(getApiErrorMessage(error, 'Не удалось получить общий итог по всем счетам.'));
-    } finally {
-      setLoadingAggregateSummary(false);
-    }
-  }
-
-  async function loadAggregatePerformance(method: string) {
-    const selectedCurrency = portfolios.find((x) => x.id === selectedPortfolio)?.reportingCurrencyId;
-    setLoadingAggregatePerformance(true);
-    try {
-      const data = await api.getAggregatePerformance(method, selectedCurrency);
-      setAggregatePerformance(data);
-    } catch (error) {
-      console.error(error);
-      setAggregatePerformance([]);
-    } finally {
-      setLoadingAggregatePerformance(false);
-    }
-  }
-
   async function loadPerformance(id: string, method: string) {
     setLoadingPerformance(true);
     try {
@@ -254,19 +267,6 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
       setPerformance([]);
     } finally {
       setLoadingPerformance(false);
-    }
-  }
-
-  async function loadOperations(id: string, page: number, pageSize: number) {
-    setLoadingOps(true);
-    try {
-      const data = await api.listOperations(id, { page, pageSize });
-      setOperations(data.items);
-      setOperationsTotalCount(data.totalCount);
-      if (data.page !== operationsPage) setOperationsPage(data.page);
-      if (data.pageSize !== operationsPageSize) setOperationsPageSize(data.pageSize);
-    } finally {
-      setLoadingOps(false);
     }
   }
 

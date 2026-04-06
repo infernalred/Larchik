@@ -24,7 +24,7 @@ public class SyncCbrFxRatesCommandHandler(LarchikContext context, IHttpClientFac
             return Result<int>.Failure($"CBR request failed with status {response.StatusCode}");
         }
 
-        var xml = await response.Content.ReadAsStringAsync(cancellationToken);
+        var xml = await HttpContentReader.ReadAsStringSafeAsync(response.Content, cancellationToken);
         var doc = XDocument.Parse(xml);
         var rates = new List<FxRate>();
 

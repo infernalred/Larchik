@@ -47,7 +47,7 @@
             "uid": "loki"
           },
           "editorMode": "builder",
-          "expr": "{app=~\"larchik-api|larchik-jobs\"}",
+          "expr": "{service=~\"larchik-api|larchik-jobs\"}",
           "queryType": "range",
           "refId": "A"
         }
@@ -77,4 +77,3 @@
   "version": 1,
   "weekStart": ""
 }
-

@@ -331,6 +331,13 @@ function PortfolioValueChart({
   currency: string;
   range: PortfolioRange;
 }) {
+  const defaultSelectedPeriod = points[points.length - 1]?.period ?? points[0]?.period ?? '';
+  const [selectedPeriod, setSelectedPeriod] = useState(defaultSelectedPeriod);
+
+  useEffect(() => {
+    setSelectedPeriod(defaultSelectedPeriod);
+  }, [defaultSelectedPeriod]);
+
   if (!points.length) {
     return (
       <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', backgroundImage: 'none' }}>
@@ -338,12 +345,6 @@ function PortfolioValueChart({
       </Paper>
     );
   }
-
-  const [selectedPeriod, setSelectedPeriod] = useState(points[points.length - 1]?.period ?? points[0]?.period);
-
-  useEffect(() => {
-    setSelectedPeriod(points[points.length - 1]?.period ?? points[0]?.period);
-  }, [points]);
 
   const width = 760;
   const height = 300;

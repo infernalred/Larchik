@@ -191,12 +191,12 @@ public class SyncTbankInstrumentInfoCommandHandler(
 
             if (!response.IsSuccessStatusCode)
             {
-                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                var body = await HttpContentReader.ReadAsStringSafeAsync(response.Content, cancellationToken);
                 return Result<InstrumentTradingInfo?>.Failure(
                     $"TBANK instrument info request failed for {instrument.Ticker}/{instrument.Isin}: {(int)response.StatusCode} {TrimBody(body)}");
             }
 
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            var json = await HttpContentReader.ReadAsStringSafeAsync(response.Content, cancellationToken);
             return ParseInstrumentInfo(json, instrument);
         }
         catch (Exception ex)

@@ -367,7 +367,7 @@ public class SyncMoexPricesCommandHandler(
                                 $"MOEX request failed for board '{board}' ({route.Engine}/{route.Market}): {(int)response.StatusCode}");
                         }
 
-                        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                        var json = await HttpContentReader.ReadAsStringSafeAsync(response.Content, cancellationToken);
                         var pageResult = ParseHistoryRows(json);
                         if (!pageResult.IsSuccess)
                         {
@@ -498,7 +498,7 @@ public class SyncMoexPricesCommandHandler(
                     continue;
                 }
 
-                var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                var json = await HttpContentReader.ReadAsStringSafeAsync(response.Content, cancellationToken);
                 var parseResult = ParseBoardsTradingState(json, boards);
                 if (parseResult.IsSuccess)
                 {

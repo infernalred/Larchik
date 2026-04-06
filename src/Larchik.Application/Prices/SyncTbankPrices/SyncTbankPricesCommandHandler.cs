@@ -271,12 +271,12 @@ public class SyncTbankPricesCommandHandler(
 
             if (!response.IsSuccessStatusCode)
             {
-                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                var body = await HttpContentReader.ReadAsStringSafeAsync(response.Content, cancellationToken);
                 return Result<TbankPricePoint?>.Failure(
                     $"TBANK request failed for {instrument.Ticker}/{instrument.Isin}: {(int)response.StatusCode} {TrimBody(body)}");
             }
 
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            var json = await HttpContentReader.ReadAsStringSafeAsync(response.Content, cancellationToken);
             using var doc = JsonDocument.Parse(json);
             if (!doc.RootElement.TryGetProperty("candles", out var candlesElement) ||
                 candlesElement.ValueKind != JsonValueKind.Array)
