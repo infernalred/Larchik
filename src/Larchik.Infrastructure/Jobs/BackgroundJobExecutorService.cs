@@ -251,7 +251,7 @@ public class BackgroundJobExecutorService(
                 run.Status = JobRunStatus.RetryScheduled;
                 run.AvailableAt = now.AddMinutes(retryDelay);
 
-                logger.LogWarning(
+                logger.LogError(
                     "Run {RunId} for job {JobName} ({JobType}) failed on attempt {Attempt}. Retry at {RetryAtUtc:O} UTC. Error: {Error}",
                     run.Id,
                     run.JobDefinition?.Name ?? "unknown",

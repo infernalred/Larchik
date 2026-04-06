@@ -30,6 +30,12 @@ public class TbankInstrumentInfoDailyJobHandler(
                 "TBANK instrument info daily job completed. Saved DB changes: {Changes}",
                 result.Value);
         }
+        else
+        {
+            logger.LogError(
+                "TBANK instrument info daily job failed. Error: {Error}",
+                result.Error ?? "TBANK instrument info sync failed");
+        }
 
         return result.IsSuccess
             ? JobExecutionResult.Success()

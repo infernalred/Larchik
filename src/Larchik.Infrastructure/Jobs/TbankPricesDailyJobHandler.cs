@@ -31,6 +31,7 @@ public class TbankPricesDailyJobHandler(
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "TBANK daily job received invalid payload: {Payload}", payloadJson);
                 return JobExecutionResult.Failure($"Invalid payload: {ex.Message}");
             }
         }
@@ -54,6 +55,13 @@ public class TbankPricesDailyJobHandler(
                 "TBANK daily job completed for {Date} UTC. Saved DB changes: {Changes}",
                 (date ?? DateOnly.FromDateTime(DateTime.UtcNow.Date)).ToString("yyyy-MM-dd"),
                 result.Value);
+        }
+        else
+        {
+            logger.LogError(
+                "TBANK daily job failed for {Date} UTC. Error: {Error}",
+                (date ?? DateOnly.FromDateTime(DateTime.UtcNow.Date)).ToString("yyyy-MM-dd"),
+                result.Error ?? "TBANK price sync failed");
         }
 
         return result.IsSuccess
