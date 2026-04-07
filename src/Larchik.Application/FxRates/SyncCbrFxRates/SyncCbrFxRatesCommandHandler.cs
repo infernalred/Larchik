@@ -14,6 +14,8 @@ public class SyncCbrFxRatesCommandHandler(LarchikContext context, IHttpClientFac
     public async Task<Result<int>> Handle(SyncCbrFxRatesCommand request, CancellationToken cancellationToken)
     {
         var date = request.Date ?? DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        var asOfUtc = DateTime.SpecifyKind(date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+        var nextDayUtc = asOfUtc.AddDays(1);
         var formatted = date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
         var url = $"https://www.cbr.ru/scripts/XML_daily.asp?date_req={formatted}";
 
@@ -47,7 +49,7 @@ public class SyncCbrFxRatesCommandHandler(LarchikContext context, IHttpClientFac
                 Id = Guid.NewGuid(),
                 BaseCurrencyId = code.ToUpperInvariant(),
                 QuoteCurrencyId = "RUB",
-                Date = date.ToDateTime(TimeOnly.MinValue),
+                Date = asOfUtc,
                 Rate = ratePerUnit,
                 Source = "CBR",
                 CreatedAt = DateTime.UtcNow
@@ -55,7 +57,7 @@ public class SyncCbrFxRatesCommandHandler(LarchikContext context, IHttpClientFac
         }
 
         var existing = await context.FxRates
-            .Where(x => x.Date.Date == date.ToDateTime(TimeOnly.MinValue).Date && x.Source == "CBR")
+            .Where(x => x.Date >= asOfUtc && x.Date < nextDayUtc && x.Source == "CBR")
             .ToListAsync(cancellationToken);
 
         foreach (var rate in rates)
