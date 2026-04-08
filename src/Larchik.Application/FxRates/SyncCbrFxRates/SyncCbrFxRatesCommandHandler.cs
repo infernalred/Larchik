@@ -5,10 +5,14 @@ using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Larchik.Application.FxRates.SyncCbrFxRates;
 
-public class SyncCbrFxRatesCommandHandler(LarchikContext context, IHttpClientFactory httpClientFactory)
+public class SyncCbrFxRatesCommandHandler(
+    LarchikContext context,
+    IHttpClientFactory httpClientFactory,
+    ILogger<SyncCbrFxRatesCommandHandler> logger)
     : IRequestHandler<SyncCbrFxRatesCommand, Result<int>>
 {
     public async Task<Result<int>> Handle(SyncCbrFxRatesCommand request, CancellationToken cancellationToken)
@@ -29,6 +33,10 @@ public class SyncCbrFxRatesCommandHandler(LarchikContext context, IHttpClientFac
         var xml = await HttpContentReader.ReadAsStringSafeAsync(response.Content, cancellationToken);
         var doc = XDocument.Parse(xml);
         var rates = new List<FxRate>();
+        var supportedCurrencies = await context.Currencies
+            .Select(x => x.Id)
+            .ToHashSetAsync(cancellationToken);
+        var skippedCurrencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var valute in doc.Descendants("Valute"))
         {
@@ -42,18 +50,34 @@ public class SyncCbrFxRatesCommandHandler(LarchikContext context, IHttpClientFac
             if (!decimal.TryParse(valueStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var value)) continue;
             if (!decimal.TryParse(nominalStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var nominal)) continue;
 
+            var normalizedCode = code.ToUpperInvariant();
+            if (!supportedCurrencies.Contains(normalizedCode))
+            {
+                skippedCurrencies.Add(normalizedCode);
+                continue;
+            }
+
             var ratePerUnit = value / nominal;
 
             rates.Add(new FxRate
             {
                 Id = Guid.NewGuid(),
-                BaseCurrencyId = code.ToUpperInvariant(),
+                BaseCurrencyId = normalizedCode,
                 QuoteCurrencyId = "RUB",
                 Date = asOfUtc,
                 Rate = ratePerUnit,
                 Source = "CBR",
                 CreatedAt = DateTime.UtcNow
             });
+        }
+
+        if (skippedCurrencies.Count > 0)
+        {
+            logger.LogWarning(
+                "CBR FX sync skipped {Count} unsupported currencies for {Date}: {Currencies}",
+                skippedCurrencies.Count,
+                date.ToString("yyyy-MM-dd"),
+                string.Join(", ", skippedCurrencies.OrderBy(x => x)));
         }
 
         var existing = await context.FxRates
