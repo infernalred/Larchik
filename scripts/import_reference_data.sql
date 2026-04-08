@@ -11692,4 +11692,101 @@ SELECT 1
 FROM inserted_instrument
 LIMIT 1;
 
+-- Source: T-Bank InstrumentsService/FindInstrument, verified on 2026-04-08
+-- Fill missing FIGI values for instruments that should participate in
+-- TbankPricesDaily. MOEX currencies are intentionally excluded here and are
+-- matched by MoexPricesDaily via instrument_aliases instead.
+
+UPDATE instruments
+SET figi = 'TCS00A0JPP37',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A0JPP37'
+  AND coalesce(figi, '') = '';
+
+UPDATE instruments
+SET figi = 'TCS00A0JRH43',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A0JRH43'
+  AND coalesce(figi, '') = '';
+
+UPDATE instruments
+SET figi = 'TCS00A0ZZFU5',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A0ZZFU5'
+  AND coalesce(figi, '') = '';
+
+UPDATE instruments
+SET figi = 'TCS10A101X50',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A101X50'
+  AND coalesce(figi, '') = '';
+
+UPDATE instruments
+SET figi = 'BBG00XK3QV47',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A1025A7'
+  AND coalesce(figi, '') = '';
+
+UPDATE instruments
+SET figi = 'BBG011MLGP84',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A103BR0'
+  AND coalesce(figi, '') = '';
+
+UPDATE instruments
+SET figi = 'BBG01N0CVG83',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A108EE1'
+  AND coalesce(figi, '') = '';
+
+UPDATE instruments
+SET figi = 'TCS10A10BVH7',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A10BVH7'
+  AND coalesce(figi, '') = '';
+
+UPDATE instruments
+SET figi = 'TCS00A10D517',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A10D517'
+  AND coalesce(figi, '') = '';
+
+UPDATE instruments
+SET figi = 'TCS00A10D533',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A10D533'
+  AND coalesce(figi, '') = '';
+
+UPDATE instruments
+SET figi = 'TCS00A10ELF6',
+    updated_at = now()
+WHERE upper(isin) = 'RU000A10ELF6'
+  AND coalesce(figi, '') = '';
+
+-- Source: MOEX ISS search/boards, verified on 2026-04-08
+-- Add missing MOEX SECID aliases so MoexPricesDaily can resolve local legacy
+-- tickers/ISIN-based tickers to actual MOEX history codes.
+
+WITH moex_aliases(alias_code, normalized_alias_code, instrument_match_code, alias_id) AS (
+    VALUES
+        ('MBNK', 'MBNK', 'RU000A0JRH43', 'f0a7918d-21fd-4bfd-b294-0c25b7210cb2'::uuid),
+        ('SU26240RMFS0', 'SU26240RMFS0', 'RU000A103BR0', 'aa950353-6b55-48cf-b4d1-b0f97f8130fb'::uuid),
+        ('USD000UTSTOM', 'USD000UTSTOM', 'USDRUB_TOM', '3db02a7e-ffdc-4894-a591-45040f82931e'::uuid),
+        ('EUR_RUB__TOM', 'EUR_RUB__TOM', 'EURRUB_TOM', 'e4b78ad1-c595-4b12-87a9-133f31574493'::uuid)
+)
+INSERT INTO instrument_aliases (id, instrument_id, alias_code, normalized_alias_code)
+SELECT
+    a.alias_id,
+    i.id,
+    a.alias_code,
+    a.normalized_alias_code
+FROM moex_aliases a
+JOIN instruments i
+  ON upper(i.ticker) = upper(a.instrument_match_code)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM instrument_aliases ia
+    WHERE ia.normalized_alias_code = a.normalized_alias_code
+);
+
 COMMIT;

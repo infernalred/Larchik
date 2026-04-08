@@ -70,7 +70,9 @@ resolved AS (
         i.currency_id,
         md5(i.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
     FROM src s
-    JOIN instruments i ON upper(i.figi) = s.figi
+    JOIN instruments i
+      ON upper(i.figi) = s.figi
+     AND upper(coalesce(i.country, '')) <> 'RU'
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
@@ -214,8 +216,11 @@ resolved AS (
         md5(i.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
     FROM src s
     JOIN instruments i
-      ON upper(coalesce(i.figi, '')) = s.db_code
-      OR upper(i.ticker) = s.db_code
+      ON (
+          upper(coalesce(i.figi, '')) = s.db_code
+          OR upper(i.ticker) = s.db_code
+      )
+     AND upper(coalesce(i.country, '')) <> 'RU'
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
@@ -785,8 +790,11 @@ resolved AS (
         md5(i.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
     FROM src s
     JOIN instruments i
-      ON upper(coalesce(i.figi, '')) = s.db_code
-      OR upper(i.ticker) = s.db_code
+      ON (
+          upper(coalesce(i.figi, '')) = s.db_code
+          OR upper(i.ticker) = s.db_code
+      )
+     AND upper(coalesce(i.country, '')) <> 'RU'
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
@@ -1053,8 +1061,11 @@ resolved AS (
         md5(i.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
     FROM src s
     JOIN instruments i
-      ON upper(coalesce(i.figi, '')) = s.db_code
-      OR upper(i.ticker) = s.db_code
+      ON (
+          upper(coalesce(i.figi, '')) = s.db_code
+          OR upper(i.ticker) = s.db_code
+      )
+     AND upper(coalesce(i.country, '')) <> 'RU'
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
@@ -1405,8 +1416,11 @@ resolved AS (
         md5(i.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
     FROM src s
     JOIN instruments i
-      ON upper(coalesce(i.figi, '')) = s.db_code
-      OR upper(i.ticker) = s.db_code
+      ON (
+          upper(coalesce(i.figi, '')) = s.db_code
+          OR upper(i.ticker) = s.db_code
+      )
+     AND upper(coalesce(i.country, '')) <> 'RU'
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
@@ -1853,8 +1867,11 @@ resolved AS (
         md5(i.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
     FROM src s
     JOIN instruments i
-      ON upper(coalesce(i.figi, '')) = s.db_code
-      OR upper(i.ticker) = s.db_code
+      ON (
+          upper(coalesce(i.figi, '')) = s.db_code
+          OR upper(i.ticker) = s.db_code
+      )
+     AND upper(coalesce(i.country, '')) <> 'RU'
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
