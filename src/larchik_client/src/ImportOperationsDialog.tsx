@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
   Alert,
   Button,
@@ -57,15 +57,14 @@ export function ImportOperationsDialog({
   const [file, setFile] = useState<File | null>(null);
   const [validationError, setValidationError] = useState('');
 
-  useEffect(() => {
-    if (!open) return;
+  const handleEnter = () => {
     setFile(null);
     setValidationError('');
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [open]);
+  };
 
   const hasSelectedFile = useMemo(() => file !== null && !submitting, [file, submitting]);
 
@@ -106,6 +105,7 @@ export function ImportOperationsDialog({
       maxWidth="sm"
       fullScreen={isMobile}
       scroll="paper"
+      TransitionProps={{ onEnter: handleEnter }}
     >
       <DialogTitle>Импорт операций из отчета</DialogTitle>
       <DialogContent>

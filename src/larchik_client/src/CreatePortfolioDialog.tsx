@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -32,23 +32,16 @@ interface Props {
   onSubmit: (form: PortfolioForm) => Promise<void>;
 }
 
+const INITIAL_FORM: PortfolioForm = {
+  name: '',
+  brokerId: '',
+  reportingCurrencyId: 'RUB',
+};
+
 export function CreatePortfolioDialog({ open, brokers, submitting, error, onClose, onSubmit }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [form, setForm] = useState<PortfolioForm>({
-    name: '',
-    brokerId: '',
-    reportingCurrencyId: 'RUB',
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    setForm({
-      name: '',
-      brokerId: '',
-      reportingCurrencyId: 'RUB',
-    });
-  }, [open]);
+  const [form, setForm] = useState<PortfolioForm>(INITIAL_FORM);
 
   const canSubmit = useMemo(
     () => form.name.trim().length > 0 && form.brokerId.length > 0 && !submitting,
@@ -61,6 +54,10 @@ export function CreatePortfolioDialog({ open, brokers, submitting, error, onClos
 
   const update = <K extends keyof PortfolioForm>(key: K, value: PortfolioForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleEnter = () => {
+    setForm(INITIAL_FORM);
   };
 
   const handleSubmit = async () => {
@@ -80,6 +77,7 @@ export function CreatePortfolioDialog({ open, brokers, submitting, error, onClos
       maxWidth="sm"
       fullScreen={isMobile}
       scroll="paper"
+      TransitionProps={{ onEnter: handleEnter }}
     >
       <DialogTitle>Новый счет</DialogTitle>
       <DialogContent>
