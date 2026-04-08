@@ -5,6 +5,13 @@
 -- Ready-to-run SQL import (instruments + fx_rates), operations excluded.
 BEGIN;
 
+DROP TABLE IF EXISTS stg_fx_ready;
+DROP TABLE IF EXISTS stg_actor;
+DROP TABLE IF EXISTS stg_stocks_ready;
+DROP TABLE IF EXISTS stg_stocks_norm;
+DROP TABLE IF EXISTS stg_legacy_exchanges;
+DROP TABLE IF EXISTS stg_legacy_stocks;
+
 CREATE TEMP TABLE stg_legacy_stocks (
     ticker text,
     company_name text,
@@ -14,14 +21,14 @@ CREATE TEMP TABLE stg_legacy_stocks (
     figi text,
     last_price numeric,
     type_num integer
-);
+) ON COMMIT DROP;
 
 CREATE TEMP TABLE stg_legacy_exchanges (
     code text,
     nominal numeric,
     rate numeric,
     trade_date date
-);
+) ON COMMIT DROP;
 
 INSERT INTO stg_legacy_stocks (ticker, company_name, type_id, currency_id, sector_id, figi, last_price, type_num) VALUES
     ('IDCC', 'InterDigItal Inc', 'SHARE', 'USD', 'IT', 'BBG000HLJ7M4', 0.0, 1),
@@ -10658,7 +10665,7 @@ BEGIN
     END IF;
 END $$;
 
-CREATE TEMP TABLE stg_stocks_norm AS
+CREATE TEMP TABLE stg_stocks_norm ON COMMIT DROP AS
 SELECT
     UPPER(TRIM(ticker)) AS ticker,
     NULLIF(TRIM(company_name), '') AS company_name,
@@ -10715,7 +10722,7 @@ WHERE s.sector_id IS NOT NULL
       WHERE LOWER(c.name) = LOWER(s.sector_id)
   );
 
-CREATE TEMP TABLE stg_stocks_ready AS
+CREATE TEMP TABLE stg_stocks_ready ON COMMIT DROP AS
 SELECT
     s.ticker,
     COALESCE(s.company_name, s.ticker) AS name,
@@ -10762,7 +10769,7 @@ BEGIN
     END IF;
 END $$;
 
-CREATE TEMP TABLE stg_actor AS
+CREATE TEMP TABLE stg_actor ON COMMIT DROP AS
 SELECT COALESCE(
     (
         SELECT u.id
@@ -10842,7 +10849,7 @@ WHERE NOT EXISTS (
        OR (src.figi IS NOT NULL AND dst.figi = src.figi)
 );
 
-CREATE TEMP TABLE stg_fx_ready AS
+CREATE TEMP TABLE stg_fx_ready ON COMMIT DROP AS
 SELECT
     UPPER(SPLIT_PART(code, '_', 1)) AS base_currency_id,
     UPPER(SPLIT_PART(code, '_', 2)) AS quote_currency_id,
@@ -10897,8 +10904,6 @@ SET
     rate = EXCLUDED.rate,
     source = EXCLUDED.source;
 
-COMMIT;
-
 SELECT COUNT(*) AS instruments_rows_after_import from instruments;
 SELECT COUNT(*) AS fx_rows_after_import FROM fx_rates;
 
@@ -10911,7 +10916,6 @@ SELECT COUNT(*) AS fx_rows_after_import FROM fx_rates;
 -- Source: official MOEX ISS description endpoint
 -- Rows: 147
 
-BEGIN;
 UPDATE instruments dst SET isin = 'RU000A0JS5T7' WHERE upper(dst.ticker) = 'ABRD' AND upper(dst.isin) = 'BBG002W2FT69' AND NOT EXISTS (SELECT 1 FROM instruments other WHERE upper(other.isin) = 'RU000A0JS5T7' AND upper(other.ticker) <> 'ABRD');
 UPDATE instruments dst SET isin = 'RU000A0DQZE3' WHERE upper(dst.ticker) = 'AFKS' AND upper(dst.isin) = 'BBG004S68614' AND NOT EXISTS (SELECT 1 FROM instruments other WHERE upper(other.isin) = 'RU000A0DQZE3' AND upper(other.ticker) <> 'AFKS');
 UPDATE instruments dst SET isin = 'RU0009062285' WHERE upper(dst.ticker) = 'AFLT' AND upper(dst.isin) = 'BBG004S683W7' AND NOT EXISTS (SELECT 1 FROM instruments other WHERE upper(other.isin) = 'RU0009062285' AND upper(other.ticker) <> 'AFLT');
@@ -11059,15 +11063,12 @@ UPDATE instruments dst SET isin = 'US9497461015' WHERE upper(dst.ticker) = 'WFC'
 UPDATE instruments dst SET isin = 'US30231G1022' WHERE upper(dst.ticker) = 'XOM' AND upper(dst.isin) = 'BBG000GZQ728' AND NOT EXISTS (SELECT 1 FROM instruments other WHERE upper(other.isin) = 'US30231G1022' AND upper(other.ticker) <> 'XOM');
 UPDATE instruments dst SET isin = 'RU0007796819' WHERE upper(dst.ticker) = 'YAKG' AND upper(dst.isin) = 'BBG002B298N6' AND NOT EXISTS (SELECT 1 FROM instruments other WHERE upper(other.isin) = 'RU0007796819' AND upper(other.ticker) <> 'YAKG');
 UPDATE instruments dst SET isin = 'NL0009805522' WHERE upper(dst.ticker) = 'YNDX' AND upper(dst.isin) = 'BBG006L8G4H1' AND NOT EXISTS (SELECT 1 FROM instruments other WHERE upper(other.isin) = 'NL0009805522' AND upper(other.ticker) <> 'YNDX');
-COMMIT;
 
 
 -- Source: scripts/moex_history/sql/fix_bbg_isin_from_broker_reports.sql
 
 -- Generated from the user's T-Bank broker reports (2019-2026).
 -- Fixes instruments where the legacy import stored FIGI in instruments.isin.
-
-BEGIN;
 
 WITH src (ticker, isin) AS (
     VALUES
@@ -11136,10 +11137,13 @@ UPDATE instruments dst
 SET isin = src.isin
 FROM src
 WHERE upper(dst.ticker) = src.ticker
-  AND dst.isin ~ '^BBG';
-
-COMMIT;
-
+  AND dst.isin ~ '^BBG'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM instruments other
+      WHERE upper(other.isin) = upper(src.isin)
+        AND other.id <> dst.id
+  );
 
 -- Source: scripts/moex_history/sql/report_2019_missing_instruments.sql
 
@@ -11251,8 +11255,6 @@ WHERE NOT EXISTS (
 
 -- Source: scripts/moex_history/sql/report_2024_missing_instruments.sql
 
-BEGIN;
-
 -- Existing MTSS row has FIGI stored in both isin/figi. Fix the ISIN in-place
 -- so report imports resolve to the existing instrument and reuse its prices.
 UPDATE instruments
@@ -11323,12 +11325,8 @@ WHERE NOT EXISTS (
        OR (src.figi IS NOT NULL AND upper(dst.figi) = upper(src.figi))
 );
 
-COMMIT;
-
 
 -- Source: scripts/moex_history/sql/report_2025_missing_instruments.sql
-
-BEGIN;
 
 -- Existing TRNFP row has FIGI stored in both isin/figi. Fix the ISIN in-place
 -- so report imports resolve to the existing instrument and reuse its prices.
@@ -11340,9 +11338,9 @@ SET isin = 'RU0009091573',
 WHERE upper(ticker) = 'TRNFP'
   AND upper(isin) = 'BBG00475KHX6';
 
--- Existing row for ticker T was loaded with the ISIN of T-Technologies but the
--- metadata of AT&T. Correct it in-place so imported operations resolve to the
--- right Russian equity.
+-- The T-Technologies instrument may already exist under the legacy ticker TCSG.
+-- Correct the instrument metadata by ISIN so we do not collide with the
+-- separate AT&T row that also uses ticker T in the legacy seed.
 UPDATE instruments
 SET name = 'Т-Технологии МКПАО ао',
     country = 'RU',
@@ -11350,8 +11348,7 @@ SET name = 'Т-Технологии МКПАО ао',
     exchange = 'TQBR',
     updated_at = now(),
     updated_by = '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid
-WHERE upper(ticker) = 'T'
-  AND upper(isin) = 'RU000A107UL4';
+WHERE upper(isin) = 'RU000A107UL4';
 
 WITH src (name, ticker, isin, figi, type, currency_id, category_id, exchange, country, price) AS (
     VALUES
@@ -11412,12 +11409,8 @@ WHERE NOT EXISTS (
        OR (src.figi IS NOT NULL AND upper(dst.figi) = upper(src.figi))
 );
 
-COMMIT;
-
 
 -- Source: scripts/moex_history/sql/report_2026_missing_instruments.sql
-
-BEGIN;
 
 UPDATE instruments
 SET isin = 'RU0006944147',
@@ -11442,8 +11435,6 @@ SET isin = 'RU0009100945',
     updated_by = '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid
 WHERE upper(ticker) = 'BSPB'
   AND upper(isin) = 'BBG000QJW156';
-
-COMMIT;
 
 
 -- Source: scripts/moex_history/sql/instrument_name_fixes_from_broker.sql
@@ -11502,8 +11493,6 @@ WHERE isin IN (
 
 
 -- Source: scripts/moex_history/sql/fix_2026_portfolio_instruments.sql
-
-BEGIN;
 
 UPDATE instruments
 SET
@@ -11610,12 +11599,8 @@ WHERE NOT EXISTS (
     WHERE ia.normalized_alias_code = a.normalized_alias_code
 );
 
-COMMIT;
-
 
 -- Source: scripts/moex_history/sql/hrl_rm_otc_fix.sql (instrument alias part only)
-
-BEGIN;
 
 WITH hrl AS (
     SELECT id
@@ -11633,11 +11618,7 @@ WHERE NOT EXISTS (
     WHERE ia.normalized_alias_code = 'HRL-RM'
 );
 
-COMMIT;
-
 -- Source: scripts/moex_history/sql/report_2026_mts_2p17.sql (instrument part only)
-
-BEGIN;
 
 WITH updated_instrument AS (
     UPDATE instruments
@@ -11655,6 +11636,8 @@ WITH updated_instrument AS (
         updated_by = '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid,
         is_trading = true
     WHERE ticker = 'RU000A10ELF6'
+       OR isin = 'RU000A10ELF6'
+       OR coalesce(figi, '') = 'TCS00A10ELF6'
     RETURNING id
 ),
 inserted_instrument AS (
@@ -11697,7 +11680,10 @@ inserted_instrument AS (
         SELECT 1
         FROM instruments
         WHERE ticker = 'RU000A10ELF6'
+           OR isin = 'RU000A10ELF6'
+           OR coalesce(figi, '') = 'TCS00A10ELF6'
     )
+    RETURNING id
 )
 SELECT 1
 FROM updated_instrument
