@@ -1,5 +1,5 @@
 import { Button, Divider, IconButton, List, ListItem, ListItemButton, ListItemText, Stack, Tooltip, Typography } from '@mui/material';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { Portfolio } from './types';
@@ -39,8 +39,8 @@ export function PortfolioSidebar({
         p: 2,
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h6" fontWeight={800}>
+      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6" sx={{ fontWeight: 800 }}>
           Larchik
         </Typography>
         <Stack direction="row" spacing={0.5}>
@@ -59,7 +59,7 @@ export function PortfolioSidebar({
 
       <Button
         variant="contained"
-        startIcon={<AddCircleOutlineIcon />}
+        startIcon={<AddCircleOutlinedIcon />}
         onClick={onCreate}
         sx={{ textTransform: 'none' }}
         fullWidth
@@ -77,17 +77,15 @@ export function PortfolioSidebar({
           <ListItem key={p.id} disablePadding>
             <ListItemButton selected={p.id === selectedId} onClick={() => onSelect(p.id)}>
               <ListItemText
-                primary={p.name}
-                primaryTypographyProps={{ fontWeight: 600 }}
-                secondary={p.reportingCurrencyId}
-                secondaryTypographyProps={{ color: 'text.secondary' }}
+                primary={<Typography sx={{ fontWeight: 600 }}>{p.name}</Typography>}
+                secondary={<Typography variant="body2" color="text.secondary">{p.reportingCurrencyId}</Typography>}
               />
             </ListItemButton>
           </ListItem>
         ))}
         {!items.length && (
           <ListItem>
-            <ListItemText primary="Нет портфелей" primaryTypographyProps={{ color: 'text.secondary' }} />
+            <ListItemText primary={<Typography color="text.secondary">Нет портфелей</Typography>} />
           </ListItem>
         )}
       </List>

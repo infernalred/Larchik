@@ -105,7 +105,7 @@ export function ImportOperationsDialog({
       maxWidth="sm"
       fullScreen={isMobile}
       scroll="paper"
-      TransitionProps={{ onEnter: handleEnter }}
+      slotProps={{ transition: { onEnter: handleEnter } }}
     >
       <DialogTitle>Импорт операций из отчета</DialogTitle>
       <DialogContent>

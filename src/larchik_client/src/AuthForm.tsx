@@ -132,7 +132,7 @@ export function AuthForm({ onLogin, onRegister }: Props) {
       <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
         <Stack spacing={1.5}>
           <Box>
-            <Typography variant="h5" fontWeight={700} gutterBottom>
+            <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>
               Larchik Investments
             </Typography>
             <Typography variant="body2" color="text.secondary">

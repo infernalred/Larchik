@@ -63,9 +63,9 @@ export function PositionsTable({ positions }: Props) {
           return (
             <Paper key={p.instrumentId} variant="outlined" sx={{ p: 1.5, backgroundImage: 'none' }}>
               <Stack spacing={1.25}>
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+                <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Stack spacing={0.25}>
-                    <Typography fontWeight={700}>{p.instrumentName || '—'}</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>{p.instrumentName || '—'}</Typography>
                     <Typography variant="caption" color="text.secondary">
                       {p.currencyId || '—'}
                     </Typography>
@@ -75,35 +75,35 @@ export function PositionsTable({ positions }: Props) {
                   </Typography>
                 </Stack>
                 <Grid container spacing={1.25}>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">
                       Цена
                     </Typography>
                     <Typography variant="body2">{priceLabel}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">
                       Сумма
                     </Typography>
                     <Typography variant="body2">{localAmount != null ? `${fmt(localAmount)} ${priceCurrency}` : '—'}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">
                       Доля, %
                     </Typography>
                     <Typography variant="body2">{fmtPct(sharePct)}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">
                       Средняя
                     </Typography>
                     <Typography variant="body2">{averageLabel}</Typography>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="caption" color="text.secondary">
                       Стоимость (base)
                     </Typography>
-                    <Typography fontWeight={700}>{fmt(p.marketValueBase)}</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>{fmt(p.marketValueBase)}</Typography>
                   </Grid>
                 </Grid>
               </Stack>
@@ -113,9 +113,9 @@ export function PositionsTable({ positions }: Props) {
         {!!positions.length && (
           <Paper variant="outlined" sx={{ p: 1.5, backgroundImage: 'none' }}>
             <Stack spacing={1}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography fontWeight={700}>Итого</Typography>
-                <Typography fontWeight={700}>{fmt(totalBase)}</Typography>
+              <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography sx={{ fontWeight: 700 }}>Итого</Typography>
+                <Typography sx={{ fontWeight: 700 }}>{fmt(totalBase)}</Typography>
               </Stack>
               {!!totalByCurrency.length && (
                 <Stack spacing={0.25}>
@@ -167,7 +167,7 @@ export function PositionsTable({ positions }: Props) {
             return (
               <TableRow key={p.instrumentId} hover>
                 <TableCell>
-                  <Typography fontWeight={600}>{p.instrumentName || '—'}</Typography>
+                  <Typography sx={{ fontWeight: 600 }}>{p.instrumentName || '—'}</Typography>
                   <Typography variant="caption" color="text.secondary">
                     {p.currencyId || '—'}
                   </Typography>
@@ -184,7 +184,7 @@ export function PositionsTable({ positions }: Props) {
           {!!positions.length && (
             <TableRow>
               <TableCell>
-                <Typography fontWeight={700}>Итого</Typography>
+                <Typography sx={{ fontWeight: 700 }}>Итого</Typography>
               </TableCell>
               <TableCell align="right">—</TableCell>
               <TableCell align="right">—</TableCell>
@@ -192,7 +192,7 @@ export function PositionsTable({ positions }: Props) {
               <TableCell align="right">{fmtPct(totalBase > 0 ? 100 : null)}</TableCell>
               <TableCell align="right">—</TableCell>
               <TableCell align="right">
-                <Typography fontWeight={700}>{fmt(totalBase)}</Typography>
+                <Typography sx={{ fontWeight: 700 }}>{fmt(totalBase)}</Typography>
               </TableCell>
             </TableRow>
           )}

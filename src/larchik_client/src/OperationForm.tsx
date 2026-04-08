@@ -259,14 +259,18 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
                     : 'Для кэш-операций оставьте пустым'
                 }
                 error={isInstrumentType && !form.instrumentId}
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <>
-                      {instrumentLoading ? <CircularProgress color="inherit" size={16} /> : null}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
+                slotProps={{
+                  inputLabel: params.slotProps.inputLabel,
+                  htmlInput: params.slotProps.htmlInput,
+                  input: {
+                    ...params.slotProps.input,
+                    endAdornment: (
+                      <>
+                        {instrumentLoading ? <CircularProgress color="inherit" size={16} /> : null}
+                        {params.slotProps.input.endAdornment}
+                      </>
+                    ),
+                  },
                 }}
               />
             )}
@@ -312,7 +316,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
               type="date"
               value={toDateInputValue(form.tradeDate)}
               onChange={(e) => update('tradeDate', e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               fullWidth
             />
             <TextField
@@ -320,7 +324,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
               type="date"
               value={toDateInputValue(form.settlementDate)}
               onChange={(e) => update('settlementDate', e.target.value || undefined)}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               fullWidth
             />
           </Stack>

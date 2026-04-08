@@ -34,7 +34,7 @@ export function QuickDeposit({ onSubmit, disabled }: Props) {
 
   return (
     <Stack spacing={1.5}>
-      <Typography variant="subtitle1" fontWeight={700}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
         Быстрый ввод средств
       </Typography>
       <TextField
@@ -43,7 +43,7 @@ export function QuickDeposit({ onSubmit, disabled }: Props) {
         type="number"
         value={amount}
         onChange={(e) => setAmount(Number(e.target.value))}
-        inputProps={{ min: 0, inputMode: 'decimal' }}
+        slotProps={{ htmlInput: { min: 0, inputMode: 'decimal' } }}
         helperText="Сумма пополнения счета"
       />
       <TextField
@@ -51,7 +51,7 @@ export function QuickDeposit({ onSubmit, disabled }: Props) {
         label="Валюта"
         value={currency}
         onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-        inputProps={{ maxLength: 5 }}
+        slotProps={{ htmlInput: { maxLength: 5 } }}
       />
       <TextField size="small" label="Комментарий" value={note} onChange={(e) => setNote(e.target.value)} />
       {error && <Alert severity="error">{error}</Alert>}

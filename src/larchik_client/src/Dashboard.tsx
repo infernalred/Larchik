@@ -16,7 +16,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
 import { api } from './api';
 import {
@@ -498,11 +498,13 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
         anchor="left"
         open={isMobile && sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        PaperProps={{
-          sx: {
-            width: 'min(86vw, 320px)',
-            bgcolor: 'background.paper',
-            backgroundImage: 'none',
+        slotProps={{
+          paper: {
+            sx: {
+              width: 'min(86vw, 320px)',
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+            },
           },
         }}
       >
@@ -553,16 +555,14 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
             />
             <Stack
               direction={{ xs: 'column', md: 'row' }}
-              alignItems={{ xs: 'stretch', md: 'center' }}
-              justifyContent="space-between"
               spacing={1.5}
-              sx={{ position: 'relative', zIndex: 1 }}
+              sx={{ position: 'relative', zIndex: 1, alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between' }}
             >
               <Stack spacing={0.5}>
                 <Typography variant="overline" color="text.secondary">
                   {viewMode === 'all' ? 'Режим просмотра' : portfolioPage === 'operations' ? 'Операции портфеля' : 'Активный портфель'}
                 </Typography>
-                <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+                <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, fontWeight: 700 }}>
                   {viewMode === 'all' ? 'Все счета' : activePortfolio?.name ?? 'Выберите портфель'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -585,7 +585,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                   <Button
                     variant="outlined"
                     onClick={handleOpenCreatePortfolio}
-                    startIcon={<AddCircleOutlineIcon />}
+                    startIcon={<AddCircleOutlinedIcon />}
                     sx={{ textTransform: 'none' }}
                     fullWidth={isMobile}
                   >
@@ -643,10 +643,9 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                 <Stack
                   direction={{ xs: 'column', sm: 'row' }}
                   spacing={1}
-                  alignItems={{ xs: 'stretch', sm: 'center' }}
-                  sx={{ width: { xs: '100%', md: 'auto' } }}
+                  sx={{ width: { xs: '100%', md: 'auto' }, alignItems: { xs: 'stretch', sm: 'center' } }}
                 >
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}>
                     <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
                       Метод оценки
                     </Typography>
@@ -671,7 +670,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                     <Typography variant="caption" color="text.secondary">
                       Базовая валюта
                     </Typography>
-                    <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
                       {currency}
                     </Typography>
                   </Paper>
@@ -681,7 +680,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
           </Paper>
 
           {isLoadingCurrent && (
-            <Stack alignItems="center" sx={{ py: 4 }}>
+            <Stack sx={{ py: 4, alignItems: 'center' }}>
               <CircularProgress />
             </Stack>
           )}
@@ -691,15 +690,15 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
               <SummaryCards summary={summary} />
 
               <Grid container spacing={{ xs: 2, md: 3 }}>
-                <Grid item xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                   <Stack spacing={1}>
-                    <Typography variant="h6" fontWeight={700}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
                       Позиции
                     </Typography>
                     <PositionsTable positions={displayPositions} />
                   </Stack>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, height: '100%', backgroundImage: 'none' }}>
                     <QuickDeposit onSubmit={handleQuickDeposit} disabled={!selectedPortfolio} />
                   </Paper>
@@ -707,7 +706,7 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
               </Grid>
 
               <Stack spacing={1}>
-                <Typography variant="h6" fontWeight={700}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
                   Аналитика
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -759,14 +758,14 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
               <SummaryCards summary={aggregateSummary} />
 
               <Stack spacing={1}>
-                <Typography variant="h6" fontWeight={700}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
                   Активы по всем счетам ({portfolios.length})
                 </Typography>
                 <PositionsTable positions={buildDisplayPositions(aggregateSummary)} />
               </Stack>
 
               <Stack spacing={1}>
-                <Typography variant="h6" fontWeight={700}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
                   Аналитика
                 </Typography>
                 <Typography variant="body2" color="text.secondary">

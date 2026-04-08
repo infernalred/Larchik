@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
 
 namespace Larchik.API.Controllers;
 
@@ -24,8 +25,13 @@ public class AccountController(
 {
     [AllowAnonymous]
     [HttpGet("antiforgery")]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
     public ActionResult<object> GetAntiforgeryToken()
     {
+        Response.Headers[HeaderNames.CacheControl] = "no-store, no-cache, max-age=0";
+        Response.Headers[HeaderNames.Pragma] = "no-cache";
+        Response.Headers[HeaderNames.Expires] = "0";
+
         var tokens = antiforgery.GetAndStoreTokens(HttpContext);
         if (!string.IsNullOrEmpty(tokens.RequestToken))
         {
@@ -33,7 +39,7 @@ public class AccountController(
             {
                 HttpOnly = false,
                 Secure = true,
-                SameSite = SameSiteMode.Lax,
+                SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax,
                 Path = "/"
             });
         }

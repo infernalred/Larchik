@@ -31,6 +31,13 @@ export default defineConfig({
     strictPort: true,
     https: httpsOptions,
     hmr: hmrConfig,
+    proxy: {
+      '/api': {
+        target: 'https://localhost:6001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   preview: {
     host: 'localhost',

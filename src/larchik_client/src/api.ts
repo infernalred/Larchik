@@ -40,6 +40,7 @@ async function ensureCsrfToken(): Promise<string> {
     csrfPromise = fetch(`${API_BASE}/account/antiforgery`, {
       method: 'GET',
       credentials: 'include',
+      cache: 'no-store',
     })
       .then(async (res) => {
         if (!res.ok) throw new Error('Не удалось получить CSRF токен');

@@ -31,32 +31,32 @@ export function PerformanceTable({ items }: Props) {
         {items.map((row) => (
           <Paper key={row.period} variant="outlined" sx={{ p: 1.5, backgroundImage: 'none' }}>
             <Stack spacing={1.25}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-                <Typography fontWeight={700}>{row.period}</Typography>
-                <Typography color={(row.returnPct ?? 0) >= 0 ? 'success.main' : 'error.main'} fontWeight={700}>
+              <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography sx={{ fontWeight: 700 }}>{row.period}</Typography>
+                <Typography color={(row.returnPct ?? 0) >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 700 }}>
                   {row.returnPct == null ? '—' : `${(row.returnPct * 100).toFixed(2)}%`}
                 </Typography>
               </Stack>
               <Grid container spacing={1.25}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="caption" color="text.secondary">
                     Начало NAV
                   </Typography>
                   <Typography variant="body2">{fmt(row.startNavBase)}</Typography>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="caption" color="text.secondary">
                     Конец NAV
                   </Typography>
                   <Typography variant="body2">{fmt(row.endNavBase)}</Typography>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="caption" color="text.secondary">
                     Потоки
                   </Typography>
                   <Typography variant="body2">{fmt(row.netInflowBase)}</Typography>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography variant="caption" color="text.secondary">
                     P&L
                   </Typography>
@@ -92,7 +92,7 @@ export function PerformanceTable({ items }: Props) {
           {items.map((row) => (
             <TableRow key={row.period} hover>
               <TableCell>
-                <Typography fontWeight={600}>{row.period}</Typography>
+                <Typography sx={{ fontWeight: 600 }}>{row.period}</Typography>
               </TableCell>
               <TableCell align="right">{fmt(row.startNavBase)}</TableCell>
               <TableCell align="right">{fmt(row.endNavBase)}</TableCell>

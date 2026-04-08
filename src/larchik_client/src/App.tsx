@@ -80,7 +80,7 @@ const theme = createTheme({
         root: {
           borderRadius: 12,
         },
-        containedPrimary: {
+        contained: {
           backgroundImage: 'linear-gradient(120deg, #0f766e 0%, #0d9488 100%)',
         },
       },
@@ -209,7 +209,7 @@ export function App() {
   const content = useMemo(() => {
     if (booting || authLoading) {
       return (
-        <Stack alignItems="center" justifyContent="center" minHeight="100vh">
+        <Stack sx={{ alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
           <CircularProgress />
         </Stack>
       );

@@ -77,7 +77,7 @@ export function CreatePortfolioDialog({ open, brokers, submitting, error, onClos
       maxWidth="sm"
       fullScreen={isMobile}
       scroll="paper"
-      TransitionProps={{ onEnter: handleEnter }}
+      slotProps={{ transition: { onEnter: handleEnter } }}
     >
       <DialogTitle>Новый счет</DialogTitle>
       <DialogContent>

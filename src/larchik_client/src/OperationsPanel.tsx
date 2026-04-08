@@ -168,12 +168,10 @@ export function OperationsPanel({
     <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, backgroundImage: 'none' }}>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'stretch', sm: 'center' }}
         spacing={1}
-        sx={{ mb: 1.5 }}
+        sx={{ mb: 1.5, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' } }}
       >
-        <Typography variant="h6" fontWeight={700}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
           Операции
         </Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
@@ -239,9 +237,9 @@ export function OperationsPanel({
           {items.map((op) => (
             <Paper key={op.id} variant="outlined" sx={{ p: 1.25, backgroundImage: 'none' }}>
               <Stack spacing={1.25}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
                   <Stack spacing={0.25}>
-                    <Typography fontWeight={700}>{TYPE_LABELS[op.type]}</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>{TYPE_LABELS[op.type]}</Typography>
                     <Typography variant="caption" color="text.secondary">
                       {fmtDate(op.tradeDate)}
                     </Typography>
@@ -260,43 +258,43 @@ export function OperationsPanel({
                   </Stack>
                 </Stack>
                 <Grid container spacing={1}>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">
                       Инструмент
                     </Typography>
                     <Typography variant="body2">{op.instrumentTicker ?? '—'}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">
                       Валюта
                     </Typography>
                     <Typography variant="body2">{op.currencyId}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">
                       Кол-во
                     </Typography>
                     <Typography variant="body2">{fmtNum(op.quantity)}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">
                       Цена
                     </Typography>
                     <Typography variant="body2">{fmtNum(op.price)}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">
                       Сумма
                     </Typography>
                     <Typography variant="body2">{fmtNum(calcAmount(op))}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">
                       Комиссия
                     </Typography>
                     <Typography variant="body2">{fmtNum(op.fee)}</Typography>
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="caption" color="text.secondary">
                       Комментарий
                     </Typography>
@@ -343,7 +341,7 @@ export function OperationsPanel({
                   <TableCell align="right">{fmtNum(op.fee)}</TableCell>
                   <TableCell align="right">{op.currencyId}</TableCell>
                   <TableCell>
-                    <Typography variant="body2" color="text.secondary" noWrap maxWidth={240}>
+                    <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 240 }}>
                       {op.note ?? '—'}
                     </Typography>
                   </TableCell>

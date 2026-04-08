@@ -34,7 +34,7 @@ function StatCard({ title, value, currency, accent }: StatCardProps) {
       <Typography variant="body2" color="text.secondary">
         {title}
       </Typography>
-      <Typography component="div" variant="h6" fontWeight={700} sx={{ mt: 0.5, lineHeight: 1.25 }}>
+      <Typography component="div" variant="h6" sx={{ mt: 0.5, lineHeight: 1.25, fontWeight: 700 }}>
         {format(value)}{' '}
         <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.875rem', fontWeight: 500 }}>
           {currency}
@@ -52,28 +52,28 @@ export function SummaryCards({ summary }: Props) {
   const c = summary.reportingCurrencyId;
   return (
     <Grid container spacing={2}>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard title="NAV" value={summary.navBase} currency={c} accent="nav" />
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard title="Наличность" value={summary.cashBase} currency={c} accent="cash" />
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard title="Позиции" value={summary.positionsValueBase} currency={c} accent="positions" />
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard title="Net inflow" value={summary.netInflowBase} currency={c} />
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard title="Пополнения" value={summary.grossDepositsBase} currency={c} />
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard title="Выводы" value={summary.grossWithdrawalsBase} currency={c} />
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard title="Реализовано" value={summary.realizedBase} currency={c} accent="realized" />
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard title="Нереализовано" value={summary.unrealizedBase} currency={c} accent="unrealized" />
       </Grid>
     </Grid>

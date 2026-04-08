@@ -244,7 +244,7 @@ function CompositionDonut({
           }}
         >
           <Box>
-            <Typography variant="h5" fontWeight={800}>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>
               {formatMoney(total)} {currency}
             </Typography>
             <Typography color="text.secondary">{centerLabel}</Typography>
@@ -273,7 +273,7 @@ function CompositionView({
   if (!slices.length) {
     return (
       <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, backgroundImage: 'none' }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
+        <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 700 }}>
           {title}
         </Typography>
         <Typography color="text.secondary">{subtitle}</Typography>
@@ -286,11 +286,11 @@ function CompositionView({
 
   return (
     <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, backgroundImage: 'none' }}>
-      <Grid container spacing={{ xs: 2, md: 3 }} alignItems="center">
-        <Grid item xs={12} md={6} lg={7}>
+      <Grid container spacing={{ xs: 2, md: 3 }} sx={{ alignItems: 'center' }}>
+        <Grid size={{ xs: 12, md: 6, lg: 7 }}>
           <Stack spacing={1.5}>
             <Box>
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
+              <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 700 }}>
                 {title}
               </Typography>
               <Typography color="text.secondary">{subtitle}</Typography>
@@ -298,14 +298,14 @@ function CompositionView({
 
             <Stack spacing={1}>
               {slices.map((slice) => (
-                <Stack key={slice.label} direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
-                  <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0 }}>
+                <Stack key={slice.label} direction="row" spacing={1.5} sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Stack direction="row" spacing={1.25} sx={{ minWidth: 0, alignItems: 'center' }}>
                     <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: slice.color, flexShrink: 0 }} />
                     <Typography sx={{ minWidth: 0 }} noWrap>
                       {slice.label}
                     </Typography>
                   </Stack>
-                  <Typography fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>
+                  <Typography sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}>
                     {formatShare(slice.share * 100)}
                   </Typography>
                 </Stack>
@@ -314,7 +314,7 @@ function CompositionView({
           </Stack>
         </Grid>
 
-        <Grid item xs={12} md={6} lg={5}>
+        <Grid size={{ xs: 12, md: 6, lg: 5 }}>
           <CompositionDonut slices={slices} total={total} centerLabel={centerLabel} currency={currency} />
         </Grid>
       </Grid>
@@ -587,17 +587,17 @@ function PortfolioView({
   return (
     <Stack spacing={{ xs: 2, md: 3 }}>
       <Grid container spacing={{ xs: 2, md: 3 }}>
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, backgroundImage: 'none' }}>
             <Stack spacing={1.25}>
-              <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={1.5}>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography variant="h6" fontWeight={700}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
                     Стоимость портфеля
                   </Typography>
                   <Typography color="text.secondary">Динамика NAV по месяцам в стиле брокерской аналитики.</Typography>
                 </Box>
-                <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                <Stack direction="row" spacing={0.75} useFlexGap sx={{ flexWrap: 'wrap' }}>
                   {(Object.keys(RANGE_LABELS) as PortfolioRange[]).map((item) => (
                     <ButtonBase
                       key={item}
@@ -612,7 +612,7 @@ function PortfolioView({
                         backgroundColor: item === range ? 'rgba(82,192,245,0.12)' : 'transparent',
                       }}
                     >
-                      <Typography variant="body2" fontWeight={item === range ? 700 : 500}>
+                      <Typography variant="body2" sx={{ fontWeight: item === range ? 700 : 500 }}>
                         {RANGE_LABELS[item]}
                       </Typography>
                     </ButtonBase>
@@ -624,9 +624,9 @@ function PortfolioView({
           </Paper>
         </Grid>
 
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, backgroundImage: 'none', height: '100%' }}>
-            <Typography variant="h6" fontWeight={700} sx={{ mb: 1.5 }}>
+            <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>
               Статистика движения средств
             </Typography>
             <Stack divider={<Divider flexItem />} spacing={0}>
@@ -640,9 +640,9 @@ function PortfolioView({
                 { label: 'Реализовано', value: summary.realizedBase },
                 { label: 'Нереализовано', value: summary.unrealizedBase },
               ].map((item) => (
-                <Stack key={item.label} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1.25 }}>
+                <Stack key={item.label} direction="row" sx={{ py: 1.25, justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography color="text.secondary">{item.label}</Typography>
-                  <Typography fontWeight={700} color={item.color}>
+                  <Typography color={item.color} sx={{ fontWeight: 700 }}>
                     {item.value == null ? '—' : `${formatMoney(item.value)} ${currency}`}
                   </Typography>
                 </Stack>
@@ -653,7 +653,7 @@ function PortfolioView({
       </Grid>
 
       <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, backgroundImage: 'none' }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>
+        <Typography variant="h6" sx={{ mb: 0.5, fontWeight: 700 }}>
           Помесячная доходность
         </Typography>
         <Typography color="text.secondary" sx={{ mb: 2 }}>
@@ -673,7 +673,7 @@ export function PerformanceAnalytics({ summary, items, currency }: Props) {
   if (!summary) {
     return (
       <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, backgroundImage: 'none' }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 0.75 }}>
+        <Typography variant="h6" sx={{ mb: 0.75, fontWeight: 700 }}>
           Аналитика
         </Typography>
         <Typography color="text.secondary">Не удалось загрузить структуру портфеля для брокерской аналитики.</Typography>
@@ -696,7 +696,7 @@ export function PerformanceAnalytics({ summary, items, currency }: Props) {
             <Typography variant="overline" color="text.secondary">
               Аналитика как у брокера
             </Typography>
-            <Typography variant="h5" fontWeight={800} sx={{ mb: 0.5 }}>
+            <Typography variant="h5" sx={{ mb: 0.5, fontWeight: 800 }}>
               Структура и динамика портфеля
             </Typography>
             <Typography color="text.secondary">
@@ -704,7 +704,7 @@ export function PerformanceAnalytics({ summary, items, currency }: Props) {
             </Typography>
           </Box>
 
-          <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0}>
+          <Stack direction="row" useFlexGap spacing={0} sx={{ flexWrap: 'wrap' }}>
             <Box
               sx={{
                 display: 'inline-flex',
@@ -728,7 +728,7 @@ export function PerformanceAnalytics({ summary, items, currency }: Props) {
                     boxShadow: tab === item ? 'inset 0 0 0 1px #ffd60a' : 'none',
                   }}
                 >
-                  <Typography fontWeight={tab === item ? 700 : 500}>{TAB_LABELS[item]}</Typography>
+                  <Typography sx={{ fontWeight: tab === item ? 700 : 500 }}>{TAB_LABELS[item]}</Typography>
                 </ButtonBase>
               ))}
             </Box>
