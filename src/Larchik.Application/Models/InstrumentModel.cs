@@ -12,4 +12,5 @@ public record InstrumentModel(
     int CategoryId,
     string? Exchange,
     string? Country,
-    bool IsTrading);
+    bool IsTrading,
+    PriceSource? PriceSource);

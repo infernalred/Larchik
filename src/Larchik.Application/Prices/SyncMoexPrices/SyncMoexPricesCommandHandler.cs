@@ -62,6 +62,7 @@ public class SyncMoexPricesCommandHandler(
             .Where(x =>
                 (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf || x.Type == InstrumentType.Currency) &&
                 x.IsTrading &&
+                x.PriceSource == Persistence.Entities.PriceSource.MOEX &&
                 x.Ticker != null &&
                 x.Ticker != "")
             .Select(x => new InstrumentCandidate(x.Id, x.Ticker.ToUpper(), x.CurrencyId.ToUpperInvariant(), x.Type))

@@ -30,6 +30,10 @@ public class InstrumentModelConfiguration : IEntityTypeConfiguration<Instrument>
 
         builder.Property(x => x.IsTrading).HasDefaultValue(true);
 
+        builder.Property(x => x.PriceSource)
+            .HasConversion<string>()
+            .HasMaxLength(16);
+
         builder.Property(x => x.Price).HasPrecision(18, 4);
 
         builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd();

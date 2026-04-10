@@ -1,4 +1,5 @@
 export type InstrumentType = 'Equity' | 'Bond' | 'Etf' | 'Currency' | 'Commodity' | 'Crypto';
+export type PriceSource = 'MOEX' | 'TBANK';
 
 export type OperationType =
   | 'Buy'
@@ -69,6 +70,7 @@ export interface InstrumentModel {
   exchange?: string;
   country?: string;
   isTrading: boolean;
+  priceSource?: PriceSource | null;
 }
 
 export interface Instrument extends InstrumentModel {

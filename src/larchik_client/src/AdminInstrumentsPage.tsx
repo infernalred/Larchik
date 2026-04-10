@@ -45,6 +45,11 @@ interface ToastState {
   message: string;
 }
 
+const PRICE_SOURCE_LABELS: Record<'MOEX' | 'TBANK', string> = {
+  MOEX: 'MOEX',
+  TBANK: 'T-Bank',
+};
+
 export function AdminInstrumentsPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -247,6 +252,7 @@ export function AdminInstrumentsPage() {
                     <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
                       <Chip size="small" label={TYPE_LABELS[item.type]} />
                       <Chip size="small" label={item.currencyId} variant="outlined" />
+                      <Chip size="small" label={item.priceSource ? PRICE_SOURCE_LABELS[item.priceSource] : 'Без синхронизации'} variant="outlined" />
                       <Chip size="small" label={item.isTrading ? 'Торгуется' : 'Не торгуется'} color={item.isTrading ? 'success' : 'default'} />
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
@@ -280,6 +286,7 @@ export function AdminInstrumentsPage() {
                     <TableCell>Категория</TableCell>
                     <TableCell>Биржа</TableCell>
                     <TableCell>Страна</TableCell>
+                    <TableCell>Источник цен</TableCell>
                     <TableCell>Статус</TableCell>
                     <TableCell align="right">Действия</TableCell>
                   </TableRow>
@@ -295,6 +302,7 @@ export function AdminInstrumentsPage() {
                       <TableCell>{categoryMap.get(item.categoryId) ?? `#${item.categoryId}`}</TableCell>
                       <TableCell>{item.exchange ?? '—'}</TableCell>
                       <TableCell>{item.country ?? '—'}</TableCell>
+                      <TableCell>{item.priceSource ? PRICE_SOURCE_LABELS[item.priceSource] : '—'}</TableCell>
                       <TableCell>
                         <Chip
                           size="small"
@@ -313,7 +321,7 @@ export function AdminInstrumentsPage() {
                   ))}
                   {!items.length && (
                     <TableRow>
-                      <TableCell colSpan={10} align="center">
+                      <TableCell colSpan={11} align="center">
                         <Typography color="text.secondary" sx={{ py: 2 }}>
                           Инструменты не найдены
                         </Typography>

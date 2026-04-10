@@ -13,6 +13,7 @@ public class Instrument
     public string? Exchange { get; set; }
     public string? Country { get; set; }
     public bool IsTrading { get; set; } = true;
+    public PriceSource? PriceSource { get; set; }
     public decimal? Price { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public Guid CreatedBy { get; set; }

@@ -49,7 +49,8 @@ public class GetAdminInstrumentsQueryHandler(LarchikContext context)
                 CategoryId = x.CategoryId,
                 Exchange = x.Exchange,
                 Country = x.Country,
-                IsTrading = x.IsTrading
+                IsTrading = x.IsTrading,
+                PriceSource = x.PriceSource
             })
             .ToPagedResultAsync(request.Paging, MaxPageSize, cancellationToken);
 

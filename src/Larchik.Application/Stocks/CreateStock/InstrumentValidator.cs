@@ -15,5 +15,10 @@ public class InstrumentValidator : AbstractValidator<InstrumentModel>
         RuleFor(x => x.CurrencyId).NotEmpty().MaximumLength(3);
         RuleFor(x => x.Exchange).MaximumLength(50);
         RuleFor(x => x.Country).MaximumLength(100);
+        RuleFor(x => x.PriceSource).IsInEnum().When(x => x.PriceSource.HasValue);
+        RuleFor(x => x.Figi)
+            .NotEmpty()
+            .When(x => x.IsTrading && x.PriceSource == Persistence.Entities.PriceSource.TBANK)
+            .WithMessage("FIGI is required for TBANK price source.");
     }
 }

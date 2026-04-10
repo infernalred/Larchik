@@ -15,4 +15,5 @@ public class InstrumentDto
     public string? Exchange { get; set; }
     public string? Country { get; set; }
     public bool IsTrading { get; set; }
+    public PriceSource? PriceSource { get; set; }
 }

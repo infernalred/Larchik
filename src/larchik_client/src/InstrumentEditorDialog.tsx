@@ -13,7 +13,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { Category, Currency, Instrument, InstrumentModel, InstrumentType } from './types';
+import { Category, Currency, Instrument, InstrumentModel, InstrumentType, PriceSource } from './types';
 
 const INSTRUMENT_TYPES: { value: InstrumentType; label: string }[] = [
   { value: 'Equity', label: 'Акция' },
@@ -22,6 +22,11 @@ const INSTRUMENT_TYPES: { value: InstrumentType; label: string }[] = [
   { value: 'Currency', label: 'Валюта' },
   { value: 'Commodity', label: 'Товар' },
   { value: 'Crypto', label: 'Крипто' },
+];
+
+const PRICE_SOURCES: { value: PriceSource; label: string }[] = [
+  { value: 'MOEX', label: 'MOEX' },
+  { value: 'TBANK', label: 'T-Bank' },
 ];
 
 function createInitialForm(initial?: Instrument | null, categories: Category[] = [], currencies: Currency[] = []): InstrumentModel {
@@ -36,6 +41,7 @@ function createInitialForm(initial?: Instrument | null, categories: Category[] =
     exchange: initial?.exchange ?? '',
     country: initial?.country ?? '',
     isTrading: initial?.isTrading ?? true,
+    priceSource: initial?.priceSource ?? null,
   };
 }
 
@@ -64,7 +70,7 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
     );
   }, [form]);
 
-  const update = (key: keyof InstrumentModel, value: string | number | boolean | InstrumentType | undefined) => {
+  const update = (key: keyof InstrumentModel, value: string | number | boolean | InstrumentType | PriceSource | null | undefined) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -80,6 +86,7 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
       exchange: form.exchange?.trim() || undefined,
       country: form.country?.trim() || undefined,
       isTrading: form.isTrading,
+      priceSource: form.priceSource ?? null,
     });
   };
 
@@ -176,6 +183,20 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
               fullWidth
             />
           </Stack>
+          <TextField
+            select
+            label="Источник цен"
+            value={form.priceSource ?? ''}
+            onChange={(e) => update('priceSource', e.target.value ? (e.target.value as PriceSource) : null)}
+            fullWidth
+          >
+            <MenuItem value="">Не синхронизировать</MenuItem>
+            {PRICE_SOURCES.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </TextField>
           <FormControlLabel
             control={
               <Checkbox
