@@ -5,10 +5,14 @@ import { AuthForm } from './AuthForm';
 import { Dashboard } from './Dashboard';
 import { User } from './types';
 
-type DashboardRoute = 'overview' | 'operations' | 'analytics';
+type DashboardRoute = 'overview' | 'operations' | 'analytics' | 'instruments';
 const SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 const resolveRoute = (pathname: string): DashboardRoute => {
+  if (pathname === '/admin/instruments' || pathname.startsWith('/admin/instruments/')) {
+    return 'instruments';
+  }
+
   if (pathname === '/operations' || pathname.startsWith('/operations/')) {
     return 'operations';
   }
@@ -150,6 +154,13 @@ export function App() {
   }, [applyRouteFromLocation]);
 
   useEffect(() => {
+    if (!user?.isAdmin && route === 'instruments') {
+      window.history.replaceState({}, '', '/');
+      setRoute('overview');
+    }
+  }, [route, user]);
+
+  useEffect(() => {
     if (!user) {
       return;
     }
@@ -173,7 +184,14 @@ export function App() {
   }, [user]);
 
   const navigateRoute = useCallback((nextRoute: DashboardRoute) => {
-    const nextPath = nextRoute === 'operations' ? '/operations' : nextRoute === 'analytics' ? '/analytics' : '/';
+    const nextPath =
+      nextRoute === 'operations'
+        ? '/operations'
+        : nextRoute === 'analytics'
+          ? '/analytics'
+          : nextRoute === 'instruments'
+            ? '/admin/instruments'
+            : '/';
     if (window.location.pathname !== nextPath) {
       window.history.pushState({}, '', nextPath);
     }
@@ -223,7 +241,7 @@ export function App() {
       );
     }
 
-    return <Dashboard onLogout={handleLogout} route={route} onRouteChange={navigateRoute} />;
+    return <Dashboard onLogout={handleLogout} route={route} onRouteChange={navigateRoute} user={user} />;
   }, [authLoading, booting, navigateRoute, route, user]);
 
   return (

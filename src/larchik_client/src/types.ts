@@ -24,6 +24,16 @@ export interface User {
   isAdmin: boolean;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+}
+
+export interface Currency {
+  id: string;
+  name: string;
+}
+
 export interface Portfolio {
   id: string;
   name: string;
@@ -46,6 +56,24 @@ export interface InstrumentLookup {
   isin: string;
   figi?: string;
   currencyId: string;
+}
+
+export interface InstrumentModel {
+  name: string;
+  ticker: string;
+  isin: string;
+  figi?: string;
+  type: InstrumentType;
+  currencyId: string;
+  categoryId: number;
+  exchange?: string;
+  country?: string;
+  isTrading: boolean;
+}
+
+export interface Instrument extends InstrumentModel {
+  id: string;
+  isTrading: boolean;
 }
 
 export interface PortfolioSummary {

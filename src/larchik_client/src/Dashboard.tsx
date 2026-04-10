@@ -19,6 +19,8 @@ import {
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
 import { api } from './api';
+import { AdminInstrumentsPage } from './AdminInstrumentsPage';
+import { getApiErrorMessage } from './error-utils';
 import {
   Broker,
   ClearPortfolioDataResult,
@@ -31,6 +33,7 @@ import {
   PositionHolding,
   PortfolioSummary,
   RecalculatePortfolioResult,
+  User,
 } from './types';
 import { SummaryCards } from './SummaryCards';
 import { PositionsTable } from './PositionsTable';
@@ -41,7 +44,7 @@ import { OperationsPanel } from './OperationsPanel';
 import { CreatePortfolioDialog } from './CreatePortfolioDialog';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 
-type PortfolioRoute = 'overview' | 'operations' | 'analytics';
+type PortfolioRoute = 'overview' | 'operations' | 'analytics' | 'instruments';
 
 const VALUATION_METHODS = [
   { value: 'adjustingAvg', label: 'Adjusting Avg' },
@@ -54,6 +57,7 @@ interface Props {
   onLogout: () => void;
   route: PortfolioRoute;
   onRouteChange: (route: PortfolioRoute) => void;
+  user: User;
 }
 
 const CASH_LABELS: Record<string, string> = {
@@ -95,17 +99,7 @@ function buildDisplayPositions(summary: PortfolioSummary): PositionHolding[] {
   });
 }
 
-function getApiErrorMessage(error: unknown, fallback: string): string {
-  if (!(error instanceof Error)) return fallback;
-  try {
-    const payload = JSON.parse(error.message) as { message?: string };
-    return payload.message || fallback;
-  } catch {
-    return error.message || fallback;
-  }
-}
-
-export function Dashboard({ onLogout, route, onRouteChange }: Props) {
+export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
@@ -152,9 +146,11 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     setOperations([]);
     setOperationsTotalCount(0);
     setOperationsPage(1);
-    onRouteChange('overview');
+    if (route !== 'instruments') {
+      onRouteChange('overview');
+    }
     setViewMode('portfolio');
-  }, [onRouteChange]);
+  }, [onRouteChange, route]);
 
   const loadBrokers = useCallback(async () => {
     const data = await api.listBrokers();
@@ -458,6 +454,12 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
     setSidebarOpen(false);
   }
 
+  function handleShowAdminInstruments() {
+    if (!user.isAdmin) return;
+    onRouteChange('instruments');
+    setSidebarOpen(false);
+  }
+
   const activePortfolio = portfolios.find((x) => x.id === selectedPortfolio) ?? null;
   const activeBroker = brokers.find((x) => x.id === activePortfolio?.brokerId) ?? null;
   const canImportOperations = Boolean(activeBroker?.supportsImport && activeBroker.code);
@@ -489,6 +491,9 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
             onCreate={handleOpenCreatePortfolio}
             onShowAllSummary={handleShowAllSummary}
             showAllSelected={viewMode === 'all'}
+            isAdmin={user.isAdmin}
+            adminSelected={portfolioPage === 'instruments'}
+            onShowAdminInstruments={handleShowAdminInstruments}
             onChangePassword={handleOpenChangePassword}
             onLogout={onLogout}
           />
@@ -515,6 +520,9 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
           onCreate={handleOpenCreatePortfolio}
           onShowAllSummary={handleShowAllSummary}
           showAllSelected={viewMode === 'all'}
+          isAdmin={user.isAdmin}
+          adminSelected={portfolioPage === 'instruments'}
+          onShowAdminInstruments={handleShowAdminInstruments}
           onChangePassword={handleOpenChangePassword}
           onLogout={onLogout}
           mobile
@@ -560,13 +568,25 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
             >
               <Stack spacing={0.5}>
                 <Typography variant="overline" color="text.secondary">
-                  {viewMode === 'all' ? 'Режим просмотра' : portfolioPage === 'operations' ? 'Операции портфеля' : 'Активный портфель'}
+                  {portfolioPage === 'instruments'
+                    ? 'Администрирование'
+                    : viewMode === 'all'
+                      ? 'Режим просмотра'
+                      : portfolioPage === 'operations'
+                        ? 'Операции портфеля'
+                        : 'Активный портфель'}
                 </Typography>
                 <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, fontWeight: 700 }}>
-                  {viewMode === 'all' ? 'Все счета' : activePortfolio?.name ?? 'Выберите портфель'}
+                  {portfolioPage === 'instruments'
+                    ? 'Справочник инструментов'
+                    : viewMode === 'all'
+                      ? 'Все счета'
+                      : activePortfolio?.name ?? 'Выберите портфель'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Валюта отчета: {currency}
+                  {portfolioPage === 'instruments'
+                    ? 'Создание и редактирование доступно только администраторам.'
+                    : `Валюта отчета: ${currency}`}
                 </Typography>
               </Stack>
               <Stack spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
@@ -640,41 +660,43 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
                     </Button>
                   </Stack>
                 )}
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={1}
-                  sx={{ width: { xs: '100%', md: 'auto' }, alignItems: { xs: 'stretch', sm: 'center' } }}
-                >
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}>
-                    <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-                      Метод оценки
-                    </Typography>
-                    <Select
-                      size="small"
-                      value={valuationMethod}
-                      onChange={(e) => setValuationMethod(e.target.value)}
-                      sx={{ minWidth: { xs: '100%', sm: 180 } }}
-                      disabled={viewMode === 'portfolio' && portfolioPage === 'operations'}
-                    >
-                      {VALUATION_METHODS.map((m) => (
-                        <MenuItem key={m.value} value={m.value}>
-                          {m.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </Stack>
-                  <Paper
-                    variant="outlined"
-                    sx={{ px: 1.5, py: 0.75, borderRadius: 999, alignSelf: { xs: 'flex-start', sm: 'center' } }}
+                {portfolioPage !== 'instruments' && (
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    sx={{ width: { xs: '100%', md: 'auto' }, alignItems: { xs: 'stretch', sm: 'center' } }}
                   >
-                    <Typography variant="caption" color="text.secondary">
-                      Базовая валюта
-                    </Typography>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                      {currency}
-                    </Typography>
-                  </Paper>
-                </Stack>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}>
+                      <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+                        Метод оценки
+                      </Typography>
+                      <Select
+                        size="small"
+                        value={valuationMethod}
+                        onChange={(e) => setValuationMethod(e.target.value)}
+                        sx={{ minWidth: { xs: '100%', sm: 180 } }}
+                        disabled={viewMode === 'portfolio' && portfolioPage === 'operations'}
+                      >
+                        {VALUATION_METHODS.map((m) => (
+                          <MenuItem key={m.value} value={m.value}>
+                            {m.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </Stack>
+                    <Paper
+                      variant="outlined"
+                      sx={{ px: 1.5, py: 0.75, borderRadius: 999, alignSelf: { xs: 'flex-start', sm: 'center' } }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        Базовая валюта
+                      </Typography>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                        {currency}
+                      </Typography>
+                    </Paper>
+                  </Stack>
+                )}
               </Stack>
             </Stack>
           </Paper>
@@ -684,6 +706,8 @@ export function Dashboard({ onLogout, route, onRouteChange }: Props) {
               <CircularProgress />
             </Stack>
           )}
+
+          {portfolioPage === 'instruments' && user.isAdmin && <AdminInstrumentsPage />}
 
           {viewMode === 'portfolio' && portfolioPage === 'overview' && !loadingSummary && summary && (
             <Stack spacing={{ xs: 2, md: 3 }}>

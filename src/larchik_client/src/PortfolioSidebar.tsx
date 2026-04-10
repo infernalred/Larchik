@@ -1,5 +1,6 @@
 import { Button, Divider, IconButton, List, ListItem, ListItemButton, ListItemText, Stack, Tooltip, Typography } from '@mui/material';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { Portfolio } from './types';
@@ -11,6 +12,9 @@ interface Props {
   onCreate: () => void;
   onShowAllSummary: () => void;
   showAllSelected?: boolean;
+  isAdmin?: boolean;
+  adminSelected?: boolean;
+  onShowAdminInstruments?: () => void;
   onChangePassword: () => void;
   onLogout: () => void;
   mobile?: boolean;
@@ -23,6 +27,9 @@ export function PortfolioSidebar({
   onCreate,
   onShowAllSummary,
   showAllSelected = false,
+  isAdmin = false,
+  adminSelected = false,
+  onShowAdminInstruments,
   onChangePassword,
   onLogout,
   mobile = false,
@@ -98,6 +105,24 @@ export function PortfolioSidebar({
       >
         Показать инфу по всем счетам
       </Button>
+
+      {isAdmin && onShowAdminInstruments && (
+        <>
+          <Divider flexItem />
+          <Typography variant="overline" color="text.secondary">
+            Администрирование
+          </Typography>
+          <Button
+            variant={adminSelected ? 'contained' : 'outlined'}
+            startIcon={<Inventory2OutlinedIcon />}
+            onClick={onShowAdminInstruments}
+            sx={{ textTransform: 'none' }}
+            fullWidth
+          >
+            Инструменты
+          </Button>
+        </>
+      )}
     </Stack>
   );
 }

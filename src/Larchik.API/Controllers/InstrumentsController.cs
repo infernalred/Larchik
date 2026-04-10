@@ -1,7 +1,9 @@
 using System.Net;
+using Larchik.Application.Common.Paging;
 using Larchik.Application.Models;
 using Larchik.Application.Stocks.CreateStock;
 using Larchik.Application.Stocks.EditStock;
+using Larchik.Application.Stocks.GetAdminInstruments;
 using Larchik.Application.Stocks.GetInstrument;
 using Larchik.Application.Stocks.SearchInstruments;
 using Larchik.Persistence.Constants;
@@ -13,6 +15,18 @@ namespace Larchik.API.Controllers;
 
 public class InstrumentsController : BaseApiController
 {
+    [Authorize(Roles = $"{Roles.Admin}")]
+    [HttpGet("admin")]
+    [ProducesResponseType(typeof(PagedResult<InstrumentDto>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    [ProducesResponseType((int)HttpStatusCode.Forbidden)]
+    public async Task<ActionResult<PagedResult<InstrumentDto>>> ListAdmin(
+        [FromQuery] string? query,
+        [FromQuery] PageQuery paging)
+    {
+        return HandleResult(await Mediator.Send(new GetAdminInstrumentsQuery(query, paging), HttpContext.RequestAborted));
+    }
+
     [HttpGet]
     [ProducesResponseType(typeof(InstrumentLookupDto[]), (int)HttpStatusCode.OK)]
     public async Task<ActionResult<InstrumentLookupDto[]>> Search([FromQuery] string? query, [FromQuery] int limit = 20)

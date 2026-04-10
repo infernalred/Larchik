@@ -1,8 +1,12 @@
 import {
   Broker,
+  Category,
   ClearPortfolioDataResult,
+  Currency,
   ImportResult,
+  Instrument,
   InstrumentLookup,
+  InstrumentModel,
   Operation,
   OperationModel,
   PagedResult,
@@ -159,11 +163,47 @@ export const api = {
     return request<Broker[]>('/brokers');
   },
 
+  async listCurrencies(): Promise<Currency[]> {
+    return request<Currency[]>('/currencies');
+  },
+
+  async listCategories(): Promise<Category[]> {
+    return request<Category[]>('/categories');
+  },
+
   async searchInstruments(query: string, limit = 20): Promise<InstrumentLookup[]> {
     const params = new URLSearchParams();
     if (query.trim().length > 0) params.set('query', query.trim());
     params.set('limit', String(limit));
     return request<InstrumentLookup[]>(`/instruments?${params.toString()}`);
+  },
+
+  async listAdminInstruments(options: { query?: string; page?: number; pageSize?: number } = {}): Promise<PagedResult<Instrument>> {
+    const params = new URLSearchParams();
+    if (options.query?.trim()) params.set('query', options.query.trim());
+    if (options.page != null) params.set('page', String(options.page));
+    if (options.pageSize != null) params.set('pageSize', String(options.pageSize));
+
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return request<PagedResult<Instrument>>(`/instruments/admin${suffix}`);
+  },
+
+  async getInstrument(id: string): Promise<Instrument> {
+    return request<Instrument>(`/instruments/${id}`);
+  },
+
+  async createInstrument(model: InstrumentModel): Promise<void> {
+    return request<void>('/instruments', {
+      method: 'POST',
+      body: JSON.stringify(model),
+    });
+  },
+
+  async updateInstrument(id: string, model: InstrumentModel): Promise<void> {
+    return request<void>(`/instruments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(model),
+    });
   },
 
   async createPortfolio(payload: { name: string; reportingCurrencyId: string; brokerId: string }) {
