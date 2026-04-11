@@ -139,14 +139,17 @@ public class SyncTbankPricesCommandHandler(
 
         var points = loadedPoints.ToList();
         var instrumentIds = points.Select(x => x.InstrumentId).Distinct().ToArray();
-        var sourceDateValues = points
-            .Select(x => x.Date.ToDateTime(TimeOnly.MinValue).Date)
+        var sourceDates = points
+            .Select(x => x.Date)
             .Distinct()
+            .OrderBy(x => x)
             .ToArray();
+        var minSourceDateUtc = ToUtcDateTime(sourceDates[0]);
+        var maxSourceDateExclusiveUtc = ToUtcDateTime(sourceDates[^1].AddDays(1));
 
         var existing = await context.Prices
             .Where(x => instrumentIds.Contains(x.InstrumentId))
-            .Where(x => sourceDateValues.Contains(x.Date.Date))
+            .Where(x => x.Date >= minSourceDateUtc && x.Date < maxSourceDateExclusiveUtc)
             .Where(x => x.Provider.ToUpper() == provider)
             .ToListAsync(cancellationToken);
 
@@ -174,7 +177,7 @@ public class SyncTbankPricesCommandHandler(
                 instrumentState.Exchange,
                 instrumentState.CurrencyId,
                 listingHistories,
-                point.Date.ToDateTime(TimeOnly.MinValue));
+                ToUtcDateTime(point.Date));
             var existingKey = new { point.InstrumentId, point.Date };
             if (existingByInstrumentDate.TryGetValue(existingKey, out var price))
             {
@@ -191,7 +194,7 @@ public class SyncTbankPricesCommandHandler(
             {
                 Id = Guid.NewGuid(),
                 InstrumentId = point.InstrumentId,
-                Date = point.Date.ToDateTime(TimeOnly.MinValue),
+                Date = ToUtcDateTime(point.Date),
                 Value = point.Value,
                 CurrencyId = instrumentState.CurrencyId,
                 SourceCurrencyId = activeListing.CurrencyId,
@@ -392,6 +395,11 @@ public class SyncTbankPricesCommandHandler(
 
         var normalized = body.Replace(Environment.NewLine, " ").Trim();
         return normalized.Length <= 180 ? normalized : normalized[..180];
+    }
+
+    private static DateTime ToUtcDateTime(DateOnly date)
+    {
+        return DateTime.SpecifyKind(date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
     }
 
     private sealed record InstrumentCandidate(Guid Id, string Figi, string CurrencyId, string Ticker, string Isin, string? Exchange);
