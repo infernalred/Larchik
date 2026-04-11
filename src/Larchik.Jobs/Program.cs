@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 var bootstrapEnvironment =
@@ -51,6 +53,15 @@ try
             services.AddBackgroundJobs(context.Configuration);
         })
         .Build();
+
+    var options = host.Services.GetRequiredService<IOptionsMonitor<BackgroundJobsOptions>>().CurrentValue;
+    var startupLogger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("JobsHost");
+    startupLogger.LogInformation(
+        "Jobs host started. Waiting for timers. BackgroundJobs enabled: {Enabled}. Scheduler poll: {SchedulerPollSeconds}s. Executor poll: {ExecutorPollSeconds}s. Batch size: {ExecutorBatchSize}.",
+        options.Enabled,
+        options.SchedulerPollSeconds,
+        options.ExecutorPollSeconds,
+        options.ExecutorBatchSize);
 
     await host.RunAsync();
 }

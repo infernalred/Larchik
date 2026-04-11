@@ -25,7 +25,7 @@
       },
       "gridPos": {
         "h": 12,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 0
       },
@@ -47,12 +47,49 @@
             "uid": "loki"
           },
           "editorMode": "builder",
-          "expr": "{service=~\"larchik-api|larchik-jobs\"}",
+          "expr": "{service=\"larchik-api\"}",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Larchik Logs",
+      "title": "API Logs",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "builder",
+          "expr": "{service=\"larchik-jobs\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Jobs Logs",
       "type": "logs"
     }
   ],

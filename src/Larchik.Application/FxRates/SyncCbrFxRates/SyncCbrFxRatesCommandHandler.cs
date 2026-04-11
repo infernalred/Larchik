@@ -84,6 +84,19 @@ public class SyncCbrFxRatesCommandHandler(
             .Where(x => x.Date >= asOfUtc && x.Date < nextDayUtc && x.Source == "CBR")
             .ToListAsync(cancellationToken);
 
+        foreach (var existingRate in existing)
+        {
+            if (existingRate.Date.Kind != DateTimeKind.Utc)
+            {
+                existingRate.Date = DateTime.SpecifyKind(existingRate.Date, DateTimeKind.Utc);
+            }
+
+            if (existingRate.CreatedAt.Kind != DateTimeKind.Utc)
+            {
+                existingRate.CreatedAt = DateTime.SpecifyKind(existingRate.CreatedAt, DateTimeKind.Utc);
+            }
+        }
+
         foreach (var rate in rates)
         {
             var match = existing.FirstOrDefault(x =>

@@ -18,13 +18,53 @@ public static class HttpContentReader
         {
             return await ReadWithFallbackEncoding(content, cancellationToken);
         }
+        catch (NotSupportedException)
+        {
+            return await ReadWithFallbackEncoding(content, cancellationToken);
+        }
     }
 
     private static async Task<string> ReadWithFallbackEncoding(HttpContent content, CancellationToken cancellationToken)
     {
         var bytes = await content.ReadAsByteArrayAsync(cancellationToken);
-        using var stream = new MemoryStream(bytes, writable: false);
-        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        return await reader.ReadToEndAsync(cancellationToken);
+
+        foreach (var encoding in GetFallbackEncodings(content))
+        {
+            try
+            {
+                return encoding.GetString(bytes);
+            }
+            catch (ArgumentException)
+            {
+                // Try next fallback.
+            }
+        }
+
+        return Encoding.UTF8.GetString(bytes);
+    }
+
+    private static IEnumerable<Encoding> GetFallbackEncodings(HttpContent content)
+    {
+        var charSet = content.Headers.ContentType?.CharSet;
+        if (!string.IsNullOrWhiteSpace(charSet))
+        {
+            Encoding? declaredEncoding = null;
+            try
+            {
+                declaredEncoding = Encoding.GetEncoding(charSet.Trim().Trim('"'));
+            }
+            catch (ArgumentException)
+            {
+                declaredEncoding = null;
+            }
+
+            if (declaredEncoding is not null)
+            {
+                yield return declaredEncoding;
+            }
+        }
+
+        yield return Encoding.UTF8;
+        yield return Encoding.GetEncoding(1251);
     }
 }
