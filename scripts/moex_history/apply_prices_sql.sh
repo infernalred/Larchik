@@ -72,14 +72,20 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 
 for ((year = FROM_YEAR; year <= TO_YEAR; year++)); do
-  sql_file="${SQL_DIR}/prices_${year}.sql"
-  if [[ ! -f "$sql_file" ]]; then
-    echo "Skip ${year}: file not found (${sql_file})" >&2
+  shopt -s nullglob
+  sql_files=("${SQL_DIR}/prices_${year}.sql" "${SQL_DIR}/prices_${year}_"*.sql)
+  shopt -u nullglob
+
+  if [[ "${#sql_files[@]}" -eq 0 ]]; then
+    echo "Skip ${year}: no files found for prices_${year}*.sql in ${SQL_DIR}" >&2
     continue
   fi
 
-  echo "Applying ${sql_file}" >&2
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$sql_file"
+  for sql_file in "${sql_files[@]}"; do
+    [[ -f "$sql_file" ]] || continue
+    echo "Applying ${sql_file}" >&2
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$sql_file"
+  done
 done
 
 echo "Done." >&2

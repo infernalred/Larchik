@@ -266,13 +266,30 @@ WITH src (figi, trade_date, price) AS (
 ),
 resolved AS (
     SELECT
-        i.id AS instrument_id,
+        inst.id AS instrument_id,
         s.trade_date,
         s.price::numeric(18,4) AS price,
-        i.currency_id,
-        md5(i.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
+        inst.currency_id,
+        md5(inst.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
     FROM src s
-    JOIN instruments i ON upper(i.figi) = s.figi
+    JOIN LATERAL (
+        SELECT i.id, i.currency_id
+        FROM instruments i
+        LEFT JOIN instrument_aliases ia ON ia.instrument_id = i.id
+        WHERE upper(coalesce(i.figi, '')) = upper(s.figi)
+           OR upper(i.ticker) = upper(s.figi)
+           OR upper(coalesce(i.isin, '')) = upper(s.figi)
+           OR upper(coalesce(ia.normalized_alias_code, '')) = upper(s.figi)
+        ORDER BY
+            CASE
+                WHEN upper(coalesce(i.figi, '')) = upper(s.figi) THEN 1
+                WHEN upper(i.ticker) = upper(s.figi) THEN 2
+                WHEN upper(coalesce(i.isin, '')) = upper(s.figi) THEN 3
+                ELSE 4
+            END,
+            i.created_at
+        LIMIT 1
+    ) inst ON true
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
@@ -817,15 +834,30 @@ WITH src (db_code, trade_date, price) AS (
 ),
 resolved AS (
     SELECT
-        i.id AS instrument_id,
+        inst.id AS instrument_id,
         s.trade_date,
         s.price::numeric(18,4) AS price,
-        i.currency_id,
-        md5(i.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
+        inst.currency_id,
+        md5(inst.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
     FROM src s
-    JOIN instruments i
-      ON upper(coalesce(i.figi, '')) = s.db_code
-      OR upper(i.ticker) = s.db_code
+    JOIN LATERAL (
+        SELECT i.id, i.currency_id
+        FROM instruments i
+        LEFT JOIN instrument_aliases ia ON ia.instrument_id = i.id
+        WHERE upper(coalesce(i.figi, '')) = upper(s.db_code)
+           OR upper(i.ticker) = upper(s.db_code)
+           OR upper(coalesce(i.isin, '')) = upper(s.db_code)
+           OR upper(coalesce(ia.normalized_alias_code, '')) = upper(s.db_code)
+        ORDER BY
+            CASE
+                WHEN upper(coalesce(i.figi, '')) = upper(s.db_code) THEN 1
+                WHEN upper(i.ticker) = upper(s.db_code) THEN 2
+                WHEN upper(coalesce(i.isin, '')) = upper(s.db_code) THEN 3
+                ELSE 4
+            END,
+            i.created_at
+        LIMIT 1
+    ) inst ON true
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
@@ -1750,15 +1782,30 @@ WITH src (db_code, trade_date, price) AS (
 ),
 resolved AS (
     SELECT
-        i.id AS instrument_id,
+        inst.id AS instrument_id,
         s.trade_date,
         s.price::numeric(18,4) AS price,
-        i.currency_id,
-        md5(i.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
+        inst.currency_id,
+        md5(inst.id::text || '|' || s.trade_date::text || '|TBANK') AS hash_key
     FROM src s
-    JOIN instruments i
-      ON upper(coalesce(i.figi, '')) = s.db_code
-      OR upper(i.ticker) = s.db_code
+    JOIN LATERAL (
+        SELECT i.id, i.currency_id
+        FROM instruments i
+        LEFT JOIN instrument_aliases ia ON ia.instrument_id = i.id
+        WHERE upper(coalesce(i.figi, '')) = upper(s.db_code)
+           OR upper(i.ticker) = upper(s.db_code)
+           OR upper(coalesce(i.isin, '')) = upper(s.db_code)
+           OR upper(coalesce(ia.normalized_alias_code, '')) = upper(s.db_code)
+        ORDER BY
+            CASE
+                WHEN upper(coalesce(i.figi, '')) = upper(s.db_code) THEN 1
+                WHEN upper(i.ticker) = upper(s.db_code) THEN 2
+                WHEN upper(coalesce(i.isin, '')) = upper(s.db_code) THEN 3
+                ELSE 4
+            END,
+            i.created_at
+        LIMIT 1
+    ) inst ON true
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
@@ -1784,4 +1831,3 @@ SET value = EXCLUDED.value,
     updated_at = now();
 
 COMMIT;
-

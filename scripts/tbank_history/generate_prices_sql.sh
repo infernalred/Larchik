@@ -129,8 +129,14 @@ write_year_sql() {
     fi
 
     echo "BEGIN;"
-    echo "WITH src (db_code, trade_date, price) AS ("
-    echo "    VALUES"
+    echo "CREATE TEMP TABLE stg_tbank_prices_src ("
+    echo "    db_code text NOT NULL,"
+    echo "    trade_date date NOT NULL,"
+    echo "    price numeric(18,8) NOT NULL"
+    echo ") ON COMMIT DROP;"
+    echo ""
+    echo "INSERT INTO stg_tbank_prices_src (db_code, trade_date, price)"
+    echo "VALUES"
 
     awk -F $'\t' -v total="$rows_count" '
       {
@@ -144,41 +150,107 @@ write_year_sql() {
     ' "$rows_file"
 
     cat <<SQL_TAIL
-),
-resolved AS (
+;
+
+CREATE TEMP TABLE stg_tbank_prices_resolved ON COMMIT DROP AS
+WITH resolved AS (
     SELECT
         i.id AS instrument_id,
-        s.trade_date,
-        s.price::numeric(18,4) AS price,
+        src.trade_date,
+        src.price::numeric(18,4) AS price,
         i.currency_id,
-        md5(i.id::text || '|' || s.trade_date::text || '|${PROVIDER}') AS hash_key
-    FROM src s
-    JOIN instruments i
-      ON upper(coalesce(i.figi, '')) = s.db_code
-      OR upper(i.ticker) = s.db_code
+        md5(i.id::text || '|' || src.trade_date::text || '|${PROVIDER}') AS hash_key
+    FROM stg_tbank_prices_src src
+    JOIN LATERAL (
+        SELECT instrument.*
+        FROM instruments instrument
+        WHERE upper(coalesce(instrument.figi, '')) = upper(src.db_code)
+           OR upper(coalesce(instrument.ticker, '')) = upper(src.db_code)
+           OR upper(coalesce(instrument.isin, '')) = upper(src.db_code)
+           OR EXISTS (
+               SELECT 1
+               FROM instrument_aliases ia
+               WHERE ia.instrument_id = instrument.id
+                 AND upper(ia.normalized_alias_code) = upper(src.db_code)
+           )
+        ORDER BY
+            CASE WHEN upper(coalesce(instrument.figi, '')) = upper(src.db_code) THEN 0 ELSE 1 END,
+            CASE WHEN upper(coalesce(instrument.ticker, '')) = upper(src.db_code) THEN 0 ELSE 1 END,
+            CASE WHEN upper(coalesce(instrument.isin, '')) = upper(src.db_code) THEN 0 ELSE 1 END,
+            instrument.created_at
+        LIMIT 1
+    ) i ON TRUE
 )
-INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
-    (
-        substr(hash_key, 1, 8) || '-' ||
-        substr(hash_key, 9, 4) || '-' ||
-        substr(hash_key, 13, 4) || '-' ||
-        substr(hash_key, 17, 4) || '-' ||
-        substr(hash_key, 21, 12)
-    )::uuid,
     instrument_id,
-    (trade_date::timestamp AT TIME ZONE 'UTC'),
+    trade_date,
     price,
     currency_id,
-    '${PROVIDER}',
-    now(),
-    now()
-FROM resolved
-ON CONFLICT (instrument_id, date, provider)
-DO UPDATE
-SET value = EXCLUDED.value,
-    currency_id = EXCLUDED.currency_id,
-    updated_at = now();
+    hash_key
+FROM resolved;
+
+WITH upserted AS (
+    INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
+    SELECT
+        (
+            substr(hash_key, 1, 8) || '-' ||
+            substr(hash_key, 9, 4) || '-' ||
+            substr(hash_key, 13, 4) || '-' ||
+            substr(hash_key, 17, 4) || '-' ||
+            substr(hash_key, 21, 12)
+        )::uuid,
+        instrument_id,
+        (trade_date::timestamp AT TIME ZONE 'UTC'),
+        price,
+        currency_id,
+        '${PROVIDER}',
+        now(),
+        now()
+    FROM stg_tbank_prices_resolved
+    ON CONFLICT (instrument_id, date, provider)
+    DO UPDATE
+    SET value = EXCLUDED.value,
+        currency_id = EXCLUDED.currency_id,
+        updated_at = now()
+    RETURNING instrument_id
+)
+SELECT
+    ${rows_count} AS expected_rows,
+    (SELECT count(*) FROM stg_tbank_prices_resolved) AS resolved_rows,
+    count(*) AS applied_rows
+FROM upserted;
+
+DO \$\$
+DECLARE
+    expected_rows integer := ${rows_count};
+    source_rows integer;
+    resolved_rows integer;
+    applied_rows integer;
+BEGIN
+    SELECT count(*) INTO source_rows FROM stg_tbank_prices_src;
+    SELECT count(*) INTO resolved_rows FROM stg_tbank_prices_resolved;
+    SELECT count(*)
+    INTO applied_rows
+    FROM prices p
+    JOIN stg_tbank_prices_resolved r
+      ON r.instrument_id = p.instrument_id
+     AND p.date = (r.trade_date::timestamp AT TIME ZONE 'UTC')
+     AND upper(p.provider) = '${PROVIDER}';
+
+    IF source_rows <> expected_rows THEN
+        RAISE EXCEPTION 'TBANK % validation failed: expected % source rows, got % in staging.', ${year}, expected_rows, source_rows;
+    END IF;
+
+    IF resolved_rows <> expected_rows THEN
+        RAISE EXCEPTION 'TBANK % validation failed: expected % resolved rows, got %.', ${year}, expected_rows, resolved_rows;
+    END IF;
+
+    IF applied_rows <> expected_rows THEN
+        RAISE EXCEPTION 'TBANK % validation failed: expected % applied rows, got %.', ${year}, expected_rows, applied_rows;
+    END IF;
+
+    RAISE NOTICE 'TBANK % validation passed: expected %, resolved %, applied %.', ${year}, expected_rows, resolved_rows, applied_rows;
+END \$\$;
 
 COMMIT;
 SQL_TAIL
@@ -305,7 +377,9 @@ select distinct upper(trim(figi)), upper(trim(figi))
 from instruments
 where figi is not null
   and btrim(figi) <> ''
-  and type in (1, 2, 3)
+  and type in (1, 2, 3, 4)
+  and is_trading = true
+  and upper(coalesce(price_source, '')) = 'TBANK'
 order by 1;
   " >"$figi_file"
 fi

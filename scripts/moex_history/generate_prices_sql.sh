@@ -14,7 +14,7 @@ Options:
   --out-dir <path>     Output directory for prices_<year>.sql
   --provider <name>    Provider value for prices.provider (default: MOEX)
   --base-url <url>     MOEX ISS base URL (default: https://iss.moex.com/iss)
-  --boards <csv>       Board priority list (default: TQBR,TQTF,TQIF,TQCB,TQOB)
+  --boards <csv>       Board priority list (default: TQBR,TQTF,TQIF,TQCB,TQOB,CETS,MTQR)
   --targets-file <path>
                        Explicit TSV file with request ticker, market, and
                        optional local DB ticker columns. When set, instruments
@@ -136,13 +136,23 @@ write_year_sql() {
     fi
 
     echo "BEGIN;"
-    echo "WITH src (ticker, trade_date, raw_price, trade_currency_id, face_value, face_currency_id, accrued_interest) AS ("
-    echo "    VALUES"
+    echo "CREATE TEMP TABLE stg_moex_prices_src ("
+    echo "    ticker text NOT NULL,"
+    echo "    trade_date date NOT NULL,"
+    echo "    raw_price numeric(18,8) NOT NULL,"
+    echo "    trade_currency_id text NULL,"
+    echo "    face_value numeric(18,8) NULL,"
+    echo "    face_currency_id text NULL,"
+    echo "    accrued_interest numeric(18,8) NULL"
+    echo ") ON COMMIT DROP;"
+    echo ""
+    echo "INSERT INTO stg_moex_prices_src (ticker, trade_date, raw_price, trade_currency_id, face_value, face_currency_id, accrued_interest)"
+    echo "VALUES"
 
     awk -F $'\t' -v total="$rows_count" '
       function sql_text(value,    escaped) {
         if (value == "") {
-          return "NULL"
+          return "NULL::text"
         }
         escaped = value
         gsub(/\047/, "\047\047", escaped)
@@ -151,7 +161,7 @@ write_year_sql() {
 
       function sql_numeric(value) {
         if (value == "") {
-          return "NULL"
+          return "NULL::numeric"
         }
         gsub(/,/, ".", value)
         return value
@@ -176,29 +186,49 @@ write_year_sql() {
     ' "$rows_file"
 
     cat <<SQL_TAIL
-),
-resolved_base AS (
+;
+
+CREATE TEMP TABLE stg_moex_prices_resolved ON COMMIT DROP AS
+WITH resolved_base AS (
     SELECT
         i.id AS instrument_id,
-        s.trade_date,
+        src.trade_date,
         i.type AS instrument_type,
-        s.raw_price,
+        src.raw_price,
         CASE
-            WHEN upper(coalesce(s.trade_currency_id, '')) IN ('SUR', 'RUR') THEN 'RUB'
-            WHEN nullif(upper(coalesce(s.trade_currency_id, '')), '') IS NULL THEN i.currency_id
-            ELSE upper(s.trade_currency_id)
+            WHEN upper(coalesce(src.trade_currency_id, '')) IN ('SUR', 'RUR') THEN 'RUB'
+            WHEN nullif(upper(coalesce(src.trade_currency_id, '')), '') IS NULL THEN i.currency_id
+            ELSE upper(src.trade_currency_id)
         END AS trade_currency_id,
-        s.face_value,
+        src.face_value,
         CASE
-            WHEN upper(coalesce(s.face_currency_id, '')) IN ('SUR', 'RUR') THEN 'RUB'
-            WHEN nullif(upper(coalesce(s.face_currency_id, '')), '') IS NULL THEN i.currency_id
-            ELSE upper(s.face_currency_id)
+            WHEN upper(coalesce(src.face_currency_id, '')) IN ('SUR', 'RUR') THEN 'RUB'
+            WHEN nullif(upper(coalesce(src.face_currency_id, '')), '') IS NULL THEN i.currency_id
+            ELSE upper(src.face_currency_id)
         END AS face_currency_id,
-        coalesce(s.accrued_interest, 0) AS accrued_interest,
+        coalesce(src.accrued_interest, 0) AS accrued_interest,
         i.currency_id,
-        md5(i.id::text || '|' || s.trade_date::text || '|${PROVIDER}') AS hash_key
-    FROM src s
-    JOIN instruments i ON upper(i.ticker) = s.ticker
+        md5(i.id::text || '|' || src.trade_date::text || '|${PROVIDER}') AS hash_key
+    FROM stg_moex_prices_src src
+    JOIN LATERAL (
+        SELECT instrument.*
+        FROM instruments instrument
+        WHERE upper(coalesce(instrument.ticker, '')) = upper(src.ticker)
+           OR upper(coalesce(instrument.isin, '')) = upper(src.ticker)
+           OR upper(coalesce(instrument.figi, '')) = upper(src.ticker)
+           OR EXISTS (
+               SELECT 1
+               FROM instrument_aliases ia
+               WHERE ia.instrument_id = instrument.id
+                 AND upper(ia.normalized_alias_code) = upper(src.ticker)
+           )
+        ORDER BY
+            CASE WHEN upper(coalesce(instrument.ticker, '')) = upper(src.ticker) THEN 0 ELSE 1 END,
+            CASE WHEN upper(coalesce(instrument.isin, '')) = upper(src.ticker) THEN 0 ELSE 1 END,
+            CASE WHEN upper(coalesce(instrument.figi, '')) = upper(src.ticker) THEN 0 ELSE 1 END,
+            instrument.created_at
+        LIMIT 1
+    ) i ON TRUE
 ),
 resolved AS (
     SELECT
@@ -263,28 +293,76 @@ resolved AS (
         LIMIT 1
     ) AS accrued_inverse ON true
 )
-INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
-    (
-        substr(hash_key, 1, 8) || '-' ||
-        substr(hash_key, 9, 4) || '-' ||
-        substr(hash_key, 13, 4) || '-' ||
-        substr(hash_key, 17, 4) || '-' ||
-        substr(hash_key, 21, 12)
-    )::uuid,
     instrument_id,
-    (trade_date::timestamp AT TIME ZONE 'UTC'),
+    trade_date,
     price,
     currency_id,
-    '${PROVIDER}',
-    now(),
-    now()
-FROM resolved
-ON CONFLICT (instrument_id, date, provider)
-DO UPDATE
-SET value = EXCLUDED.value,
-    currency_id = EXCLUDED.currency_id,
-    updated_at = now();
+    hash_key
+FROM resolved;
+
+WITH upserted AS (
+    INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
+    SELECT
+        (
+            substr(hash_key, 1, 8) || '-' ||
+            substr(hash_key, 9, 4) || '-' ||
+            substr(hash_key, 13, 4) || '-' ||
+            substr(hash_key, 17, 4) || '-' ||
+            substr(hash_key, 21, 12)
+        )::uuid,
+        instrument_id,
+        (trade_date::timestamp AT TIME ZONE 'UTC'),
+        price,
+        currency_id,
+        '${PROVIDER}',
+        now(),
+        now()
+    FROM stg_moex_prices_resolved
+    ON CONFLICT (instrument_id, date, provider)
+    DO UPDATE
+    SET value = EXCLUDED.value,
+        currency_id = EXCLUDED.currency_id,
+        updated_at = now()
+    RETURNING instrument_id
+)
+SELECT
+    ${rows_count} AS expected_rows,
+    (SELECT count(*) FROM stg_moex_prices_resolved) AS resolved_rows,
+    count(*) AS applied_rows
+FROM upserted;
+
+DO \$\$
+DECLARE
+    expected_rows integer := ${rows_count};
+    source_rows integer;
+    resolved_rows integer;
+    applied_rows integer;
+BEGIN
+    SELECT count(*) INTO source_rows FROM stg_moex_prices_src;
+    SELECT count(*) INTO resolved_rows FROM stg_moex_prices_resolved;
+    SELECT count(*)
+    INTO applied_rows
+    FROM prices p
+    JOIN stg_moex_prices_resolved r
+      ON r.instrument_id = p.instrument_id
+     AND p.date = (r.trade_date::timestamp AT TIME ZONE 'UTC')
+     AND upper(p.provider) = '${PROVIDER}';
+
+    IF source_rows <> expected_rows THEN
+        RAISE EXCEPTION 'MOEX % validation failed: expected % source rows, got % in staging.', ${year}, expected_rows, source_rows;
+    END IF;
+
+    IF resolved_rows <> expected_rows THEN
+        RAISE EXCEPTION 'MOEX % validation failed: expected % resolved rows, got %.', ${year}, expected_rows, resolved_rows;
+    END IF;
+
+    IF applied_rows <> expected_rows THEN
+        RAISE EXCEPTION 'MOEX % validation failed: expected % applied rows, got %.', ${year}, expected_rows, applied_rows;
+    END IF;
+
+    RAISE NOTICE 'MOEX % validation passed: expected %, resolved %, applied %.', ${year}, expected_rows, resolved_rows, applied_rows;
+END \$\$;
 
 COMMIT;
 SQL_TAIL
@@ -297,7 +375,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT_DIR="${SCRIPT_DIR}/sql"
 PROVIDER="MOEX"
 BASE_URL="https://iss.moex.com/iss"
-BOARDS_CSV="TQBR,TQTF,TQIF,TQCB,TQOB"
+BOARDS_CSV="TQBR,TQTF,TQIF,TQCB,TQOB,CETS,MTQR"
 PAGE_SIZE=100
 TARGETS_FILE=""
 
@@ -405,13 +483,16 @@ else
           upper(trim(ia.alias_code)) as alias_code,
           row_number() over (partition by ia.instrument_id order by ia.alias_code) as rn
       from instrument_aliases ia
+      join instruments i on i.id = ia.instrument_id
       where ia.alias_code is not null
         and btrim(ia.alias_code) <> ''
-        and upper(trim(ia.alias_code)) !~ '^[A-Z]{2}[A-Z0-9]{10}$'
+        and upper(trim(ia.alias_code)) <> upper(coalesce(i.isin, ''))
   )
   select distinct
          upper(trim(
              case
+               when i.type = 4 and ac.alias_code is not null
+                 then ac.alias_code
                when upper(trim(i.ticker)) ~ '^[A-Z]{2}[A-Z0-9]{10}$' and ac.alias_code is not null
                  then ac.alias_code
                else i.ticker
@@ -429,6 +510,8 @@ else
   where i.ticker is not null
     and btrim(i.ticker) <> ''
     and i.type in (1, 2, 3, 4)
+    and i.is_trading = true
+    and upper(coalesce(i.price_source, '')) = 'MOEX'
   order by 3;
   " >"$instruments_file"
 fi

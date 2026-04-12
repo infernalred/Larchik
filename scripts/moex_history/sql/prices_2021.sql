@@ -35722,7 +35722,25 @@ resolved AS (
         i.currency_id,
         md5(i.id::text || '|' || s.trade_date::text || '|MOEX') AS hash_key
     FROM src s
-    JOIN instruments i ON upper(i.ticker) = s.ticker
+    JOIN LATERAL (
+        SELECT instrument.*
+        FROM instruments instrument
+        WHERE upper(coalesce(instrument.ticker, '')) = s.ticker
+           OR upper(coalesce(instrument.isin, '')) = s.ticker
+           OR upper(coalesce(instrument.figi, '')) = s.ticker
+           OR EXISTS (
+               SELECT 1
+               FROM instrument_aliases ia
+               WHERE ia.instrument_id = instrument.id
+                 AND upper(ia.normalized_alias_code) = s.ticker
+           )
+        ORDER BY
+            CASE WHEN upper(coalesce(instrument.ticker, '')) = s.ticker THEN 0 ELSE 1 END,
+            CASE WHEN upper(coalesce(instrument.isin, '')) = s.ticker THEN 0 ELSE 1 END,
+            CASE WHEN upper(coalesce(instrument.figi, '')) = s.ticker THEN 0 ELSE 1 END,
+            instrument.created_at
+        LIMIT 1
+    ) i ON TRUE
 )
 INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
 SELECT
