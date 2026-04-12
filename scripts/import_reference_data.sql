@@ -11515,6 +11515,7 @@ WITH src (ticker, isin, name, type, currency_id, category_id, exchange, country,
         ('LQDT', 'RU000A1014L8', 'БПИФ Ликвидность УК ВИМ', 3, 'RUB', 22, 'TQTF', 'RU', NULL::numeric(18,4)),
         ('SU26233RMFS5', 'RU000A101F94', 'ОФЗ-ПД 26233 18/07/2035', 2, 'RUB', 14, 'TQOB', 'RU', NULL::numeric(18,4)),
         ('TGLD', 'RU000A101X50', 'БПИФ Т-Капитал ЗОЛОТО', 3, 'RUB', 22, 'TQTF', 'RU', NULL::numeric(18,4)),
+        ('TMOS', 'RU000A101X76', 'Т-Капитал Индекс МосБиржи', 3, 'RUB', 22, 'TQTF', 'RU', NULL::numeric(18,4)),
         ('SU26240RMFS0', 'RU000A103BR0', 'ОФЗ-ПД 26240 30/07/2036', 2, 'RUB', 14, 'TQOB', 'RU', NULL::numeric(18,4)),
         ('RU000A104DZ7', 'RU000A104DZ7', 'Сибнефтехимтрейд БО-02', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
         ('RU000A104ZK2', 'RU000A104ZK2', 'МВ ФИНАНС 001Р-03', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
@@ -11777,6 +11778,7 @@ WITH aliases(alias_code, normalized_alias_code, ticker, alias_id) AS (
         ('UGLD', 'UGLD', 'RU000A0JPP37', '8a1fbf0e-4244-4bbf-8121-0d0fdcb69e31'::uuid),
         ('DOMRF', 'DOMRF', 'RU000A0ZZFU5', '0c1d44c5-83c0-4f3b-9108-d442e2d9345f'::uuid),
         ('TGLD', 'TGLD', 'RU000A101X50', 'cc7ccefb-b028-4cbc-bf0c-46f6bd67aaf2'::uuid),
+        ('TMOS', 'TMOS', 'TMOS', 'c6ae7659-f7b6-451f-8f07-86f0d4c59f21'::uuid),
         ('SU29015RMFS3', 'SU29015RMFS3', 'RU000A1025A7', '55ce87b7-4587-4687-8588-e22db494f757'::uuid),
         ('SU26246RMFS7', 'SU26246RMFS7', 'RU000A108EE1', '7a2e10a4-a8a8-4d34-bb83-bb62db63b4cb'::uuid),
         ('SU26250RMFS9', 'SU26250RMFS9', 'RU000A10BVH7', 'edbd6e19-a5f9-4ba6-bfa8-84b786ea821f'::uuid),
@@ -12025,7 +12027,7 @@ updated_at = now();
 
 DO $$
 DECLARE
-    expected_instruments integer := 1947;
+    expected_instruments integer := 1948;
     actual_instruments integer;
     unresolved_codes text[];
 BEGIN
@@ -12046,6 +12048,7 @@ BEGIN
             ('RU000A1014L8'),
             ('RU000A101F94'),
             ('RU000A101X50'),
+            ('RU000A101X76'),
             ('RU000A1025A7'),
             ('RU000A103BR0'),
             ('RU000A104DZ7'),
