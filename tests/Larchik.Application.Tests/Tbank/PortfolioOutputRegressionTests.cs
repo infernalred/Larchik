@@ -28,6 +28,7 @@ public class PortfolioOutputRegressionTests
         AssertSummaryMatchesExpected(summary, expected);
         AssertCashMatchesExpected(summary, cash, expected.Cash);
         AssertPositionsMatchExpected(positions, expected.Positions);
+        AssertPositiveAverageCosts(positions);
         AssertOutputInvariants(summary);
 
         Assert.Equal("RUB", summary.ReportingCurrencyId);
@@ -58,6 +59,7 @@ public class PortfolioOutputRegressionTests
         AssertSummaryMatchesExpected(summary, expected);
         AssertCashMatchesExpected(summary, cash, expected.Cash);
         AssertPositionsMatchExpected(positions, expected.Positions);
+        AssertPositiveAverageCosts(positions);
         AssertOutputInvariants(summary);
 
         AssertPositionCurrency(positionMap, "T", "RUB", "RUB", "RUB");
@@ -233,6 +235,16 @@ public class PortfolioOutputRegressionTests
         Assert.Equal(
             Round2(summary.CashBase + summary.PositionsValueBase),
             Round2(summary.NavBase));
+    }
+
+    private static void AssertPositiveAverageCosts(
+        IReadOnlyList<TbankImportScenarioHarness.PositionSnapshotItem> positions)
+    {
+        Assert.All(
+            positions,
+            position => Assert.True(
+                position.AverageCost > 0m,
+                $"Position '{position.Ticker}' has non-positive average cost {position.AverageCost}."));
     }
 
     private static void AssertPositionCurrency(

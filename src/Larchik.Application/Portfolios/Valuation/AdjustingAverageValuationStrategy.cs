@@ -35,7 +35,7 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
                     qtyChange = -op.Quantity;
                     var avgBefore = position.Quantity != 0 ? -position.RollingCost / position.Quantity : 0;
                     realized = op.Quantity * op.Price - op.Fee - avgBefore * op.Quantity;
-                    costChange = op.Quantity * op.Price - op.Fee;
+                    costChange = avgBefore * op.Quantity;
                     break;
                 case OperationType.TransferIn:
                     qtyChange = op.Quantity;
@@ -62,6 +62,11 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
 
             position.Quantity += qtyChange;
             position.RollingCost += costChange;
+
+            if (position.Quantity == 0)
+            {
+                position.RollingCost = 0;
+            }
 
             if (realized != 0)
             {
