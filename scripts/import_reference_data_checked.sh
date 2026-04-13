@@ -46,24 +46,26 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 
 if [[ "$ALLOW_NON_EMPTY" != "1" ]]; then
-  read -r instruments_count aliases_count fx_count <<<"$(psql "$DATABASE_URL" -X -A -t -F ' ' -v ON_ERROR_STOP=1 -c "
+  read -r instruments_count aliases_count corporate_actions_count fx_count <<<"$(psql "$DATABASE_URL" -X -A -t -F ' ' -v ON_ERROR_STOP=1 -c "
 select
     (select count(*) from instruments),
     (select count(*) from instrument_aliases),
+    (select count(*) from instrument_corporate_actions),
     (select count(*) from fx_rates);")"
 
-  if [[ "${instruments_count:-0}" != "0" || "${aliases_count:-0}" != "0" || "${fx_count:-0}" != "0" ]]; then
-    echo "Preflight failed: expected empty instruments/instrument_aliases/fx_rates tables, got instruments=${instruments_count:-0}, aliases=${aliases_count:-0}, fx_rates=${fx_count:-0}." >&2
+  if [[ "${instruments_count:-0}" != "0" || "${aliases_count:-0}" != "0" || "${corporate_actions_count:-0}" != "0" || "${fx_count:-0}" != "0" ]]; then
+    echo "Preflight failed: expected empty instruments/instrument_aliases/instrument_corporate_actions/fx_rates tables, got instruments=${instruments_count:-0}, aliases=${aliases_count:-0}, corporate_actions=${corporate_actions_count:-0}, fx_rates=${fx_count:-0}." >&2
     exit 1
   fi
 fi
 
 psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f "${SCRIPT_DIR}/import_reference_data.sql"
 
-read -r final_instruments final_aliases final_fx <<<"$(psql "$DATABASE_URL" -X -A -t -F ' ' -v ON_ERROR_STOP=1 -c "
+read -r final_instruments final_aliases final_corporate_actions final_fx <<<"$(psql "$DATABASE_URL" -X -A -t -F ' ' -v ON_ERROR_STOP=1 -c "
 select
     (select count(*) from instruments),
     (select count(*) from instrument_aliases),
+    (select count(*) from instrument_corporate_actions),
     (select count(*) from fx_rates);")"
 
-echo "Reference import finished. instruments=${final_instruments:-0}, aliases=${final_aliases:-0}, fx_rates=${final_fx:-0}." >&2
+echo "Reference import finished. instruments=${final_instruments:-0}, aliases=${final_aliases:-0}, corporate_actions=${final_corporate_actions:-0}, fx_rates=${final_fx:-0}." >&2

@@ -11258,6 +11258,52 @@ where src.ticker = 'VEON'
          or i.ticker = 'VEONold'
   );
 
+INSERT INTO instrument_aliases (id, instrument_id, alias_code, normalized_alias_code)
+SELECT
+    '0d74d460-c5b2-4736-b993-6ac51e836f8b'::uuid,
+    i.id,
+    'US91822M1062',
+    'US91822M1062'
+FROM instruments i
+WHERE i.ticker = 'VEON'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM instrument_aliases ia
+      WHERE ia.normalized_alias_code = 'US91822M1062'
+  );
+
+INSERT INTO instrument_aliases (id, instrument_id, alias_code, normalized_alias_code)
+SELECT
+    '93393046-b9bc-4f19-b8db-0f0fb81fa537'::uuid,
+    i.id,
+    'VEONold',
+    'VEONOLD'
+FROM instruments i
+WHERE i.ticker = 'VEON'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM instrument_aliases ia
+      WHERE ia.normalized_alias_code = 'VEONOLD'
+  );
+
+INSERT INTO instrument_corporate_actions (id, instrument_id, type, factor, effective_date, note)
+SELECT
+    'b0af630e-7316-44a9-b2fd-81a56d0e22d8'::uuid,
+    i.id,
+    12,
+    0.04,
+    timestamptz '2023-03-09 00:00:00+00',
+    'System continuity: VEON ADR ratio change 1:25 on 2023-03-09'
+FROM instruments i
+WHERE i.ticker = 'VEON'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM instrument_corporate_actions c
+      WHERE c.instrument_id = i.id
+        AND c.type = 12
+        AND c.effective_date = timestamptz '2023-03-09 00:00:00+00'
+  );
+
 
 -- Source: scripts/moex_history/sql/report_2023_missing_instruments.sql
 
@@ -12035,6 +12081,8 @@ DECLARE
     expected_instruments integer := 1953;
     actual_instruments integer;
     unresolved_codes text[];
+    veon_alias_count integer;
+    veon_corporate_action_count integer;
 BEGIN
     SELECT count(*)
     INTO actual_instruments
@@ -12163,9 +12211,37 @@ BEGIN
             array_to_string(unresolved_codes, ', ');
     END IF;
 
+    SELECT count(*)
+    INTO veon_alias_count
+    FROM instrument_aliases ia
+    WHERE ia.normalized_alias_code IN ('VEONOLD', 'US91822M1062');
+
+    IF veon_alias_count <> 2 THEN
+        RAISE EXCEPTION
+            'Reference import validation failed: expected 2 VEON legacy aliases, got %.',
+            veon_alias_count;
+    END IF;
+
+    SELECT count(*)
+    INTO veon_corporate_action_count
+    FROM instrument_corporate_actions c
+    JOIN instruments i ON i.id = c.instrument_id
+    WHERE i.ticker = 'VEON'
+      AND c.type = 12
+      AND c.effective_date = timestamptz '2023-03-09 00:00:00+00'
+      AND c.factor = 0.04;
+
+    IF veon_corporate_action_count <> 1 THEN
+        RAISE EXCEPTION
+            'Reference import validation failed: expected VEON reverse split corporate action, got % matches.',
+            veon_corporate_action_count;
+    END IF;
+
     RAISE NOTICE
-        'Reference import validation passed. Instruments: %, unresolved required codes: 0.',
-        actual_instruments;
+        'Reference import validation passed. Instruments: %, unresolved required codes: 0, VEON aliases: %, VEON corporate actions: %.',
+        actual_instruments,
+        veon_alias_count,
+        veon_corporate_action_count;
 END $$;
 
 COMMIT;

@@ -26,6 +26,7 @@ BEGIN
 END $$;
 
 DELETE FROM prices;
+DELETE FROM instrument_corporate_actions;
 DELETE FROM instrument_aliases;
 DELETE FROM fx_rates;
 DELETE FROM instruments;
@@ -34,30 +35,35 @@ DO $$
 DECLARE
     prices_count bigint;
     aliases_count bigint;
+    corporate_actions_count bigint;
     fx_count bigint;
     instruments_count bigint;
 BEGIN
     SELECT count(*) INTO prices_count FROM prices;
     SELECT count(*) INTO aliases_count FROM instrument_aliases;
+    SELECT count(*) INTO corporate_actions_count FROM instrument_corporate_actions;
     SELECT count(*) INTO fx_count FROM fx_rates;
     SELECT count(*) INTO instruments_count FROM instruments;
 
     IF prices_count <> 0
         OR aliases_count <> 0
+        OR corporate_actions_count <> 0
         OR fx_count <> 0
         OR instruments_count <> 0 THEN
         RAISE EXCEPTION
-            'Reset validation failed: prices=%, aliases=%, fx_rates=%, instruments=%.',
+            'Reset validation failed: prices=%, aliases=%, corporate_actions=%, fx_rates=%, instruments=%.',
             prices_count,
             aliases_count,
+            corporate_actions_count,
             fx_count,
             instruments_count;
     END IF;
 
     RAISE NOTICE
-        'Reset validation passed. prices=%, aliases=%, fx_rates=%, instruments=%.',
+        'Reset validation passed. prices=%, aliases=%, corporate_actions=%, fx_rates=%, instruments=%.',
         prices_count,
         aliases_count,
+        corporate_actions_count,
         fx_count,
         instruments_count;
 END $$;
