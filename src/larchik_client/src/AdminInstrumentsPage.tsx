@@ -6,6 +6,7 @@ import {
   Chip,
   CircularProgress,
   IconButton,
+  Pagination,
   Paper,
   Snackbar,
   Stack,
@@ -63,7 +64,9 @@ export function AdminInstrumentsPage() {
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [searchInput, setSearchInput] = useState('');
+  const [countryInput, setCountryInput] = useState('');
   const [query, setQuery] = useState('');
+  const [country, setCountry] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Instrument | null>(null);
   const [loadingEditor, setLoadingEditor] = useState(false);
@@ -77,6 +80,10 @@ export function AdminInstrumentsPage() {
   const categoryMap = useMemo(() => {
     return new Map(categories.map((category) => [category.id, category.name]));
   }, [categories]);
+
+  const totalPages = useMemo(() => {
+    return pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0;
+  }, [pageSize, totalCount]);
 
   const loadCategories = useCallback(async () => {
     setCategoriesLoading(true);
@@ -105,7 +112,7 @@ export function AdminInstrumentsPage() {
   const loadInstruments = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.listAdminInstruments({ query, page, pageSize });
+      const data = await api.listAdminInstruments({ query, country, page, pageSize });
       setItems(data.items);
       setTotalCount(data.totalCount);
       if (data.page !== page) {
@@ -121,7 +128,7 @@ export function AdminInstrumentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, query, showToast]);
+  }, [country, page, pageSize, query, showToast]);
 
   useEffect(() => {
     void loadCategories();
@@ -135,10 +142,11 @@ export function AdminInstrumentsPage() {
     const timerId = window.setTimeout(() => {
       setPage(1);
       setQuery(searchInput.trim());
+      setCountry(countryInput.trim());
     }, 300);
 
     return () => window.clearTimeout(timerId);
-  }, [searchInput]);
+  }, [countryInput, searchInput]);
 
   useEffect(() => {
     void loadInstruments();
@@ -222,12 +230,21 @@ export function AdminInstrumentsPage() {
             </Stack>
           </Stack>
 
-          <TextField
-            label="Поиск по тикеру, названию, ISIN, FIGI, бирже или стране"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            fullWidth
-          />
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+            <TextField
+              label="Поиск по тикеру, названию, ISIN, FIGI или бирже"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              fullWidth
+            />
+            <TextField
+              label="Фильтр по стране"
+              value={countryInput}
+              onChange={(e) => setCountryInput(e.target.value)}
+              fullWidth
+              sx={{ maxWidth: { md: 280 } }}
+            />
+          </Stack>
 
           {loading || categoriesLoading || currenciesLoading || loadingEditor ? (
             <Stack sx={{ py: 4, alignItems: 'center' }}>
@@ -333,19 +350,47 @@ export function AdminInstrumentsPage() {
             </TableContainer>
           )}
 
-          <TablePagination
-            component="div"
-            count={totalCount}
-            page={Math.max(page - 1, 0)}
-            onPageChange={(_, nextPage) => setPage(nextPage + 1)}
-            rowsPerPage={pageSize}
-            onRowsPerPageChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setPage(1);
-            }}
-            rowsPerPageOptions={[10, 25, 50, 100]}
-            labelRowsPerPage="Строк на странице"
-          />
+          <Stack spacing={1.5}>
+            {totalPages > 1 && (
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Страница {page} из {totalPages}
+                </Typography>
+                <Pagination
+                  count={totalPages}
+                  page={page}
+                  onChange={(_, nextPage) => setPage(nextPage)}
+                  color="primary"
+                  shape="rounded"
+                  showFirstButton
+                  showLastButton
+                  size={isMobile ? 'small' : 'medium'}
+                  siblingCount={isMobile ? 0 : 1}
+                  boundaryCount={isMobile ? 1 : 2}
+                />
+              </Stack>
+            )}
+
+            <TablePagination
+              component="div"
+              count={totalCount}
+              page={Math.max(page - 1, 0)}
+              onPageChange={(_, nextPage) => setPage(nextPage + 1)}
+              rowsPerPage={pageSize}
+              onRowsPerPageChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              rowsPerPageOptions={[10, 25, 50, 100]}
+              labelRowsPerPage="Строк на странице"
+              showFirstButton
+              showLastButton
+            />
+          </Stack>
         </Stack>
       </Paper>
 

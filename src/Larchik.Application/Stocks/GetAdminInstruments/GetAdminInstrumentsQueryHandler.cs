@@ -23,14 +23,21 @@ public class GetAdminInstrumentsQueryHandler(LarchikContext context)
         var input = request.Query?.Trim();
         if (!string.IsNullOrWhiteSpace(input))
         {
-            var raw = input.ToUpperInvariant();
+            var pattern = $"%{input}%";
             query = query.Where(x =>
-                x.Ticker.ToUpper().Contains(raw) ||
-                x.Name.ToUpper().Contains(raw) ||
-                x.Isin.ToUpper().Contains(raw) ||
-                (x.Figi != null && x.Figi.ToUpper().Contains(raw)) ||
-                (x.Exchange != null && x.Exchange.ToUpper().Contains(raw)) ||
-                (x.Country != null && x.Country.ToUpper().Contains(raw)));
+                EF.Functions.ILike(x.Ticker, pattern) ||
+                EF.Functions.ILike(x.Name, pattern) ||
+                EF.Functions.ILike(x.Isin, pattern) ||
+                (x.Figi != null && EF.Functions.ILike(x.Figi, pattern)) ||
+                (x.Exchange != null && EF.Functions.ILike(x.Exchange, pattern)) ||
+                (x.Country != null && EF.Functions.ILike(x.Country, pattern)));
+        }
+
+        var country = request.Country?.Trim();
+        if (!string.IsNullOrWhiteSpace(country))
+        {
+            var countryPattern = $"%{country}%";
+            query = query.Where(x => x.Country != null && EF.Functions.ILike(x.Country, countryPattern));
         }
 
         var result = await query

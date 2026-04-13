@@ -5,4 +5,4 @@ using MediatR;
 
 namespace Larchik.Application.Stocks.GetAdminInstruments;
 
-public record GetAdminInstrumentsQuery(string? Query, PageQuery Paging) : IRequest<Result<PagedResult<InstrumentDto>>>;
+public record GetAdminInstrumentsQuery(string? Query, string? Country, PageQuery Paging) : IRequest<Result<PagedResult<InstrumentDto>>>;

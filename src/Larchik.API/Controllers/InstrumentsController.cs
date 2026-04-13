@@ -22,9 +22,10 @@ public class InstrumentsController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
     public async Task<ActionResult<PagedResult<InstrumentDto>>> ListAdmin(
         [FromQuery] string? query,
+        [FromQuery] string? country,
         [FromQuery] PageQuery paging)
     {
-        return HandleResult(await Mediator.Send(new GetAdminInstrumentsQuery(query, paging), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new GetAdminInstrumentsQuery(query, country, paging), HttpContext.RequestAborted));
     }
 
     [HttpGet]
