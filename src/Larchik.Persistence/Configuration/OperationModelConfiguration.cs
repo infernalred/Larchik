@@ -17,7 +17,8 @@ public class OperationModelConfiguration : IEntityTypeConfiguration<Operation>
         builder.Property(x => x.CreatedAt);
         builder.Property(x => x.UpdatedAt);
 
-        builder.HasIndex(x => new { x.PortfolioId, x.TradeDate });
+        builder.HasIndex(x => new { x.PortfolioId, x.TradeDate, x.CreatedAt });
+        builder.HasIndex(x => new { x.PortfolioId, x.InstrumentId, x.TradeDate });
         builder.HasIndex(x => new { x.InstrumentId, x.TradeDate });
         builder.HasIndex(x => new { x.PortfolioId, x.BrokerOperationKey })
             .IsUnique()

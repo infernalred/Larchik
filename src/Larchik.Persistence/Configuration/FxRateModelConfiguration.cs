@@ -14,6 +14,7 @@ public class FxRateModelConfiguration : IEntityTypeConfiguration<FxRate>
         builder.Property(x => x.Rate).HasPrecision(18, 6);
         builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd();
 
+        builder.HasIndex(x => new { x.Source, x.Date });
         builder.HasIndex(x => new { x.BaseCurrencyId, x.QuoteCurrencyId, x.Date }).IsUnique();
     }
 }

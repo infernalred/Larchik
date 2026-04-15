@@ -9,6 +9,7 @@ public class InstrumentModelConfiguration : IEntityTypeConfiguration<Instrument>
     public void Configure(EntityTypeBuilder<Instrument> builder)
     {
         builder.HasIndex(x => x.Ticker);
+        builder.HasIndex(x => new { x.PriceSource, x.Type, x.IsTrading });
 
         builder.HasIndex(x => x.Isin).IsUnique();
 
