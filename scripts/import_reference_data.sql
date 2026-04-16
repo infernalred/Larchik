@@ -11612,6 +11612,7 @@ WITH src (ticker, isin, name, type, currency_id, category_id, exchange, country,
         ('RU000A10BGU1', 'RU000A10BGU1', 'Первое кол.бюро НАО 001Р-07', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
         ('RU000A10BQV8', 'RU000A10BQV8', 'Инвест КЦ 001P-01', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
         ('RU000A10BU07', 'RU000A10BU07', 'Полипласт АО П02-БО-06', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
+        ('RU000A10ECX8', 'RU000A10ECX8', 'Полипласт АО П02-БО-14', 2, 'USD', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
         ('RU000A10BYZ3', 'RU000A10BYZ3', 'Медскан 001Р-01', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
         ('RU000A10CMQ5', 'RU000A10CMQ5', 'Новые технологии 001Р-08', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
         ('RU000A10CRC4', 'RU000A10CRC4', 'ГМК Нор.никель БО-001Р-14', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
@@ -11685,6 +11686,26 @@ WHERE NOT EXISTS (
     WHERE upper(dst.ticker) = upper(src.ticker)
        OR upper(coalesce(dst.isin, '')) = upper(src.isin)
 );
+
+-- Source: MOEX n97872 / issuehistory.aspx?code=RU000A10ECX8, verified on 2026-04-16
+-- Keep this issue consistent even if it was inserted earlier with incomplete data.
+UPDATE instruments
+SET
+    name = 'Полипласт АО П02-БО-14',
+    ticker = 'RU000A10ECX8',
+    isin = 'RU000A10ECX8',
+    figi = NULL,
+    type = 2,
+    currency_id = 'USD',
+    category_id = 14,
+    exchange = 'TQCB',
+    country = 'RU',
+    price = NULL,
+    is_trading = true,
+    updated_at = now(),
+    updated_by = '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid
+WHERE upper(coalesce(ticker, '')) = 'RU000A10ECX8'
+   OR upper(coalesce(isin, '')) = 'RU000A10ECX8';
 
 
 -- Source: scripts/moex_history/sql/instrument_name_fixes_from_broker.sql
@@ -12060,6 +12081,23 @@ WHERE NOT EXISTS (
     WHERE ia.normalized_alias_code = a.normalized_alias_code
 );
 
+INSERT INTO instrument_aliases (id, instrument_id, alias_code, normalized_alias_code)
+SELECT
+    'b1a8f5d1-2d91-4dd8-8b3d-e82b2e8f1f6b'::uuid,
+    i.id,
+    '4B02-15-06757-A-002P',
+    '4B02-15-06757-A-002P'
+FROM instruments i
+WHERE (
+        upper(coalesce(i.ticker, '')) = 'RU000A10ECX8'
+        OR upper(coalesce(i.isin, '')) = 'RU000A10ECX8'
+      )
+  AND NOT EXISTS (
+      SELECT 1
+      FROM instrument_aliases ia
+      WHERE ia.normalized_alias_code = '4B02-15-06757-A-002P'
+  );
+
 -- Backfill price source for imported reference instruments.
 UPDATE instruments
 SET price_source = CASE
@@ -12078,7 +12116,7 @@ updated_at = now();
 
 DO $$
 DECLARE
-    expected_instruments integer := 1953;
+    expected_instruments integer := 1954;
     actual_instruments integer;
     unresolved_codes text[];
     veon_alias_count integer;
@@ -12152,6 +12190,7 @@ BEGIN
             ('RU000A10BGU1'),
             ('RU000A10BQV8'),
             ('RU000A10BU07'),
+            ('RU000A10ECX8'),
             ('RU000A10BYZ3'),
             ('RU000A10CMQ5'),
             ('RU000A10CRC4'),
