@@ -342,6 +342,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             PositionsValueBase = positionsValueBase,
             RealizedBase = realizedBase,
             UnrealizedBase = positionsValueBase - costBasisBase,
+            PnlBase = cashBase + positionsValueBase - netInflowBase,
             NavBase = cashBase + positionsValueBase,
             ValuationMethod = request.Method ?? "adjustingAvg",
             Cash = cashDtos,

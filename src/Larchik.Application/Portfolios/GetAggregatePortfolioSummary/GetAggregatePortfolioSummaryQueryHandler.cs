@@ -164,6 +164,7 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
             PositionsValueBase = summaries.Sum(x => x.PositionsValueBase),
             RealizedBase = summaries.Sum(x => x.RealizedBase),
             UnrealizedBase = summaries.Sum(x => x.UnrealizedBase),
+            PnlBase = summaries.Sum(x => x.PnlBase),
             NavBase = summaries.Sum(x => x.NavBase),
             ValuationMethod = method,
             Cash = cash,

@@ -582,7 +582,7 @@ function PortfolioView({
 }) {
   const [range, setRange] = useState<PortfolioRange>('all');
   const visiblePoints = points.slice(-RANGE_LIMITS[range]);
-  const totalReturn = summary.navBase - summary.netInflowBase;
+  const totalReturn = summary.pnlBase;
 
   return (
     <Stack spacing={{ xs: 2, md: 3 }}>
@@ -631,7 +631,7 @@ function PortfolioView({
             </Typography>
             <Stack divider={<Divider flexItem />} spacing={0}>
               {[
-                { label: 'Доходность', value: totalReturn, color: totalReturn >= 0 ? 'success.main' : 'error.main' },
+                { label: 'Итоговый результат', value: totalReturn, color: totalReturn >= 0 ? 'success.main' : 'error.main' },
                 { label: 'Чистый поток', value: summary.netInflowBase },
                 { label: 'Пополнения', value: summary.grossDepositsBase },
                 { label: 'Выводы', value: summary.grossWithdrawalsBase },

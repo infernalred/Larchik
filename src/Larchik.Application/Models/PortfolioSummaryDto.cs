@@ -12,6 +12,7 @@ public class PortfolioSummaryDto
     public decimal PositionsValueBase { get; set; }
     public decimal RealizedBase { get; set; }
     public decimal UnrealizedBase { get; set; }
+    public decimal PnlBase { get; set; }
     public string? ValuationMethod { get; set; }
     public decimal NavBase { get; set; }
     public IReadOnlyCollection<CashBalanceDto> Cash { get; set; } = [];

@@ -89,6 +89,7 @@ export interface PortfolioSummary {
   positionsValueBase: number;
   realizedBase: number;
   unrealizedBase: number;
+  pnlBase: number;
   navBase: number;
   valuationMethod: string;
   cash: CashBalance[];

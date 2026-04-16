@@ -298,6 +298,7 @@ internal sealed class PortfolioAnalyticsCalculator
             PositionsValueBase = positionsValueBase,
             RealizedBase = realizedBase,
             UnrealizedBase = positionsValueBase - costBasisBase,
+            PnlBase = cashBase + positionsValueBase - netInflowBase,
             NavBase = cashBase + positionsValueBase,
             ValuationMethod = valuationMethod,
             Cash = cashDtos,
