@@ -180,6 +180,7 @@ public class SyncMoexPricesCommandHandler(
         var tradingStatusByInstrument = await LoadTradingStates(
             instruments,
             aliasCodes,
+            listingHistories,
             boards,
             baseUrl,
             cancellationToken);
@@ -428,6 +429,7 @@ public class SyncMoexPricesCommandHandler(
     private async Task<Dictionary<Guid, bool>> LoadTradingStates(
         IReadOnlyCollection<InstrumentCandidate> instruments,
         IReadOnlyCollection<InstrumentAliasCandidate> aliases,
+        IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> listingHistories,
         IReadOnlyCollection<string> boards,
         string baseUrl,
         CancellationToken cancellationToken)
@@ -450,9 +452,22 @@ public class SyncMoexPricesCommandHandler(
             await semaphore.WaitAsync(cancellationToken);
             try
             {
+                var historyTickers = listingHistories.TryGetValue(instrument.Id, out var instrumentHistory)
+                    ? instrumentHistory
+                        .Select(x => x.Ticker)
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToArray()
+                    : [];
                 var codes = aliasesByInstrument.TryGetValue(instrument.Id, out var instrumentAliases)
-                    ? new[] { instrument.Ticker }.Concat(instrumentAliases).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
-                    : [instrument.Ticker];
+                    ? new[] { instrument.Ticker }
+                        .Concat(historyTickers)
+                        .Concat(instrumentAliases)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToArray()
+                    : new[] { instrument.Ticker }
+                        .Concat(historyTickers)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToArray();
 
                 var tradingState = await LoadTradingState(client, codes, boards, baseUrl, cancellationToken);
                 if (tradingState.IsSuccess && tradingState.Value.HasValue)
@@ -488,6 +503,8 @@ public class SyncMoexPricesCommandHandler(
         string baseUrl,
         CancellationToken cancellationToken)
     {
+        var resolvedState = (bool?)null;
+
         foreach (var code in codes.Where(x => !string.IsNullOrWhiteSpace(x)))
         {
             try
@@ -505,7 +522,12 @@ public class SyncMoexPricesCommandHandler(
                 {
                     if (parseResult.Value.HasValue)
                     {
-                        return parseResult;
+                        if (parseResult.Value.Value)
+                        {
+                            return parseResult;
+                        }
+
+                        resolvedState ??= false;
                     }
 
                     continue;
@@ -519,7 +541,7 @@ public class SyncMoexPricesCommandHandler(
             }
         }
 
-        return Result<bool?>.Success(null);
+        return Result<bool?>.Success(resolvedState);
     }
 
     private static Result<bool?> ParseBoardsTradingState(string json, IReadOnlyCollection<string> boards)

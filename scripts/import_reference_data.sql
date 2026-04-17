@@ -1431,7 +1431,7 @@ INSERT INTO stg_legacy_stocks (ticker, company_name, type_id, currency_id, secto
     ('BLI', 'Berkeley Lights', 'SHARE', 'USD', 'Healthcare', 'BBG00HJ8K617', 0.0, 1),
     ('STLA', 'Stellantis N.V.', 'SHARE', 'USD', 'Consumer', 'BBG0078ZLDG9', 0.0, 1),
     ('PACB', 'Pacific Biosciences of California', 'SHARE', 'USD', 'Healthcare', 'BBG000QKXH20', 0.0, 1),
-    ('T', 'AT&T', 'SHARE', 'USD', 'Telecom', 'BBG000BSJK37', 0.0, 1),
+    ('T@US', 'AT&T', 'SHARE', 'USD', 'Telecom', 'BBG000BSJK37', 0.0, 1),
     ('BOSS@DE', 'HUGO BOSS AG', 'SHARE', 'EUR', 'Consumer', 'BBG000BD0GG5', 0.0, 1),
     ('KMAZ', 'КАМАЗ', 'SHARE', 'RUB', 'Industrials', 'BBG000LNHHJ9', 0.0, 1),
     ('VSCO', 'Victorias Secret & Co.', 'SHARE', 'USD', 'Consumer', 'BBG01103B471', 0.0, 1),
@@ -11445,17 +11445,151 @@ SET isin = 'RU0009091573',
 WHERE upper(ticker) = 'TRNFP'
   AND upper(isin) = 'BBG00475KHX6';
 
+-- Keep the legacy AT&T row on a disambiguated ticker so the MOEX-issued
+-- T-Technologies security can use the real SECID/TQBR ticker `T`.
+UPDATE instruments
+SET ticker = 'T@US',
+    updated_at = now(),
+    updated_by = '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid
+WHERE upper(coalesce(isin, '')) = 'US00206R1023'
+  AND upper(ticker) = 'T';
+
 -- The T-Technologies instrument may already exist under the legacy ticker TCSG.
--- Correct the instrument metadata by ISIN so we do not collide with the
--- separate AT&T row that also uses ticker T in the legacy seed.
+-- Promote the live MOEX ticker `T` to be canonical and preserve `TCSG`
+-- as continuity metadata for historical imports and price backfills.
 UPDATE instruments
 SET name = 'Т-Технологии МКПАО ао',
+    ticker = 'T',
     country = 'RU',
     currency_id = 'RUB',
     exchange = 'TQBR',
+    is_trading = true,
     updated_at = now(),
     updated_by = '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid
 WHERE upper(isin) = 'RU000A107UL4';
+
+INSERT INTO instrument_aliases (id, instrument_id, alias_code, normalized_alias_code)
+SELECT
+    'b7606c41-0f06-4da5-9090-85ef77aebefd'::uuid,
+    i.id,
+    'TCSG',
+    'TCSG'
+FROM instruments i
+WHERE upper(i.isin) = 'RU000A107UL4'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM instrument_aliases ia
+      WHERE ia.normalized_alias_code = 'TCSG'
+  );
+
+INSERT INTO instrument_aliases (id, instrument_id, alias_code, normalized_alias_code)
+SELECT
+    '8a3b13be-313d-45c0-b2b2-31305c543819'::uuid,
+    i.id,
+    'BBG00QPYJ5H0',
+    'BBG00QPYJ5H0'
+FROM instruments i
+WHERE upper(i.isin) = 'RU000A107UL4'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM instrument_aliases ia
+      WHERE ia.normalized_alias_code = 'BBG00QPYJ5H0'
+  );
+
+DO $$
+DECLARE
+    t_technologies_id uuid;
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'instrument_listing_histories'
+    ) THEN
+        RETURN;
+    END IF;
+
+    SELECT id
+    INTO t_technologies_id
+    FROM instruments
+    WHERE upper(isin) = 'RU000A107UL4'
+    ORDER BY created_at, id
+    LIMIT 1;
+
+    IF t_technologies_id IS NULL THEN
+        RETURN;
+    END IF;
+
+    UPDATE instrument_listing_histories
+    SET effective_to = timestamptz '2024-11-27 00:00:00+00',
+        updated_at = now()
+    WHERE instrument_id = t_technologies_id
+      AND upper(ticker) = 'TCSG'
+      AND effective_from < timestamptz '2024-11-28 00:00:00+00'
+      AND (effective_to IS NULL OR effective_to > timestamptz '2024-11-27 00:00:00+00');
+
+    INSERT INTO instrument_listing_histories (
+        id,
+        instrument_id,
+        ticker,
+        figi,
+        currency_id,
+        exchange,
+        effective_from,
+        effective_to,
+        created_at,
+        updated_at
+    )
+    SELECT
+        '9b23d89e-7725-4b5f-9f07-90fc08f0a184'::uuid,
+        t_technologies_id,
+        'TCSG',
+        'BBG00QPYJ5H0',
+        'RUB',
+        'TQBR',
+        timestamptz '1900-01-01 00:00:00+00',
+        timestamptz '2024-11-27 00:00:00+00',
+        now(),
+        now()
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM instrument_listing_histories h
+        WHERE h.instrument_id = t_technologies_id
+          AND upper(h.ticker) = 'TCSG'
+          AND h.effective_from = timestamptz '1900-01-01 00:00:00+00'
+    );
+
+    INSERT INTO instrument_listing_histories (
+        id,
+        instrument_id,
+        ticker,
+        figi,
+        currency_id,
+        exchange,
+        effective_from,
+        effective_to,
+        created_at,
+        updated_at
+    )
+    SELECT
+        '631a83ce-a8c8-4f18-b18f-467f50fc7198'::uuid,
+        t_technologies_id,
+        'T',
+        COALESCE((SELECT nullif(i.figi, '') FROM instruments i WHERE i.id = t_technologies_id), 'BBG00QPYJ5H0'),
+        'RUB',
+        'TQBR',
+        timestamptz '2024-11-28 00:00:00+00',
+        NULL,
+        now(),
+        now()
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM instrument_listing_histories h
+        WHERE h.instrument_id = t_technologies_id
+          AND upper(h.ticker) = 'T'
+          AND h.effective_from = timestamptz '2024-11-28 00:00:00+00'
+    );
+END $$;
 
 WITH src (name, ticker, isin, figi, type, currency_id, category_id, exchange, country, price) AS (
     VALUES
