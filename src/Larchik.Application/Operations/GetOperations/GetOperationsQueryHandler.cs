@@ -3,6 +3,7 @@ using Larchik.Application.Common.Paging;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
+using Larchik.Persistence.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,7 +19,12 @@ public class GetOperationsQueryHandler(LarchikContext context, IUserAccessor use
         var userId = userAccessor.GetUserId();
         var result = await context.Operations
             .AsNoTracking()
-            .Where(x => x.PortfolioId == request.PortfolioId && x.Portfolio != null && x.Portfolio.UserId == userId)
+            .Where(x =>
+                x.PortfolioId == request.PortfolioId &&
+                x.Portfolio != null &&
+                x.Portfolio.UserId == userId &&
+                x.Type != OperationType.Split &&
+                x.Type != OperationType.ReverseSplit)
             .OrderByDescending(x => x.TradeDate)
             .ThenByDescending(x => x.CreatedAt)
             .Select(x => new OperationDto

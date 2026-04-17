@@ -74,6 +74,10 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
   Crypto: 5,
 };
 
+function formatPercent(value: number): string {
+  return `${(value * 100).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+}
+
 function buildDisplayPositions(summary: PortfolioSummary): PositionHolding[] {
   const cashRows: PositionHolding[] = summary.cash.map((cash) => ({
     instrumentId: `cash:${cash.currencyId}`,
@@ -129,6 +133,18 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const portfolioPage = route;
   const displayPositions = summary ? buildDisplayPositions(summary) : [];
+  const currentSummary = viewMode === 'all' ? aggregateSummary : summary;
+  const annualizedReturnLabel = viewMode === 'all'
+    ? loadingAggregateSummary
+      ? 'Годовая доходность: считаем...'
+      : currentSummary?.annualizedReturnPct == null
+        ? 'Годовая доходность: пока недостаточно данных'
+        : `Годовая доходность: ${formatPercent(currentSummary.annualizedReturnPct)}`
+    : loadingSummary
+      ? 'Годовая доходность: считаем...'
+      : currentSummary?.annualizedReturnPct == null
+        ? 'Годовая доходность: пока недостаточно данных'
+        : `Годовая доходность: ${formatPercent(currentSummary.annualizedReturnPct)}`;
 
   const loadPortfolios = useCallback(async (preferredId?: string) => {
     const data = await api.listPortfolios();
@@ -588,6 +604,11 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
                     ? 'Создание и редактирование доступно только администраторам.'
                     : `Валюта отчета: ${currency}`}
                 </Typography>
+                {portfolioPage !== 'instruments' && (
+                  <Typography variant="body2" color="text.secondary">
+                    {annualizedReturnLabel}
+                  </Typography>
+                )}
               </Stack>
               <Stack spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>

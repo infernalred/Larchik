@@ -5,6 +5,10 @@ using Larchik.Application.Stocks.CreateStock;
 using Larchik.Application.Stocks.EditStock;
 using Larchik.Application.Stocks.GetAdminInstruments;
 using Larchik.Application.Stocks.GetInstrument;
+using Larchik.Application.Stocks.InstrumentCorporateActions.CreateInstrumentCorporateAction;
+using Larchik.Application.Stocks.InstrumentCorporateActions.DeleteInstrumentCorporateAction;
+using Larchik.Application.Stocks.InstrumentCorporateActions.EditInstrumentCorporateAction;
+using Larchik.Application.Stocks.InstrumentCorporateActions.GetInstrumentCorporateActions;
 using Larchik.Application.Stocks.SearchInstruments;
 using Larchik.Persistence.Constants;
 using MediatR;
@@ -64,5 +68,47 @@ public class InstrumentsController : BaseApiController
     public async Task<ActionResult<Unit>> EditInstrument(Guid id, [FromBody] InstrumentModel model)
     {
         return HandleResult(await Mediator.Send(new EditInstrumentCommand(id, model), HttpContext.RequestAborted));
+    }
+
+    [Authorize(Roles = $"{Roles.Admin}")]
+    [HttpGet("{id:guid}/corporate-actions")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<InstrumentCorporateActionDto>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    [ProducesResponseType((int)HttpStatusCode.Forbidden)]
+    public async Task<ActionResult<IReadOnlyCollection<InstrumentCorporateActionDto>>> ListCorporateActions(Guid id)
+    {
+        return HandleResult(await Mediator.Send(new GetInstrumentCorporateActionsQuery(id), HttpContext.RequestAborted));
+    }
+
+    [Authorize(Roles = $"{Roles.Admin}")]
+    [HttpPost("{id:guid}/corporate-actions")]
+    [ProducesResponseType(typeof(Guid), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    [ProducesResponseType((int)HttpStatusCode.Forbidden)]
+    public async Task<ActionResult<Guid>> CreateCorporateAction(Guid id, [FromBody] InstrumentCorporateActionModel model)
+    {
+        return HandleResult(await Mediator.Send(new CreateInstrumentCorporateActionCommand(id, model), HttpContext.RequestAborted));
+    }
+
+    [Authorize(Roles = $"{Roles.Admin}")]
+    [HttpPut("{id:guid}/corporate-actions/{actionId:guid}")]
+    [ProducesResponseType(typeof(Unit), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    [ProducesResponseType((int)HttpStatusCode.Forbidden)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<ActionResult<Unit>> EditCorporateAction(Guid id, Guid actionId, [FromBody] InstrumentCorporateActionModel model)
+    {
+        return HandleResult(await Mediator.Send(new EditInstrumentCorporateActionCommand(id, actionId, model), HttpContext.RequestAborted));
+    }
+
+    [Authorize(Roles = $"{Roles.Admin}")]
+    [HttpDelete("{id:guid}/corporate-actions/{actionId:guid}")]
+    [ProducesResponseType(typeof(Unit), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
+    [ProducesResponseType((int)HttpStatusCode.Forbidden)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<ActionResult<Unit>> DeleteCorporateAction(Guid id, Guid actionId)
+    {
+        return HandleResult(await Mediator.Send(new DeleteInstrumentCorporateActionCommand(id, actionId), HttpContext.RequestAborted));
     }
 }

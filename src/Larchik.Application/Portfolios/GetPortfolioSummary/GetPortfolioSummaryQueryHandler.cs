@@ -43,6 +43,8 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             .Where(x => instrumentIds.Contains(x.Id))
             .AsNoTracking()
             .ToDictionaryAsync(x => x.Id, cancellationToken);
+        var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
+        operations = InstrumentCorporateActionOperationMerger.Merge(operations, corporateActions, instruments).ToList();
 
         var prices = await context.Prices
             .AsNoTracking()
@@ -330,6 +332,14 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             });
         }
 
+        var navBase = cashBase + positionsValueBase;
+        var annualizedReturnPct = MoneyWeightedReturnCalculator.CalculateAnnualizedReturn(
+            operations,
+            data,
+            portfolio.ReportingCurrencyId,
+            navBase,
+            asOfDateTime);
+
         var summary = new PortfolioSummaryDto
         {
             Id = portfolio.Id,
@@ -342,8 +352,9 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             PositionsValueBase = positionsValueBase,
             RealizedBase = realizedBase,
             UnrealizedBase = positionsValueBase - costBasisBase,
-            PnlBase = cashBase + positionsValueBase - netInflowBase,
-            NavBase = cashBase + positionsValueBase,
+            PnlBase = navBase - netInflowBase,
+            AnnualizedReturnPct = annualizedReturnPct,
+            NavBase = navBase,
             ValuationMethod = request.Method ?? "adjustingAvg",
             Cash = cashDtos,
             Positions = positionDtos,

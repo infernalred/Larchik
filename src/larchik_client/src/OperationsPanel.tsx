@@ -69,8 +69,6 @@ const TYPE_LABELS: Record<OperationType, string> = {
   TransferOut: 'Перевод из',
   BondPartialRedemption: 'Частичное погашение',
   BondMaturity: 'Погашение',
-  Split: 'Сплит',
-  ReverseSplit: 'Обратный сплит',
   CashAdjustment: 'Движение денег',
 };
 

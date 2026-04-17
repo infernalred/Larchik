@@ -28,8 +28,9 @@ import EditIcon from '@mui/icons-material/Edit';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { api } from './api';
 import { getApiErrorMessage } from './error-utils';
+import { InstrumentCorporateActionsDialog } from './InstrumentCorporateActionsDialog';
 import { InstrumentEditorDialog } from './InstrumentEditorDialog';
-import { Category, Currency, Instrument, InstrumentModel } from './types';
+import { Category, Currency, Instrument, InstrumentCorporateAction, InstrumentCorporateActionModel, InstrumentModel } from './types';
 
 const TYPE_LABELS: Record<Instrument['type'], string> = {
   Equity: 'Акция',
@@ -71,6 +72,11 @@ export function AdminInstrumentsPage() {
   const [editing, setEditing] = useState<Instrument | null>(null);
   const [loadingEditor, setLoadingEditor] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [actionsDialogOpen, setActionsDialogOpen] = useState(false);
+  const [actionsInstrument, setActionsInstrument] = useState<Instrument | null>(null);
+  const [corporateActions, setCorporateActions] = useState<InstrumentCorporateAction[]>([]);
+  const [actionsLoading, setActionsLoading] = useState(false);
+  const [actionsSaving, setActionsSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>({ open: false, severity: 'success', message: '' });
 
   const showToast = useCallback((severity: ToastState['severity'], message: string) => {
@@ -191,6 +197,88 @@ export function AdminInstrumentsPage() {
     }
   };
 
+  const openCorporateActions = async (instrument: Instrument) => {
+    setActionsInstrument(instrument);
+    setActionsDialogOpen(true);
+    setActionsLoading(true);
+    try {
+      const data = await api.listInstrumentCorporateActions(instrument.id);
+      setCorporateActions(data);
+    } catch (error) {
+      setCorporateActions([]);
+      showToast('error', getApiErrorMessage(error, 'Не удалось загрузить корпоративные действия.'));
+    } finally {
+      setActionsLoading(false);
+    }
+  };
+
+  const reloadCorporateActions = useCallback(async () => {
+    if (!actionsInstrument) {
+      return;
+    }
+
+    const data = await api.listInstrumentCorporateActions(actionsInstrument.id);
+    setCorporateActions(data);
+  }, [actionsInstrument]);
+
+  const handleCreateCorporateAction = async (model: InstrumentCorporateActionModel) => {
+    if (!actionsInstrument) {
+      return;
+    }
+
+    setActionsSaving(true);
+    try {
+      await api.createInstrumentCorporateAction(actionsInstrument.id, model);
+      await reloadCorporateActions();
+      showToast('success', 'Корпоративное действие добавлено.');
+    } catch (error) {
+      showToast('error', getApiErrorMessage(error, 'Не удалось добавить корпоративное действие.'));
+      throw error;
+    } finally {
+      setActionsSaving(false);
+    }
+  };
+
+  const handleUpdateCorporateAction = async (id: string, model: InstrumentCorporateActionModel) => {
+    if (!actionsInstrument) {
+      return;
+    }
+
+    setActionsSaving(true);
+    try {
+      await api.updateInstrumentCorporateAction(actionsInstrument.id, id, model);
+      await reloadCorporateActions();
+      showToast('success', 'Корпоративное действие обновлено.');
+    } catch (error) {
+      showToast('error', getApiErrorMessage(error, 'Не удалось обновить корпоративное действие.'));
+      throw error;
+    } finally {
+      setActionsSaving(false);
+    }
+  };
+
+  const handleDeleteCorporateAction = async (id: string) => {
+    if (!actionsInstrument) {
+      return;
+    }
+
+    const confirmed = window.confirm('Удалить корпоративное действие? Портфели с этой бумагой будут пересчитаны.');
+    if (!confirmed) {
+      return;
+    }
+
+    setActionsSaving(true);
+    try {
+      await api.deleteInstrumentCorporateAction(actionsInstrument.id, id);
+      await reloadCorporateActions();
+      showToast('success', 'Корпоративное действие удалено.');
+    } catch (error) {
+      showToast('error', getApiErrorMessage(error, 'Не удалось удалить корпоративное действие.'));
+    } finally {
+      setActionsSaving(false);
+    }
+  };
+
   return (
     <>
       <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, backgroundImage: 'none' }}>
@@ -260,11 +348,16 @@ export function AdminInstrumentsPage() {
                         <Typography sx={{ fontWeight: 700 }}>{item.ticker}</Typography>
                         <Typography variant="body2">{item.name}</Typography>
                       </Stack>
-                      <Tooltip title="Редактировать">
-                        <IconButton size="small" onClick={() => void handleEdit(item.id)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <Stack direction="row" spacing={1}>
+                        <Button variant="outlined" size="small" onClick={() => void openCorporateActions(item)}>
+                          Сплиты
+                        </Button>
+                        <Tooltip title="Редактировать">
+                          <IconButton size="small" onClick={() => void handleEdit(item.id)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </Stack>
                     <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
                       <Chip size="small" label={TYPE_LABELS[item.type]} />
@@ -328,11 +421,16 @@ export function AdminInstrumentsPage() {
                         />
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title="Редактировать">
-                          <IconButton size="small" onClick={() => void handleEdit(item.id)}>
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                          <Button variant="outlined" size="small" onClick={() => void openCorporateActions(item)}>
+                            Сплиты
+                          </Button>
+                          <Tooltip title="Редактировать">
+                            <IconButton size="small" onClick={() => void handleEdit(item.id)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -410,6 +508,26 @@ export function AdminInstrumentsPage() {
           setEditing(null);
         }}
         onSubmit={handleSubmit}
+      />
+
+      <InstrumentCorporateActionsDialog
+        open={actionsDialogOpen}
+        instrument={actionsInstrument}
+        items={corporateActions}
+        loading={actionsLoading}
+        submitting={actionsSaving}
+        onClose={() => {
+          if (actionsSaving) {
+            return;
+          }
+
+          setActionsDialogOpen(false);
+          setActionsInstrument(null);
+          setCorporateActions([]);
+        }}
+        onCreate={handleCreateCorporateAction}
+        onUpdate={handleUpdateCorporateAction}
+        onDelete={handleDeleteCorporateAction}
       />
 
       <Snackbar

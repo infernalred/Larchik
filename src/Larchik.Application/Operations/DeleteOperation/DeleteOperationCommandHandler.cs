@@ -1,5 +1,6 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
+using Larchik.Application.Operations;
 using Larchik.Persistence.Context;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,10 @@ public class DeleteOperationCommandHandler(LarchikContext context, IUserAccessor
             .FirstOrDefaultAsync(o => o.Id == request.Id && o.Portfolio != null && o.Portfolio.UserId == userId, cancellationToken);
 
         if (op is null) return Result<Unit>.Failure("Not found");
+        if (OperationTypeRules.IsAdministrativeCorporateAction(op.Type))
+        {
+            return Result<Unit>.Failure("Split and reverse split must be managed as administrative corporate actions.");
+        }
 
         context.Operations.Remove(op);
         await context.SaveChangesAsync(cancellationToken);

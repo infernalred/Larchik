@@ -57,6 +57,7 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
             .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
+        var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
 
         var prices = await context.Prices
             .AsNoTracking()
@@ -95,9 +96,10 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
         foreach (var portfolio in portfolios)
         {
             var portfolioOperations = operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [];
+            var mergedOperations = InstrumentCorporateActionOperationMerger.Merge(portfolioOperations, corporateActions, instruments);
             var (netInflowBase, grossDepositsBase, grossWithdrawalsBase, cashBase, positionsValueBase, realizedBase, unrealizedBase) =
                 CalculatePortfolioMetrics(
-                    portfolioOperations,
+                    mergedOperations,
                     instruments,
                     data,
                     valuationService,

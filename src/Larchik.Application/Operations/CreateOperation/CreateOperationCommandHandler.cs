@@ -13,6 +13,11 @@ public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor
 {
     public async Task<Result<Guid>> Handle(CreateOperationCommand request, CancellationToken cancellationToken)
     {
+        if (OperationTypeRules.IsAdministrativeCorporateAction(request.Model.Type))
+        {
+            return Result<Guid>.Failure("Split and reverse split must be managed as administrative corporate actions.");
+        }
+
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
             .AsNoTracking()

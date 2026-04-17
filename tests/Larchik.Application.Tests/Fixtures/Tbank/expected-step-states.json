@@ -12,9 +12,9 @@
     "netInflowBase": 1037.97,
     "breakdown": {
       "Buy": 2,
-      "CashAdjustment": 1,
+      "Fee": 2,
       "Deposit": 2,
-      "Fee": 2
+      "CashAdjustment": 1
     },
     "cash": {
       "RUB": 2.82
@@ -46,10 +46,10 @@
     "netInflowBase": 5006.54,
     "breakdown": {
       "Buy": 7,
-      "CashAdjustment": 6,
-      "Deposit": 7,
       "Dividend": 1,
-      "Fee": 4
+      "Fee": 4,
+      "Deposit": 7,
+      "CashAdjustment": 6
     },
     "cash": {
       "RUB": 21.09,
@@ -108,19 +108,19 @@
     "skippedOperations": 0,
     "totalOperationsInDb": 150,
     "cashBase": 130.97,
-    "positionsValueBase": 3903841.08,
-    "navBase": 3903972.05,
+    "positionsValueBase": 3586499.76,
+    "navBase": 3586630.73,
     "realizedBase": 699.88,
-    "unrealizedBase": 3764931.64,
+    "unrealizedBase": 3447590.32,
     "netInflowBase": 136042.99,
     "breakdown": {
       "Buy": 68,
-      "CashAdjustment": 22,
-      "Deposit": 31,
+      "Sell": 2,
       "Dividend": 8,
       "Fee": 17,
-      "Sell": 2,
-      "Withdraw": 2
+      "Deposit": 31,
+      "Withdraw": 2,
+      "CashAdjustment": 22
     },
     "cash": {
       "RUB": 0.49,
@@ -240,10 +240,10 @@
       {
         "ticker": "VEON",
         "instrumentName": "VEON",
-        "quantity": 80.0,
+        "quantity": 3,
         "lastPrice": 49.59,
-        "marketValueBase": 329705.26,
-        "averageCost": 1.69,
+        "marketValueBase": 12363.95,
+        "averageCost": 45.19,
         "currencyId": "USD",
         "priceCurrencyId": "USD",
         "averageCostCurrencyId": "USD"
@@ -267,19 +267,19 @@
     "skippedOperations": 10,
     "totalOperationsInDb": 391,
     "cashBase": 325.86,
-    "positionsValueBase": 4842897.00,
-    "navBase": 4843222.86,
+    "positionsValueBase": 3800204.10,
+    "navBase": 3800529.96,
     "realizedBase": 5268.36,
-    "unrealizedBase": 4546045.82,
+    "unrealizedBase": 3503352.92,
     "netInflowBase": 272576.78,
     "breakdown": {
       "Buy": 133,
-      "CashAdjustment": 93,
-      "Deposit": 59,
+      "Sell": 13,
       "Dividend": 12,
       "Fee": 68,
-      "Sell": 13,
-      "Withdraw": 13
+      "Deposit": 59,
+      "Withdraw": 13,
+      "CashAdjustment": 93
     },
     "cash": {
       "EUR": 0.02,
@@ -444,10 +444,10 @@
       {
         "ticker": "VEON",
         "instrumentName": "VEON",
-        "quantity": 264.0,
+        "quantity": 11,
         "lastPrice": 49.59,
-        "marketValueBase": 1088027.37,
-        "averageCost": 0.92,
+        "marketValueBase": 45334.47,
+        "averageCost": 21.98,
         "currencyId": "USD",
         "priceCurrencyId": "USD",
         "averageCostCurrencyId": "USD"
@@ -467,9 +467,9 @@
   },
   {
     "fileName": "broker-report-2023-01-01-2023-12-31.xlsx",
-    "importedOperations": 294,
+    "importedOperations": 293,
     "skippedOperations": 0,
-    "totalOperationsInDb": 685,
+    "totalOperationsInDb": 684,
     "cashBase": 21679.79,
     "positionsValueBase": 4039434.02,
     "navBase": 4061113.80,
@@ -477,15 +477,14 @@
     "unrealizedBase": 3404309.23,
     "netInflowBase": 592614.49,
     "breakdown": {
-      "BondPartialRedemption": 2,
       "Buy": 196,
-      "CashAdjustment": 143,
-      "Deposit": 99,
+      "Sell": 21,
       "Dividend": 70,
       "Fee": 140,
-      "ReverseSplit": 1,
-      "Sell": 21,
-      "Withdraw": 13
+      "Deposit": 99,
+      "Withdraw": 13,
+      "BondPartialRedemption": 2,
+      "CashAdjustment": 143
     },
     "cash": {
       "EUR": 0.02,
@@ -873,7 +872,7 @@
     "fileName": "broker-report-2024-01-01-2024-12-31.xlsx",
     "importedOperations": 741,
     "skippedOperations": 4,
-    "totalOperationsInDb": 1426,
+    "totalOperationsInDb": 1425,
     "cashBase": 215.96,
     "positionsValueBase": 115132.89,
     "navBase": 115348.84,
@@ -881,16 +880,15 @@
     "unrealizedBase": 12186.77,
     "netInflowBase": -44840.52,
     "breakdown": {
-      "BondMaturity": 1,
-      "BondPartialRedemption": 17,
       "Buy": 271,
-      "CashAdjustment": 218,
-      "Deposit": 187,
+      "Sell": 144,
       "Dividend": 300,
       "Fee": 255,
-      "ReverseSplit": 1,
-      "Sell": 144,
-      "Withdraw": 32
+      "Deposit": 187,
+      "Withdraw": 32,
+      "BondPartialRedemption": 17,
+      "BondMaturity": 1,
+      "CashAdjustment": 218
     },
     "cash": {
       "EUR": 0.02,
@@ -1080,7 +1078,7 @@
     "fileName": "broker-report-2025-01-01-2025-12-31.xlsx",
     "importedOperations": 670,
     "skippedOperations": 0,
-    "totalOperationsInDb": 2096,
+    "totalOperationsInDb": 2095,
     "cashBase": 30661.55,
     "positionsValueBase": 931986.48,
     "navBase": 962648.03,
@@ -1088,16 +1086,15 @@
     "unrealizedBase": 30746.53,
     "netInflowBase": 650854.73,
     "breakdown": {
-      "BondMaturity": 2,
-      "BondPartialRedemption": 28,
       "Buy": 437,
-      "CashAdjustment": 311,
-      "Deposit": 270,
+      "Sell": 155,
       "Dividend": 516,
       "Fee": 344,
-      "ReverseSplit": 1,
-      "Sell": 155,
-      "Withdraw": 32
+      "Deposit": 270,
+      "Withdraw": 32,
+      "BondPartialRedemption": 28,
+      "BondMaturity": 2,
+      "CashAdjustment": 311
     },
     "cash": {
       "EUR": 0.02,
@@ -1881,7 +1878,7 @@
     "fileName": "broker-report-2026-01-01-2026-03-17.xlsx",
     "importedOperations": 277,
     "skippedOperations": 9,
-    "totalOperationsInDb": 2373,
+    "totalOperationsInDb": 2372,
     "cashBase": 11909.91,
     "positionsValueBase": 1160237.78,
     "navBase": 1172147.68,
@@ -1889,16 +1886,15 @@
     "unrealizedBase": 32109.20,
     "netInflowBase": 813623.41,
     "breakdown": {
-      "BondMaturity": 2,
-      "BondPartialRedemption": 29,
       "Buy": 542,
-      "CashAdjustment": 341,
-      "Deposit": 285,
+      "Sell": 163,
       "Dividend": 603,
       "Fee": 375,
-      "ReverseSplit": 1,
-      "Sell": 163,
-      "Withdraw": 32
+      "Deposit": 285,
+      "Withdraw": 32,
+      "BondPartialRedemption": 29,
+      "BondMaturity": 2,
+      "CashAdjustment": 341
     },
     "cash": {
       "EUR": 0.02,
@@ -2803,7 +2799,7 @@
     "fileName": "broker-report-2026-01-01-2026-03-24.xlsx",
     "importedOperations": 15,
     "skippedOperations": 286,
-    "totalOperationsInDb": 2388,
+    "totalOperationsInDb": 2387,
     "cashBase": 1182.46,
     "positionsValueBase": 1160237.78,
     "navBase": 1161420.23,
@@ -2811,16 +2807,15 @@
     "unrealizedBase": 32109.20,
     "netInflowBase": 836824.85,
     "breakdown": {
-      "BondMaturity": 2,
-      "BondPartialRedemption": 29,
       "Buy": 542,
-      "CashAdjustment": 345,
-      "Deposit": 287,
+      "Sell": 163,
       "Dividend": 611,
       "Fee": 376,
-      "ReverseSplit": 1,
-      "Sell": 163,
-      "Withdraw": 32
+      "Deposit": 287,
+      "Withdraw": 32,
+      "BondPartialRedemption": 29,
+      "BondMaturity": 2,
+      "CashAdjustment": 345
     },
     "cash": {
       "EUR": 0.02,

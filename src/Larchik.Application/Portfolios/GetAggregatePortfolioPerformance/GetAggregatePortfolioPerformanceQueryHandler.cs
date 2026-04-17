@@ -59,6 +59,7 @@ public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context
             .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
+        var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
 
         var prices = await context.Prices
             .AsNoTracking()
@@ -88,7 +89,10 @@ public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context
         var series = portfolios
             .SelectMany(portfolio => calculator.CalculatePerformance(
                 portfolio,
-                operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [],
+                InstrumentCorporateActionOperationMerger.Merge(
+                    operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [],
+                    corporateActions,
+                    instruments),
                 instruments,
                 data,
                 method,

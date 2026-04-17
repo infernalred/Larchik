@@ -286,6 +286,14 @@ internal sealed class PortfolioAnalyticsCalculator
             });
         }
 
+        var navBase = cashBase + positionsValueBase;
+        var annualizedReturnPct = MoneyWeightedReturnCalculator.CalculateAnnualizedReturn(
+            operations,
+            data,
+            baseCurrency,
+            navBase,
+            asOfDate);
+
         return new PortfolioSummaryDto
         {
             Id = portfolio.Id,
@@ -298,8 +306,9 @@ internal sealed class PortfolioAnalyticsCalculator
             PositionsValueBase = positionsValueBase,
             RealizedBase = realizedBase,
             UnrealizedBase = positionsValueBase - costBasisBase,
-            PnlBase = cashBase + positionsValueBase - netInflowBase,
-            NavBase = cashBase + positionsValueBase,
+            PnlBase = navBase - netInflowBase,
+            AnnualizedReturnPct = annualizedReturnPct,
+            NavBase = navBase,
             ValuationMethod = valuationMethod,
             Cash = cashDtos,
             Positions = positionDtos,

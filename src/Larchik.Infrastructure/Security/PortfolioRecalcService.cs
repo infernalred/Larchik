@@ -1,4 +1,5 @@
 using Larchik.Application.Contracts;
+using Larchik.Application.Helpers;
 using Larchik.Application.Portfolios.Valuation;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
@@ -46,6 +47,8 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
             .Where(x => instrumentIds.Contains(x.Id))
             .AsNoTracking()
             .ToDictionaryAsync(x => x.Id, cancellationToken);
+        var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
+        operations = InstrumentCorporateActionOperationMerger.Merge(operations, corporateActions, instruments).ToList();
 
         var prices = await context.Prices
             .AsNoTracking()

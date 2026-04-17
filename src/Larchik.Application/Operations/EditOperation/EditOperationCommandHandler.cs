@@ -13,12 +13,21 @@ public class EditOperationCommandHandler(LarchikContext context, IUserAccessor u
 {
     public async Task<Result<Unit>?> Handle(EditOperationCommand request, CancellationToken cancellationToken)
     {
+        if (OperationTypeRules.IsAdministrativeCorporateAction(request.Model.Type))
+        {
+            return Result<Unit>.Failure("Split and reverse split must be managed as administrative corporate actions.");
+        }
+
         var userId = userAccessor.GetUserId();
         var op = await context.Operations
             .Include(o => o.Portfolio)
             .FirstOrDefaultAsync(o => o.Id == request.Id && o.Portfolio != null && o.Portfolio.UserId == userId, cancellationToken);
 
         if (op is null) return null;
+        if (OperationTypeRules.IsAdministrativeCorporateAction(op.Type))
+        {
+            return Result<Unit>.Failure("Split and reverse split must be managed as administrative corporate actions.");
+        }
 
         var originalTradeDate = op.TradeDate;
         var instrumentId = request.Model.InstrumentId;

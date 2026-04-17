@@ -1,5 +1,5 @@
 {
-  "operationCount": 2380,
+  "operationCount": 2379,
   "cashBase": 2300.65,
   "positionsValueBase": 1193572.18,
   "navBase": 1195872.82,
@@ -7,16 +7,15 @@
   "unrealizedBase": 32082.60,
   "netInflowBase": 836824.85,
   "breakdown": {
-    "BondMaturity": 2,
-    "BondPartialRedemption": 29,
     "Buy": 545,
-    "CashAdjustment": 341,
-    "Deposit": 287,
+    "Sell": 163,
     "Dividend": 605,
     "Fee": 375,
-    "ReverseSplit": 1,
-    "Sell": 163,
-    "Withdraw": 32
+    "Deposit": 287,
+    "Withdraw": 32,
+    "BondPartialRedemption": 29,
+    "BondMaturity": 2,
+    "CashAdjustment": 341
   },
   "cash": {
     "EUR": 0.02,

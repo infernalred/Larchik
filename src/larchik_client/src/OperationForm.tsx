@@ -27,8 +27,6 @@ const TYPE_OPTIONS: { value: OperationType; label: string }[] = [
   { value: 'TransferOut', label: 'Перевод из' },
   { value: 'BondPartialRedemption', label: 'Частичное погашение облигации' },
   { value: 'BondMaturity', label: 'Полное погашение облигации' },
-  { value: 'Split', label: 'Сплит' },
-  { value: 'ReverseSplit', label: 'Обратный сплит' },
   { value: 'CashAdjustment', label: 'Движение денег' },
 ];
 
@@ -38,8 +36,6 @@ const INSTRUMENT_OPERATION_TYPES = new Set<OperationType>([
   'Dividend',
   'BondPartialRedemption',
   'BondMaturity',
-  'Split',
-  'ReverseSplit',
 ]);
 
 interface Props {
@@ -159,14 +155,8 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
     };
   }, [instrumentSearch, open, searchInstruments]);
 
-  const isSplitType = form.type === 'Split' || form.type === 'ReverseSplit';
   const isInstrumentType = INSTRUMENT_OPERATION_TYPES.has(form.type);
-  const quantityLabel = isSplitType ? 'Коэффициент' : 'Количество';
-  const quantityHelperText = isSplitType
-    ? '1:10 = 10, 10:1 = 0.1'
-    : isInstrumentType
-      ? undefined
-      : 'Для денежных операций можно оставить 0';
+  const quantityHelperText = isInstrumentType ? undefined : 'Для денежных операций можно оставить 0';
 
   const selectedInstrumentValue = useMemo(() => {
     if (!form.instrumentId) return null;
@@ -280,7 +270,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              label={quantityLabel}
+              label="Количество"
               type="number"
               value={form.quantity}
               onChange={(e) => update('quantity', Number(e.target.value))}
@@ -288,7 +278,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
               fullWidth
             />
             <TextField
-              label={isSplitType ? 'Цена/сумма (0)' : 'Цена/сумма'}
+              label="Цена/сумма"
               type="number"
               value={form.price}
               onChange={(e) => update('price', Number(e.target.value))}
@@ -297,7 +287,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
           </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
-              label={isSplitType ? 'Комиссия (0)' : 'Комиссия'}
+              label="Комиссия"
               type="number"
               value={form.fee}
               onChange={(e) => update('fee', Number(e.target.value))}

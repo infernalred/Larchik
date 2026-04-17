@@ -56,6 +56,7 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
             .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
+        var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
 
         var prices = await context.Prices
             .AsNoTracking()
@@ -85,7 +86,10 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
         var summaries = portfolios
             .Select(portfolio => calculator.CalculateSummary(
                 portfolio,
-                operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [],
+                InstrumentCorporateActionOperationMerger.Merge(
+                    operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [],
+                    corporateActions,
+                    instruments),
                 instruments,
                 data,
                 method,
@@ -152,6 +156,14 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
             .OrderByDescending(x => Math.Abs(x.RealizedBase))
             .ToList();
 
+        var navBase = summaries.Sum(x => x.NavBase);
+        var annualizedReturnPct = MoneyWeightedReturnCalculator.CalculateAnnualizedReturn(
+            operations,
+            data,
+            baseCurrency,
+            navBase,
+            asOfDateTime);
+
         return Result<PortfolioSummaryDto>.Success(new PortfolioSummaryDto
         {
             Id = Guid.Empty,
@@ -165,7 +177,8 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
             RealizedBase = summaries.Sum(x => x.RealizedBase),
             UnrealizedBase = summaries.Sum(x => x.UnrealizedBase),
             PnlBase = summaries.Sum(x => x.PnlBase),
-            NavBase = summaries.Sum(x => x.NavBase),
+            AnnualizedReturnPct = annualizedReturnPct,
+            NavBase = navBase,
             ValuationMethod = method,
             Cash = cash,
             Positions = positions,

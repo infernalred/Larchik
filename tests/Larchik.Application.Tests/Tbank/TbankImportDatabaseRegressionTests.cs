@@ -782,6 +782,42 @@ public class TbankImportDatabaseRegressionTests
     }
 
     [Fact]
+    public async Task PortfolioSummary_MoneyWeightedAnnualizedReturn_UsesExternalCashFlowsAndCurrentNav()
+    {
+        await using var harness = new TbankImportScenarioHarness();
+
+        var oneYearAgo = DateTimeOffset.UtcNow.AddYears(-1).AddDays(-2);
+        var today = DateTimeOffset.UtcNow;
+
+        await harness.CreateOperationAsync(new OperationModel(
+            InstrumentId: null,
+            Type: OperationType.Deposit,
+            Quantity: 1000m,
+            Price: 0m,
+            Fee: 0m,
+            CurrencyId: "RUB",
+            TradeDate: oneYearAgo,
+            SettlementDate: null,
+            Note: "initial deposit"));
+
+        await harness.CreateOperationAsync(new OperationModel(
+            InstrumentId: null,
+            Type: OperationType.CashAdjustment,
+            Quantity: 0m,
+            Price: 100m,
+            Fee: 0m,
+            CurrencyId: "RUB",
+            TradeDate: today,
+            SettlementDate: null,
+            Note: "profit adjustment"));
+
+        var summary = await harness.GetSummaryAsync();
+
+        Assert.NotNull(summary.AnnualizedReturnPct);
+        Assert.InRange(summary.AnnualizedReturnPct!.Value, 0.09m, 0.11m);
+    }
+
+    [Fact]
     public async Task ImportedTbankTradeFee_IsNotDoubleCountedWhenFeeOperationExists()
     {
         await using var harness = new TbankImportScenarioHarness();

@@ -47,6 +47,8 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             .Where(x => instrumentIds.Contains(x.Id))
             .AsNoTracking()
             .ToDictionaryAsync(x => x.Id, cancellationToken);
+        var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
+        operations = InstrumentCorporateActionOperationMerger.Merge(operations, corporateActions, instruments).ToList();
 
         var prices = await context.Prices
             .AsNoTracking()

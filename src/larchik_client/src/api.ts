@@ -5,6 +5,8 @@ import {
   Currency,
   ImportResult,
   Instrument,
+  InstrumentCorporateAction,
+  InstrumentCorporateActionModel,
   InstrumentLookup,
   InstrumentModel,
   Operation,
@@ -204,6 +206,30 @@ export const api = {
     return request<void>(`/instruments/${id}`, {
       method: 'PUT',
       body: JSON.stringify(model),
+    });
+  },
+
+  async listInstrumentCorporateActions(instrumentId: string): Promise<InstrumentCorporateAction[]> {
+    return request<InstrumentCorporateAction[]>(`/instruments/${instrumentId}/corporate-actions`);
+  },
+
+  async createInstrumentCorporateAction(instrumentId: string, model: InstrumentCorporateActionModel): Promise<string> {
+    return request<string>(`/instruments/${instrumentId}/corporate-actions`, {
+      method: 'POST',
+      body: JSON.stringify(model),
+    });
+  },
+
+  async updateInstrumentCorporateAction(instrumentId: string, id: string, model: InstrumentCorporateActionModel): Promise<void> {
+    return request<void>(`/instruments/${instrumentId}/corporate-actions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(model),
+    });
+  },
+
+  async deleteInstrumentCorporateAction(instrumentId: string, id: string): Promise<void> {
+    return request<void>(`/instruments/${instrumentId}/corporate-actions/${id}`, {
+      method: 'DELETE',
     });
   },
 

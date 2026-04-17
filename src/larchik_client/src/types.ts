@@ -1,5 +1,6 @@
 export type InstrumentType = 'Equity' | 'Bond' | 'Etf' | 'Currency' | 'Commodity' | 'Crypto';
 export type PriceSource = 'MOEX' | 'TBANK';
+export type CorporateActionType = 'Split' | 'ReverseSplit';
 
 export type OperationType =
   | 'Buy'
@@ -12,8 +13,6 @@ export type OperationType =
   | 'TransferOut'
   | 'BondPartialRedemption'
   | 'BondMaturity'
-  | 'Split'
-  | 'ReverseSplit'
   | 'CashAdjustment';
 
 export interface User {
@@ -78,6 +77,18 @@ export interface Instrument extends InstrumentModel {
   isTrading: boolean;
 }
 
+export interface InstrumentCorporateActionModel {
+  type: CorporateActionType;
+  factor: number;
+  effectiveDate: string;
+  note: string;
+}
+
+export interface InstrumentCorporateAction extends InstrumentCorporateActionModel {
+  id: string;
+  instrumentId: string;
+}
+
 export interface PortfolioSummary {
   id: string;
   name: string;
@@ -90,6 +101,7 @@ export interface PortfolioSummary {
   realizedBase: number;
   unrealizedBase: number;
   pnlBase: number;
+  annualizedReturnPct?: number | null;
   navBase: number;
   valuationMethod: string;
   cash: CashBalance[];
