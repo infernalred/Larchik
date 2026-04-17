@@ -31,6 +31,15 @@ Or run the combined SQL directly:
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f ./scripts/fix_missing_ofz_prices.sql
 ```
 
+## Targeted Полипласт backfill
+
+To backfill the missing MOEX history for `Полипласт АО П02-БО-14 (RU000A10ECX8)` without rerunning the full price import:
+
+```bash
+DATABASE_URL='postgresql://postgres:postgres@localhost:5432/larchik' \
+./scripts/apply_missing_poliplast_prices.sh
+```
+
 ## Regeneration
 
 `generate_prices_sql.sh` is still available for ad hoc MOEX history rebuilds, but the committed `sql/prices_<year>.sql` files are already the production-ready merged result.
