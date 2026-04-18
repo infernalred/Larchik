@@ -13,6 +13,7 @@ public class DeleteInstrumentCorporateActionCommandHandler(LarchikContext contex
     public async Task<Result<Unit>> Handle(DeleteInstrumentCorporateActionCommand request, CancellationToken cancellationToken)
     {
         var entity = await context.InstrumentCorporateActions
+            .AsTracking()
             .FirstOrDefaultAsync(x => x.Id == request.Id && x.InstrumentId == request.InstrumentId, cancellationToken);
 
         if (entity is null)

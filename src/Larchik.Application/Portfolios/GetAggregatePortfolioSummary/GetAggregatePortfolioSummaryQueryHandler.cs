@@ -12,6 +12,8 @@ namespace Larchik.Application.Portfolios.GetAggregatePortfolioSummary;
 public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IUserAccessor userAccessor)
     : IRequestHandler<GetAggregatePortfolioSummaryQuery, Result<PortfolioSummaryDto>>
 {
+    private const string DefaultValuationMethod = "adjustingAvg";
+
     public async Task<Result<PortfolioSummaryDto>> Handle(
         GetAggregatePortfolioSummaryQuery request,
         CancellationToken cancellationToken)
@@ -60,7 +62,7 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
 
         var prices = await context.Prices
             .AsNoTracking()
-            .Where(x => instrumentIds.Contains(x.InstrumentId))
+            .Where(x => instrumentIds.Contains(x.InstrumentId) && x.Date <= asOfDateTime)
             .ToListAsync(cancellationToken);
 
         var neededCurrencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { baseCurrency };
@@ -77,7 +79,7 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
         var fxRates = await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
 
         var data = new HistoricalDataLookup(prices, fxRates);
-        var method = request.Method ?? "adjustingAvg";
+        var method = request.Method ?? DefaultValuationMethod;
         var calculator = new PortfolioAnalyticsCalculator();
         var operationsByPortfolio = operations
             .GroupBy(x => x.PortfolioId)

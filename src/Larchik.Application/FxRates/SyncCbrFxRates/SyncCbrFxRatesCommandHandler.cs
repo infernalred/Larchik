@@ -81,6 +81,7 @@ public class SyncCbrFxRatesCommandHandler(
         }
 
         var existing = await context.FxRates
+            .AsTracking()
             .Where(x => x.Date >= asOfUtc && x.Date < nextDayUtc && x.Source == "CBR")
             .ToListAsync(cancellationToken);
 

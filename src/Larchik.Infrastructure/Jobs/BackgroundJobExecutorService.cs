@@ -61,6 +61,7 @@ public class BackgroundJobExecutorService(
         var context = scope.ServiceProvider.GetRequiredService<LarchikContext>();
 
         var expiredRuns = await context.JobRuns
+            .AsTracking()
             .Include(x => x.JobDefinition)
             .Where(x =>
                 x.Status == JobRunStatus.Running &&
@@ -169,6 +170,7 @@ public class BackgroundJobExecutorService(
             .ToDictionary(x => x.JobType, x => x, StringComparer.OrdinalIgnoreCase);
 
         var run = await context.JobRuns
+            .AsTracking()
             .Include(x => x.JobDefinition)
             .FirstOrDefaultAsync(x => x.Id == runId, cancellationToken);
 

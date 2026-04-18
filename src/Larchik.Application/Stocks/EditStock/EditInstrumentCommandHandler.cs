@@ -45,6 +45,7 @@ public class EditInstrumentCommandHandler(LarchikContext context, IUserAccessor 
     {
         var effectiveFrom = now.Date;
         var activeListing = await context.InstrumentListingHistories
+            .AsTracking()
             .Where(x => x.InstrumentId == instrument.Id && (!x.EffectiveTo.HasValue || x.EffectiveTo >= effectiveFrom))
             .OrderByDescending(x => x.EffectiveFrom)
             .FirstOrDefaultAsync(cancellationToken);

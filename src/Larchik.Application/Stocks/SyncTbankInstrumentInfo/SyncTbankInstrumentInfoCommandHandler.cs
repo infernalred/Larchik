@@ -81,6 +81,7 @@ public class SyncTbankInstrumentInfoCommandHandler(
         }
 
         var trackedInstruments = await context.Instruments
+            .AsTracking()
             .Where(x => candidates.Select(c => c.Id).Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
 

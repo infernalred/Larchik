@@ -26,6 +26,13 @@ public class LarchikContext(DbContextOptions<LarchikContext> options)
     public DbSet<JobRun> JobRuns { get; set; } = null!;
     public DbSet<PositionSnapshot> PositionSnapshots { get; set; } = null!;
     public DbSet<PortfolioSnapshot> PortfolioSnapshots { get; set; } = null!;
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

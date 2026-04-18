@@ -26,7 +26,6 @@ public static class ApplicationServiceExtensions
         {
             opt.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
-            opt.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
             opt.UseSnakeCaseNamingConvention();
         });
 

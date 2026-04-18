@@ -20,6 +20,7 @@ public class EditOperationCommandHandler(LarchikContext context, IUserAccessor u
 
         var userId = userAccessor.GetUserId();
         var op = await context.Operations
+            .AsTracking()
             .Include(o => o.Portfolio)
             .FirstOrDefaultAsync(o => o.Id == request.Id && o.Portfolio != null && o.Portfolio.UserId == userId, cancellationToken);
 

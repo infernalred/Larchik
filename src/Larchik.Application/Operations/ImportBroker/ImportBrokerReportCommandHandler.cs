@@ -233,6 +233,7 @@ public class ImportBrokerReportCommandHandler(
         {
             var (fromDate, toDate) = BrokerImportReconciliationHelper.GetManualCandidateWindow(operationsToReconcile);
             manualCandidates = await context.Operations
+                .AsTracking()
                 .Where(x =>
                     x.PortfolioId == portfolio.Id &&
                     (x.BrokerOperationKey == null || x.BrokerOperationKey.StartsWith("manual:v2:")) &&

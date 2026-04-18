@@ -186,6 +186,7 @@ public class SyncMoexPricesCommandHandler(
             cancellationToken);
 
         var trackedInstruments = await context.Instruments
+            .AsTracking()
             .Where(x => instrumentIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
 
@@ -244,6 +245,7 @@ public class SyncMoexPricesCommandHandler(
         var data = new HistoricalDataLookup([], fxRates);
 
         var existing = await context.Prices
+            .AsTracking()
             .Where(x => instrumentIds.Contains(x.InstrumentId))
             .Where(x => x.Date >= minSourceDateUtc && x.Date < maxSourceDateExclusiveUtc)
             .Where(x => x.Provider.ToUpper() == provider)

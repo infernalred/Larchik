@@ -12,6 +12,8 @@ namespace Larchik.Application.Portfolios.GetPortfolioSummary;
 public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccessor userAccessor)
     : IRequestHandler<GetPortfolioSummaryQuery, Result<PortfolioSummaryDto>?>
 {
+    private const string DefaultValuationMethod = "adjustingAvg";
+
     public async Task<Result<PortfolioSummaryDto>?> Handle(GetPortfolioSummaryQuery request, CancellationToken cancellationToken)
     {
         var userId = userAccessor.GetUserId();
@@ -48,7 +50,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
 
         var prices = await context.Prices
             .AsNoTracking()
-            .Where(x => instrumentIds.Contains(x.InstrumentId))
+            .Where(x => instrumentIds.Contains(x.InstrumentId) && x.Date <= asOfDateTime)
             .ToListAsync(cancellationToken);
 
         var neededCurrencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -251,7 +253,8 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
         }
 
         var valuationService = new ValuationService();
-        var valuation = valuationService.Evaluate(valuationOperations, request.Method, assumeSorted: true);
+        var method = request.Method ?? DefaultValuationMethod;
+        var valuation = valuationService.Evaluate(valuationOperations, method, assumeSorted: true);
         var positionCosts = valuation.Positions;
 
         var cashDtos = new List<CashBalanceDto>();
@@ -355,7 +358,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             PnlBase = navBase - netInflowBase,
             AnnualizedReturnPct = annualizedReturnPct,
             NavBase = navBase,
-            ValuationMethod = request.Method ?? "adjustingAvg",
+            ValuationMethod = method,
             Cash = cashDtos,
             Positions = positionDtos,
             RealizedByInstrument = realizedDtos

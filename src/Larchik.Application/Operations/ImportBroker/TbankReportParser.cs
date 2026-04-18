@@ -42,8 +42,9 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         {
             ParseRows(fileStream, fileName, parsed, errors);
         }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
+            logger.LogError(ex, "TBank import: failed to parse file {FileName}", fileName);
             return Task.FromResult(new BrokerReportParseResult([], [InvalidFormatMessage]));
         }
 
@@ -76,7 +77,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         var tradesCount = parsed.Count - beforeTrades;
 
         var beforeCash = parsed.Count;
-        ParseCash(rows, parsed, reportPeriodEnd);
+        ParseCash(rows, parsed, errors, reportPeriodEnd);
         var cashCount = parsed.Count - beforeCash;
 
         logger.LogInformation(
@@ -102,11 +103,11 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         }
 
         using var archive = new ZipArchive(fileStream, ZipArchiveMode.Read, leaveOpen: true);
-        var worksheetPath = GetFirstWorksheetPath(archive);
+        var sharedStrings = LoadSharedStrings(archive);
+        var worksheetPath = GetWorksheetPath(archive, sharedStrings);
         var worksheetEntry = archive.GetEntry(worksheetPath)
                              ?? throw new InvalidDataException($"Worksheet entry '{worksheetPath}' not found.");
 
-        var sharedStrings = LoadSharedStrings(archive);
         var ns = XNamespace.Get("http://schemas.openxmlformats.org/spreadsheetml/2006/main");
 
         using var worksheetStream = worksheetEntry.Open();
@@ -154,7 +155,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         return rows;
     }
 
-    private static string GetFirstWorksheetPath(ZipArchive archive)
+    private static string GetWorksheetPath(ZipArchive archive, IReadOnlyDictionary<int, string> sharedStrings)
     {
         var workbookEntry = archive.GetEntry("xl/workbook.xml")
                             ?? throw new InvalidDataException("Workbook definition not found.");
@@ -171,19 +172,44 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         var workbook = XDocument.Load(workbookStream);
         var rels = XDocument.Load(relsStream);
 
-        var relationshipId = workbook.Root?
+        var targetsByRelationshipId = rels.Root?
+            .Elements(packageNs + "Relationship")
+            .Where(rel => !string.IsNullOrWhiteSpace((string?)rel.Attribute("Id")))
+            .Select(rel => new
+            {
+                Id = (string?)rel.Attribute("Id"),
+                Target = (string?)rel.Attribute("Target")
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Id) && !string.IsNullOrWhiteSpace(x.Target))
+            .ToDictionary(x => x.Id!, x => x.Target!, StringComparer.Ordinal)
+            ?? [];
+
+        var worksheetPaths = workbook.Root?
             .Element(workbookNs + "sheets")?
             .Elements(workbookNs + "sheet")
             .Select(sheet => (string?)sheet.Attribute(officeNs + "id"))
-            .FirstOrDefault(id => !string.IsNullOrWhiteSpace(id));
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => targetsByRelationshipId.GetValueOrDefault(id!))
+            .Where(target => !string.IsNullOrWhiteSpace(target))
+            .Select(target => $"xl/{target!.TrimStart('/')}")
+            .ToArray()
+            ?? [];
 
-        var target = rels.Root?
-            .Elements(packageNs + "Relationship")
-            .Where(rel => string.Equals((string?)rel.Attribute("Id"), relationshipId, StringComparison.Ordinal))
-            .Select(rel => (string?)rel.Attribute("Target"))
-            .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
+        foreach (var worksheetPath in worksheetPaths)
+        {
+            var worksheetEntry = archive.GetEntry(worksheetPath);
+            if (worksheetEntry is null)
+            {
+                continue;
+            }
 
-        if (string.IsNullOrWhiteSpace(target))
+            if (WorksheetLooksLikeReport(worksheetEntry, sharedStrings))
+            {
+                return worksheetPath;
+            }
+        }
+
+        if (worksheetPaths.Length == 0)
         {
             var fallbackPath = archive.Entries
                 .Where(entry => entry.FullName.StartsWith("xl/worksheets/", StringComparison.OrdinalIgnoreCase)
@@ -196,7 +222,35 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             return fallbackPath ?? throw new InvalidDataException("Worksheet not found.");
         }
 
-        return $"xl/{target.TrimStart('/')}";
+        return worksheetPaths[0];
+    }
+
+    private static bool WorksheetLooksLikeReport(ZipArchiveEntry worksheetEntry, IReadOnlyDictionary<int, string> sharedStrings)
+    {
+        var ns = XNamespace.Get("http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+        using var worksheetStream = worksheetEntry.Open();
+        var worksheet = XDocument.Load(worksheetStream);
+
+        var values = worksheet.Root?
+            .Element(ns + "sheetData")?
+            .Elements(ns + "row")
+            .Take(200)
+            .SelectMany(row => row.Elements(ns + "c"))
+            .Select(cell => Normalize(GetCellValue(cell, sharedStrings, ns)))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToArray()
+            ?? [];
+
+        if (values.Length == 0)
+        {
+            return false;
+        }
+
+        var hasTradesMarker = values.Contains("номер сделки", StringComparer.Ordinal);
+        var hasCashSectionMarker = values.Contains("2. операции с денежными средствами", StringComparer.Ordinal);
+        var hasCashHeader = values.Contains("дата", StringComparer.Ordinal) && values.Contains("операция", StringComparer.Ordinal);
+
+        return hasTradesMarker || hasCashSectionMarker || hasCashHeader;
     }
 
     private static Dictionary<int, string> LoadSharedStrings(ZipArchive archive)
@@ -430,6 +484,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     private static void ParseCash(
         IReadOnlyList<ReportRow> rows,
         ICollection<ParsedOperation> parsed,
+        ICollection<string> errors,
         DateTime? reportPeriodEnd)
     {
         var headerRow = rows.FirstOrDefault(r => Normalize(r.GetString(1)) == "дата"
@@ -466,10 +521,17 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             if (string.IsNullOrWhiteSpace(dateText) && string.IsNullOrWhiteSpace(opText)) continue;
             if (string.IsNullOrWhiteSpace(opText)) continue;
             if (string.IsNullOrWhiteSpace(dateText)) continue;
+            if (IsCashLayoutMarker(opText, dateText)) continue;
 
             var timeText = layout.TimeColumn > 0 ? row.GetString(layout.TimeColumn) : null;
-            var tradeDate = ParseDateTime(dateText, timeText) ?? DateTime.UtcNow;
-            if (reportPeriodEnd.HasValue && tradeDate.Date > reportPeriodEnd.Value.Date)
+            var tradeDate = ParseDateTime(dateText, timeText);
+            if (tradeDate is null)
+            {
+                errors.Add($"Не удалось распарсить дату денежной операции '{opText}' в строке {row.RowNumber}");
+                continue;
+            }
+
+            if (reportPeriodEnd.HasValue && tradeDate.Value.Date > reportPeriodEnd.Value.Date)
             {
                 continue;
             }
@@ -483,7 +545,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             }
 
             var note = layout.NoteColumn > 0 ? row.GetString(layout.NoteColumn) : opText;
-            var corporateAction = TryParseCorporateAction(note, signedAmount, currentCurrency, tradeDate, opText);
+            var corporateAction = TryParseCorporateAction(note, signedAmount, currentCurrency, tradeDate.Value, opText);
             if (corporateAction is not null)
             {
                 parsed.Add(corporateAction);
@@ -504,8 +566,8 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
                 Price = mapped.Value.Amount,
                 Fee = 0,
                 CurrencyId = currentCurrency,
-                TradeDate = tradeDate,
-                SettlementDate = tradeDate,
+                TradeDate = tradeDate.Value,
+                SettlementDate = tradeDate.Value,
                 Note = string.IsNullOrWhiteSpace(note) ? opText : $"{opText}: {note}",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -725,7 +787,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     {
         if (string.IsNullOrWhiteSpace(dateText)) return null;
         var combined = string.IsNullOrWhiteSpace(timeText) ? dateText : $"{dateText} {timeText}";
-        return DateTime.TryParse(combined, RuCulture, DateTimeStyles.AssumeLocal, out var dt)
+        return DateTime.TryParse(combined, RuCulture, DateTimeStyles.None, out var dt)
             ? NormalizeImportedDate(dt)
             : null;
     }
@@ -734,7 +796,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
         var parts = text.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return DateTime.TryParse(parts.FirstOrDefault(), RuCulture, DateTimeStyles.AssumeLocal, out var dt)
+        return DateTime.TryParse(parts.FirstOrDefault(), RuCulture, DateTimeStyles.None, out var dt)
             ? NormalizeImportedDate(dt)
             : null;
     }
@@ -842,6 +904,23 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         char.IsDigit(normalizedValue[0]) &&
         normalizedValue[1] == '.';
 
+    private static bool IsCashLayoutMarker(string opText, string dateText)
+    {
+        var normalizedOperation = Normalize(opText);
+        var normalizedDate = Normalize(dateText);
+        var operationLooksLikeDate = DateTime.TryParse(opText, RuCulture, DateTimeStyles.None, out _);
+
+        return normalizedOperation is "операция" or "позиция" or "дата"
+               || normalizedOperation.StartsWith("операц", StringComparison.Ordinal)
+               || normalizedOperation.StartsWith("позиц", StringComparison.Ordinal)
+               || normalizedOperation.StartsWith("дат", StringComparison.Ordinal)
+               || normalizedDate == "дата"
+               || normalizedDate.StartsWith("дат", StringComparison.Ordinal)
+               || operationLooksLikeDate
+               || IsTradeSectionMarker(normalizedOperation)
+               || IsTradeSectionMarker(normalizedDate);
+    }
+
     private static string? NormalizeCurrency(string? currency)
     {
         if (string.IsNullOrWhiteSpace(currency)) return null;
@@ -852,13 +931,9 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     private static string? NormalizeCode(string? code) =>
         string.IsNullOrWhiteSpace(code) ? null : code.Trim().ToUpperInvariant();
 
-    private static DateTime NormalizeImportedDate(DateTime value) =>
-        value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => DateTime.SpecifyKind(value, DateTimeKind.Utc),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
+    // Broker report timestamps are wall-clock values from the report itself.
+    // We persist them as UTC without timezone conversion to keep trade dates stable across server locales.
+    private static DateTime NormalizeImportedDate(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
 
     private sealed record ReportRow(int RowNumber, IReadOnlyDictionary<int, string> Cells)
     {

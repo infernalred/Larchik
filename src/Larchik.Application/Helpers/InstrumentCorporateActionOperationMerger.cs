@@ -7,6 +7,7 @@ namespace Larchik.Application.Helpers;
 
 public static class InstrumentCorporateActionOperationMerger
 {
+    // Corporate actions are merged as synthetic end-of-day operations, after user/imported operations on the same date.
     private static readonly DateTime CorporateActionCreatedAt = new(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
 
     public static async Task<IReadOnlyList<InstrumentCorporateAction>> LoadAsync(

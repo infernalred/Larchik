@@ -148,6 +148,7 @@ public class SyncTbankPricesCommandHandler(
         var maxSourceDateExclusiveUtc = ToUtcDateTime(sourceDates[^1].AddDays(1));
 
         var existing = await context.Prices
+            .AsTracking()
             .Where(x => instrumentIds.Contains(x.InstrumentId))
             .Where(x => x.Date >= minSourceDateUtc && x.Date < maxSourceDateExclusiveUtc)
             .Where(x => x.Provider.ToUpper() == provider)

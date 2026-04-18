@@ -80,6 +80,7 @@ public class SyncPricesCommandHandler(LarchikContext context)
             .ToHashSet();
 
         var existing = await context.Prices
+            .AsTracking()
             .Where(x => instrumentIds.Contains(x.InstrumentId))
             .Where(x => instrumentPriceDates.Any(t =>
                 t.Item1 == x.InstrumentId &&

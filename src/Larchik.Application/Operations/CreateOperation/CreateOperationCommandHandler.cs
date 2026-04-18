@@ -5,12 +5,15 @@ using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Larchik.Application.Operations.CreateOperation;
 
 public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor userAccessor, IPortfolioRecalcService recalc)
     : IRequestHandler<CreateOperationCommand, Result<Guid>>
 {
+    private const string BrokerOperationKeyConstraintName = "ix_operations_portfolio_id_broker_operation_key";
+
     public async Task<Result<Guid>> Handle(CreateOperationCommand request, CancellationToken cancellationToken)
     {
         if (OperationTypeRules.IsAdministrativeCorporateAction(request.Model.Type))
@@ -21,24 +24,33 @@ public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
             .AsNoTracking()
-            .Include(x => x.Broker)
-            .FirstOrDefaultAsync(x => x.Id == request.PortfolioId && x.UserId == userId, cancellationToken);
+            .Where(x => x.Id == request.PortfolioId && x.UserId == userId)
+            .Select(x => new PortfolioIdentity(x.Id, x.Broker == null ? null : x.Broker.Code))
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (portfolio is null) return Result<Guid>.Failure("Portfolio not found");
 
-        var instrumentId = request.Model.InstrumentId;
         var requiresInstrument = OperationTypeRules.RequiresInstrument(request.Model.Type);
+        var instrumentId = requiresInstrument ? request.Model.InstrumentId : null;
         if (requiresInstrument && instrumentId is null)
         {
             return Result<Guid>.Failure("Instrument is required for selected operation type.");
         }
 
-        Instrument? instrument = null;
-        if (instrumentId is not null)
+        var currencyId = NormalizeCurrencyId(request.Model.CurrencyId);
+        if (currencyId is null)
+        {
+            return Result<Guid>.Failure("Currency must be a 3-letter code.");
+        }
+
+        InstrumentIdentity? instrument = null;
+        if (requiresInstrument && instrumentId is not null)
         {
             instrument = await context.Instruments
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == instrumentId.Value, cancellationToken);
+                .Where(x => x.Id == instrumentId.Value)
+                .Select(x => new InstrumentIdentity(x.Id, x.Isin, x.Ticker))
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (instrument is null)
             {
@@ -48,6 +60,10 @@ public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor
 
         var tradeDate = OperationInputNormalizer.NormalizeUtc(request.Model.TradeDate);
         var settlementDate = OperationInputNormalizer.NormalizeUtc(request.Model.SettlementDate) ?? tradeDate;
+        var now = DateTime.UtcNow;
+        var note = string.IsNullOrWhiteSpace(request.Model.Note)
+            ? null
+            : request.Model.Note.Trim();
 
         var entity = new Operation
         {
@@ -58,34 +74,71 @@ public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor
             Quantity = request.Model.Quantity,
             Price = request.Model.Price,
             Fee = request.Model.Fee,
-            CurrencyId = request.Model.CurrencyId.ToUpperInvariant(),
+            CurrencyId = currencyId,
             TradeDate = tradeDate,
             SettlementDate = settlementDate,
-            Note = request.Model.Note,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            Note = note,
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
-        var canonicalInstrumentCode = instrument is null
-            ? null
-            : !string.IsNullOrWhiteSpace(instrument.Isin)
-                ? instrument.Isin
-                : instrument.Ticker;
+        var canonicalInstrumentCode = NormalizeInstrumentCode(instrument);
 
         entity.BrokerOperationKey = await BrokerOperationIdentityHelper.BuildProvisionalManualKeyAsync(
             context,
             request.PortfolioId,
-            portfolio.Broker?.Code,
+            portfolio.BrokerCode,
             entity,
             canonicalInstrumentCode,
             excludeOperationId: null,
             cancellationToken);
 
-        await context.Operations.AddAsync(entity, cancellationToken);
-        await context.SaveChangesAsync(cancellationToken);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await context.Operations.AddAsync(entity, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
 
-        await recalc.ScheduleRebuild(request.PortfolioId, entity.TradeDate, cancellationToken);
+            await recalc.ScheduleRebuild(request.PortfolioId, entity.TradeDate, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsBrokerOperationKeyConflict(ex))
+        {
+            return Result<Guid>.Failure("Operation with the same broker identity already exists. Please retry the request.");
+        }
 
         return Result<Guid>.Success(entity.Id);
     }
+
+    private static string? NormalizeCurrencyId(string? currencyId)
+    {
+        if (string.IsNullOrWhiteSpace(currencyId))
+        {
+            return null;
+        }
+
+        var normalized = currencyId.Trim().ToUpperInvariant();
+        return normalized.Length == 3 ? normalized : null;
+    }
+
+    private static string? NormalizeInstrumentCode(InstrumentIdentity? instrument)
+    {
+        var rawCode = !string.IsNullOrWhiteSpace(instrument?.Isin)
+            ? instrument.Isin
+            : instrument?.Ticker;
+
+        return string.IsNullOrWhiteSpace(rawCode)
+            ? null
+            : rawCode.Trim().ToUpperInvariant();
+    }
+
+    private static bool IsBrokerOperationKeyConflict(DbUpdateException exception) =>
+        exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: BrokerOperationKeyConstraintName
+        };
+
+    private sealed record PortfolioIdentity(Guid Id, string? BrokerCode);
+    private sealed record InstrumentIdentity(Guid Id, string? Isin, string? Ticker);
 }

@@ -55,6 +55,7 @@ public class BackgroundJobSchedulerService(
         await LogDefinitionScheduleState(context, cancellationToken);
 
         var dueDefinitions = await context.JobDefinitions
+            .AsTracking()
             .Where(x => x.IsEnabled && x.NextRunAt <= now)
             .OrderBy(x => x.NextRunAt)
             .ToListAsync(cancellationToken);
@@ -201,6 +202,7 @@ public class BackgroundJobSchedulerService(
         var lockTimeoutMinutes = Math.Max(1, lockTimeoutMinutesRaw);
 
         var definition = await context.JobDefinitions
+            .AsTracking()
             .FirstOrDefaultAsync(x => x.Name == definitionName, cancellationToken);
 
         if (definition is null)

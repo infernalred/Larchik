@@ -20,6 +20,7 @@ public class EditInstrumentCorporateActionCommandHandler(LarchikContext context,
         }
 
         var entity = await context.InstrumentCorporateActions
+            .AsTracking()
             .FirstOrDefaultAsync(x => x.Id == request.Id && x.InstrumentId == request.InstrumentId, cancellationToken);
 
         if (entity is null)
