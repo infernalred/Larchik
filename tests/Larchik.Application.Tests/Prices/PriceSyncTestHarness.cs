@@ -1,7 +1,6 @@
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
+using Larchik.Application.Tests.TestInfrastructure;
 
 namespace Larchik.Application.Tests.Prices;
 
@@ -10,19 +9,12 @@ internal sealed class PriceSyncTestHarness : IAsyncDisposable
     internal static readonly Guid UserId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     internal static readonly DateTime SeedTimestamp = new(2026, 4, 19, 0, 0, 0, DateTimeKind.Utc);
 
-    private readonly SqliteConnection connection;
+    private readonly SqliteTestDatabase database;
 
     public PriceSyncTestHarness()
     {
-        connection = new SqliteConnection("Data Source=:memory:");
-        connection.Open();
-
-        var options = new DbContextOptionsBuilder<LarchikContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        Context = new LarchikContext(options);
-        Context.Database.EnsureCreated();
+        database = SqliteTestContextFactory.Create();
+        Context = database.Context;
         SeedReferenceData();
     }
 
@@ -129,8 +121,7 @@ internal sealed class PriceSyncTestHarness : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await Context.DisposeAsync();
-        await connection.DisposeAsync();
+        await database.DisposeAsync();
     }
 
     private void SeedReferenceData()

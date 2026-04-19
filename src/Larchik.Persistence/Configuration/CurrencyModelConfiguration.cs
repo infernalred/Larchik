@@ -8,23 +8,11 @@ public class CurrencyModelConfiguration : IEntityTypeConfiguration<Currency>
 {
     public void Configure(EntityTypeBuilder<Currency> builder)
     {
-        builder.Property(x => x.Id).HasMaxLength(3);
+        builder.HasCurrencyCode(x => x.Id, required: true);
 
-        var rub = new Currency
-        {
-            Id = "RUB"
-        };
-
-        var usd = new Currency
-        {
-            Id = "USD"
-        };
-
-        var eur = new Currency
-        {
-            Id = "EUR"
-        };
-
-        builder.HasData(rub, usd, eur);
+        builder.HasData(
+            new Currency { Id = "RUB" },
+            new Currency { Id = "USD" },
+            new Currency { Id = "EUR" });
     }
 }

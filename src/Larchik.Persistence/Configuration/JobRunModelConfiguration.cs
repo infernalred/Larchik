@@ -13,8 +13,8 @@ public class JobRunModelConfiguration : IEntityTypeConfiguration<JobRun>
         builder.Property(x => x.LockedBy).HasMaxLength(120);
         builder.Property(x => x.LastError).HasMaxLength(4000);
         builder.Property(x => x.MaxAttempts).HasDefaultValue(5);
-        builder.Property(x => x.CreatedAt);
-        builder.Property(x => x.UpdatedAt);
+        builder.HasCreatedAt(x => x.CreatedAt);
+        builder.HasUpdatedAt(x => x.UpdatedAt);
 
         builder.HasIndex(x => x.DedupKey).IsUnique();
         builder.HasIndex(x => new { x.Status, x.AvailableAt });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Button,
   Dialog,
@@ -13,6 +13,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import { toUtcIso } from './date-input';
 import { CorporateActionType, Instrument, InstrumentCorporateAction, InstrumentCorporateActionModel } from './types';
 
 const ACTION_TYPES: { value: CorporateActionType; label: string }[] = [
@@ -29,10 +30,6 @@ function createInitialForm(action?: InstrumentCorporateAction | null): Instrumen
     effectiveDate: action?.effectiveDate?.slice(0, 10) ?? todayIso(),
     note: action?.note ?? '',
   };
-}
-
-function toUtcIso(value: string): string {
-  return `${value}T00:00:00.000Z`;
 }
 
 interface Props {
@@ -63,15 +60,6 @@ export function InstrumentCorporateActionsDialog({
   const [editing, setEditing] = useState<InstrumentCorporateAction | null>(null);
   const [form, setForm] = useState<InstrumentCorporateActionModel>(() => createInitialForm());
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setEditing(null);
-    setForm(createInitialForm());
-  }, [open, instrument?.id]);
-
   const isValid = useMemo(() => {
     return form.factor > 0 && form.factor !== 1 && form.effectiveDate.length > 0 && form.note.trim().length > 0;
   }, [form]);
@@ -94,7 +82,7 @@ export function InstrumentCorporateActionsDialog({
     const model: InstrumentCorporateActionModel = {
       type: form.type,
       factor: form.factor,
-      effectiveDate: toUtcIso(form.effectiveDate),
+      effectiveDate: toUtcIso(form.effectiveDate)!,
       note: form.note.trim(),
     };
 

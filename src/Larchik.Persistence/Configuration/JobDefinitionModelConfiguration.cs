@@ -14,8 +14,8 @@ public class JobDefinitionModelConfiguration : IEntityTypeConfiguration<JobDefin
         builder.Property(x => x.MaxAttempts).HasDefaultValue(5);
         builder.Property(x => x.RetryDelayMinutes).HasDefaultValue(15);
         builder.Property(x => x.LockTimeoutMinutes).HasDefaultValue(5);
-        builder.Property(x => x.CreatedAt);
-        builder.Property(x => x.UpdatedAt);
+        builder.HasCreatedAt(x => x.CreatedAt);
+        builder.HasUpdatedAt(x => x.UpdatedAt);
 
         builder.HasIndex(x => x.Name).IsUnique();
         builder.HasIndex(x => new { x.IsEnabled, x.NextRunAt });

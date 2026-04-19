@@ -6,6 +6,14 @@ namespace Larchik.Infrastructure.Security;
 
 public class UserAccessor(IHttpContextAccessor httpContextAccessor) : IUserAccessor
 {
-    public Guid GetUserId() =>
-        Guid.Parse(httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    public Guid GetUserId()
+    {
+        var userId = httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            throw new InvalidOperationException("Authenticated user id claim is missing.");
+        }
+
+        return Guid.Parse(userId);
+    }
 }

@@ -27,7 +27,7 @@ public class InstrumentModelConfiguration : IEntityTypeConfiguration<Instrument>
 
         builder.Property(x => x.Country).HasMaxLength(100);
 
-        builder.Property(x => x.CurrencyId).HasMaxLength(3);
+        builder.HasCurrencyCode(x => x.CurrencyId, required: true);
 
         builder.Property(x => x.IsTrading).HasDefaultValue(true);
 
@@ -35,8 +35,7 @@ public class InstrumentModelConfiguration : IEntityTypeConfiguration<Instrument>
             .HasConversion<string>()
             .HasMaxLength(16);
 
-        builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd();
-
-        builder.Property(x => x.UpdatedAt);
+        builder.HasCreatedAt(x => x.CreatedAt, generatedOnAdd: true);
+        builder.HasUpdatedAt(x => x.UpdatedAt);
     }
 }

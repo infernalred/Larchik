@@ -8,7 +8,7 @@ using Larchik.Application.Portfolios.GetPortfolioSummary;
 using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using Microsoft.Data.Sqlite;
+using Larchik.Application.Tests.TestInfrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -21,7 +21,7 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
     internal static readonly Guid BrokerId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     internal static readonly DateTime SeedTimestamp = new(2026, 4, 18, 0, 0, 0, DateTimeKind.Utc);
 
-    private readonly SqliteConnection connection;
+    private readonly SqliteTestDatabase database;
     private readonly LarchikContext context;
     private readonly GetPortfoliosSummaryQueryHandler portfoliosSummaryHandler;
     private readonly GetPortfolioSummaryQueryHandler portfolioSummaryHandler;
@@ -31,15 +31,8 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
 
     public PortfolioAnalyticsTestHarness()
     {
-        connection = new SqliteConnection("Data Source=:memory:");
-        connection.Open();
-
-        var options = new DbContextOptionsBuilder<LarchikContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        context = new LarchikContext(options);
-        context.Database.EnsureCreated();
+        database = SqliteTestContextFactory.Create();
+        context = database.Context;
 
         SeedReferenceData();
 
@@ -209,9 +202,7 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
 
     public ValueTask DisposeAsync()
     {
-        context.Dispose();
-        connection.Dispose();
-        return ValueTask.CompletedTask;
+        return database.DisposeAsync();
     }
 
     private void SeedReferenceData()

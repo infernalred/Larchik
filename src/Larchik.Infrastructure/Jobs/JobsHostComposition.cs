@@ -1,0 +1,38 @@
+using Larchik.Application.FxRates.SyncCbrFxRates;
+using Larchik.Application.Prices.SyncMoexPrices;
+using Larchik.Application.Prices.SyncTbankPrices;
+using Larchik.Application.Stocks.SyncTbankInstrumentInfo;
+using Larchik.Persistence.Context;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Larchik.Infrastructure.Jobs;
+
+public static class JobsHostComposition
+{
+    public static bool ShouldUseConsoleBootstrapLogging(string? environmentName) =>
+        string.Equals(environmentName, "Development", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(environmentName, "Local", StringComparison.OrdinalIgnoreCase);
+
+    public static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddDbContext<LarchikContext>(options =>
+        {
+            options.UseNpgsql(
+                configuration.GetConnectionString("DefaultConnection"),
+                npgsql => npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+            options.UseSnakeCaseNamingConvention();
+        });
+
+        services.AddHttpClient();
+
+        // Jobs host only needs sync handlers used by background job adapters.
+        services.AddScoped<SyncCbrFxRatesCommandHandler>();
+        services.AddScoped<SyncMoexPricesCommandHandler>();
+        services.AddScoped<SyncTbankPricesCommandHandler>();
+        services.AddScoped<SyncTbankInstrumentInfoCommandHandler>();
+
+        services.AddBackgroundJobs(configuration);
+    }
+}

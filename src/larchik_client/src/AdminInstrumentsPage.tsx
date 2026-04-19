@@ -28,29 +28,16 @@ import EditIcon from '@mui/icons-material/Edit';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { api } from './api';
 import { getApiErrorMessage } from './error-utils';
+import { INSTRUMENT_TYPE_LABELS, PRICE_SOURCE_LABELS } from './instrument-domain';
 import { InstrumentCorporateActionsDialog } from './InstrumentCorporateActionsDialog';
 import { InstrumentEditorDialog } from './InstrumentEditorDialog';
 import { Category, Currency, Instrument, InstrumentCorporateAction, InstrumentCorporateActionModel, InstrumentModel } from './types';
-
-const TYPE_LABELS: Record<Instrument['type'], string> = {
-  Equity: 'Акция',
-  Bond: 'Облигация',
-  Etf: 'ETF',
-  Currency: 'Валюта',
-  Commodity: 'Товар',
-  Crypto: 'Крипто',
-};
 
 interface ToastState {
   open: boolean;
   severity: 'success' | 'error';
   message: string;
 }
-
-const PRICE_SOURCE_LABELS: Record<'MOEX' | 'TBANK', string> = {
-  MOEX: 'MOEX',
-  TBANK: 'T-Bank',
-};
 
 export function AdminInstrumentsPage() {
   const theme = useTheme();
@@ -360,7 +347,7 @@ export function AdminInstrumentsPage() {
                       </Stack>
                     </Stack>
                     <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-                      <Chip size="small" label={TYPE_LABELS[item.type]} />
+                      <Chip size="small" label={INSTRUMENT_TYPE_LABELS[item.type]} />
                       <Chip size="small" label={item.currencyId} variant="outlined" />
                       <Chip size="small" label={item.priceSource ? PRICE_SOURCE_LABELS[item.priceSource] : 'Без синхронизации'} variant="outlined" />
                       <Chip size="small" label={item.isTrading ? 'Торгуется' : 'Не торгуется'} color={item.isTrading ? 'success' : 'default'} />
@@ -407,7 +394,7 @@ export function AdminInstrumentsPage() {
                       <TableCell>{item.ticker}</TableCell>
                       <TableCell>{item.name}</TableCell>
                       <TableCell>{item.isin}</TableCell>
-                      <TableCell>{TYPE_LABELS[item.type]}</TableCell>
+                      <TableCell>{INSTRUMENT_TYPE_LABELS[item.type]}</TableCell>
                       <TableCell>{item.currencyId}</TableCell>
                       <TableCell>{categoryMap.get(item.categoryId) ?? `#${item.categoryId}`}</TableCell>
                       <TableCell>{item.exchange ?? '—'}</TableCell>
@@ -511,6 +498,7 @@ export function AdminInstrumentsPage() {
       />
 
       <InstrumentCorporateActionsDialog
+        key={`${actionsInstrument?.id ?? 'none'}:${actionsDialogOpen ? 'open' : 'closed'}`}
         open={actionsDialogOpen}
         instrument={actionsInstrument}
         items={corporateActions}

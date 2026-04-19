@@ -5,8 +5,6 @@ TRUNCATE TABLE
     job_definitions,
     position_snapshots,
     portfolio_snapshots,
-    cash_balances,
-    lots,
     operations,
     portfolios,
     prices,
@@ -33,8 +31,6 @@ DECLARE
     prices_count bigint;
     portfolios_count bigint;
     operations_count bigint;
-    lots_count bigint;
-    cash_balances_count bigint;
     position_snapshots_count bigint;
     portfolio_snapshots_count bigint;
     job_definitions_count bigint;
@@ -51,8 +47,6 @@ BEGIN
     SELECT count(*) INTO prices_count FROM prices;
     SELECT count(*) INTO portfolios_count FROM portfolios;
     SELECT count(*) INTO operations_count FROM operations;
-    SELECT count(*) INTO lots_count FROM lots;
-    SELECT count(*) INTO cash_balances_count FROM cash_balances;
     SELECT count(*) INTO position_snapshots_count FROM position_snapshots;
     SELECT count(*) INTO portfolio_snapshots_count FROM portfolio_snapshots;
     SELECT count(*) INTO job_definitions_count FROM job_definitions;
@@ -69,14 +63,12 @@ BEGIN
         OR prices_count <> 0
         OR portfolios_count <> 0
         OR operations_count <> 0
-        OR lots_count <> 0
-        OR cash_balances_count <> 0
         OR position_snapshots_count <> 0
         OR portfolio_snapshots_count <> 0
         OR job_definitions_count <> 0
         OR job_runs_count <> 0 THEN
         RAISE EXCEPTION
-            'Full reset validation failed: currencies=%, categories=%, brokers=%, instruments=%, aliases=%, corporate_actions=%, listing_history=%, fx_rates=%, prices=%, portfolios=%, operations=%, lots=%, cash_balances=%, position_snapshots=%, portfolio_snapshots=%, job_definitions=%, job_runs=%.',
+            'Full reset validation failed: currencies=%, categories=%, brokers=%, instruments=%, aliases=%, corporate_actions=%, listing_history=%, fx_rates=%, prices=%, portfolios=%, operations=%, position_snapshots=%, portfolio_snapshots=%, job_definitions=%, job_runs=%.',
             currencies_count,
             categories_count,
             brokers_count,
@@ -88,8 +80,6 @@ BEGIN
             prices_count,
             portfolios_count,
             operations_count,
-            lots_count,
-            cash_balances_count,
             position_snapshots_count,
             portfolio_snapshots_count,
             job_definitions_count,
@@ -97,7 +87,7 @@ BEGIN
     END IF;
 
     RAISE NOTICE
-        'Full reset validation passed. currencies=%, categories=%, brokers=%, instruments=%, aliases=%, corporate_actions=%, listing_history=%, fx_rates=%, prices=%, portfolios=%, operations=%, lots=%, cash_balances=%, position_snapshots=%, portfolio_snapshots=%, job_definitions=%, job_runs=%.',
+        'Full reset validation passed. currencies=%, categories=%, brokers=%, instruments=%, aliases=%, corporate_actions=%, listing_history=%, fx_rates=%, prices=%, portfolios=%, operations=%, position_snapshots=%, portfolio_snapshots=%, job_definitions=%, job_runs=%.',
         currencies_count,
         categories_count,
         brokers_count,
@@ -109,8 +99,6 @@ BEGIN
         prices_count,
         portfolios_count,
         operations_count,
-        lots_count,
-        cash_balances_count,
         position_snapshots_count,
         portfolio_snapshots_count,
         job_definitions_count,

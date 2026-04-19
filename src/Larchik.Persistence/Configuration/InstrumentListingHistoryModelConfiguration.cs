@@ -10,10 +10,10 @@ public class InstrumentListingHistoryModelConfiguration : IEntityTypeConfigurati
     {
         builder.Property(x => x.Ticker).IsRequired().HasMaxLength(16);
         builder.Property(x => x.Figi).HasMaxLength(32);
-        builder.Property(x => x.CurrencyId).IsRequired().HasMaxLength(3);
+        builder.HasCurrencyCode(x => x.CurrencyId, required: true);
         builder.Property(x => x.Exchange).HasMaxLength(50);
-        builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd();
-        builder.Property(x => x.UpdatedAt);
+        builder.HasCreatedAt(x => x.CreatedAt, generatedOnAdd: true);
+        builder.HasUpdatedAt(x => x.UpdatedAt);
 
         builder.HasIndex(x => new { x.InstrumentId, x.EffectiveFrom }).IsUnique();
         builder.HasIndex(x => new { x.InstrumentId, x.EffectiveTo });

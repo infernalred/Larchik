@@ -9,7 +9,7 @@ using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Application.Portfolios.GetPortfolioSummary;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using Microsoft.Data.Sqlite;
+using Larchik.Application.Tests.TestInfrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -21,7 +21,7 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
     private static readonly Guid UserId = Guid.Parse("7e89d7d2-21e2-40ce-bef2-58c3b9408abb");
     private static readonly Guid BrokerId = Guid.Parse("f6f784ea-b520-4bc5-8a32-9a17f1637003");
 
-    private readonly SqliteConnection _connection;
+    private readonly SqliteTestDatabase _database;
     private readonly LarchikContext _context;
     private readonly IUserAccessor _userAccessor;
     private readonly IPortfolioRecalcService _recalc;
@@ -36,15 +36,8 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
 
     public TbankImportScenarioHarness()
     {
-        _connection = new SqliteConnection("Data Source=:memory:");
-        _connection.Open();
-
-        var options = new DbContextOptionsBuilder<LarchikContext>()
-            .UseSqlite(_connection)
-            .Options;
-
-        _context = new LarchikContext(options);
-        _context.Database.EnsureCreated();
+        _database = SqliteTestContextFactory.Create();
+        _context = _database.Context;
 
         _userAccessor = new FixedUserAccessor(UserId);
         _recalc = new NoOpPortfolioRecalcService();
@@ -346,9 +339,7 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
 
     public ValueTask DisposeAsync()
     {
-        _context.Dispose();
-        _connection.Dispose();
-        return ValueTask.CompletedTask;
+        return _database.DisposeAsync();
     }
 
     private sealed class FixedUserAccessor(Guid userId) : IUserAccessor

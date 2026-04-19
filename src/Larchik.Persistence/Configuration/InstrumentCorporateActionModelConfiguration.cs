@@ -8,7 +8,7 @@ public class InstrumentCorporateActionModelConfiguration : IEntityTypeConfigurat
 {
     public void Configure(EntityTypeBuilder<InstrumentCorporateAction> builder)
     {
-        builder.Property(x => x.Factor).HasPrecision(18, 6);
+        builder.HasQuantityPrecision(x => x.Factor);
         builder.Property(x => x.Note).IsRequired().HasMaxLength(500);
 
         builder.HasIndex(x => new { x.InstrumentId, x.EffectiveDate });

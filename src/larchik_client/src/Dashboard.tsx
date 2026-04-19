@@ -24,6 +24,7 @@ import { getApiErrorMessage } from './error-utils';
 import {
   Broker,
   ClearPortfolioDataResult,
+  Currency,
   ImportResult,
   InstrumentLookup,
   Operation,
@@ -108,6 +109,7 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [brokers, setBrokers] = useState<Broker[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [selectedPortfolio, setSelectedPortfolio] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'portfolio' | 'all'>('portfolio');
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
@@ -132,6 +134,7 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const portfolioPage = route;
+  const activePortfolio = portfolios.find((x) => x.id === selectedPortfolio) ?? null;
   const displayPositions = summary ? buildDisplayPositions(summary) : [];
   const currentSummary = viewMode === 'all' ? aggregateSummary : summary;
   const annualizedReturnLabel = viewMode === 'all'
@@ -173,12 +176,16 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
     setBrokers(data);
   }, []);
 
+  const loadCurrencies = useCallback(async () => {
+    const data = await api.listCurrencies();
+    setCurrencies(data);
+  }, []);
+
   const loadAggregateSummary = useCallback(async (method: string) => {
-    const selectedCurrency = portfolios.find((x) => x.id === selectedPortfolio)?.reportingCurrencyId;
     setLoadingAggregateSummary(true);
     setAggregateError('');
     try {
-      const data = await api.getAggregatePortfolioSummary(method, selectedCurrency);
+      const data = await api.getAggregatePortfolioSummary(method, activePortfolio?.reportingCurrencyId);
       setAggregateSummary(data);
     } catch (error) {
       setAggregateSummary(null);
@@ -186,13 +193,12 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
     } finally {
       setLoadingAggregateSummary(false);
     }
-  }, [portfolios, selectedPortfolio]);
+  }, [activePortfolio?.reportingCurrencyId]);
 
   const loadAggregatePerformance = useCallback(async (method: string) => {
-    const selectedCurrency = portfolios.find((x) => x.id === selectedPortfolio)?.reportingCurrencyId;
     setLoadingAggregatePerformance(true);
     try {
-      const data = await api.getAggregatePerformance(method, selectedCurrency);
+      const data = await api.getAggregatePerformance(method, activePortfolio?.reportingCurrencyId);
       setAggregatePerformance(data);
     } catch (error) {
       console.error(error);
@@ -200,7 +206,7 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
     } finally {
       setLoadingAggregatePerformance(false);
     }
-  }, [portfolios, selectedPortfolio]);
+  }, [activePortfolio?.reportingCurrencyId]);
 
   const loadOperations = useCallback(async (id: string, page: number, pageSize: number) => {
     setLoadingOps(true);
@@ -218,12 +224,12 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   useEffect(() => {
     (async () => {
       try {
-        await Promise.all([loadPortfolios(), loadBrokers()]);
+        await Promise.all([loadPortfolios(), loadBrokers(), loadCurrencies()]);
       } catch (error) {
         console.error(error);
       }
     })();
-  }, [loadBrokers, loadPortfolios]);
+  }, [loadBrokers, loadCurrencies, loadPortfolios]);
 
   useEffect(() => {
     if (viewMode !== 'all' || (portfolioPage !== 'overview' && portfolioPage !== 'analytics')) return;
@@ -284,7 +290,7 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
 
   function handleOpenCreatePortfolio() {
     setCreatePortfolioError('');
-    loadBrokers().catch(console.error);
+    Promise.all([loadBrokers(), loadCurrencies()]).catch(console.error);
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -476,7 +482,6 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
     setSidebarOpen(false);
   }
 
-  const activePortfolio = portfolios.find((x) => x.id === selectedPortfolio) ?? null;
   const activeBroker = brokers.find((x) => x.id === activePortfolio?.brokerId) ?? null;
   const canImportOperations = Boolean(activeBroker?.supportsImport && activeBroker.code);
   const performanceCurrency = performance[0]?.reportingCurrencyId;
@@ -745,7 +750,13 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
                   <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, height: '100%', backgroundImage: 'none' }}>
-                    <QuickDeposit onSubmit={handleQuickDeposit} disabled={!selectedPortfolio} />
+                    <QuickDeposit
+                      key={selectedPortfolio ?? 'no-portfolio'}
+                      onSubmit={handleQuickDeposit}
+                      currencies={currencies}
+                      defaultCurrencyId={activePortfolio?.reportingCurrencyId}
+                      disabled={!selectedPortfolio}
+                    />
                   </Paper>
                 </Grid>
               </Grid>
@@ -854,6 +865,7 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
       <CreatePortfolioDialog
         open={createDialogOpen}
         brokers={brokers}
+        currencies={currencies}
         submitting={createPortfolioLoading}
         error={createPortfolioError}
         onClose={handleCloseCreatePortfolio}

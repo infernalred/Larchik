@@ -14,6 +14,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import { toDateInputValue, toUtcIso } from './date-input';
 import { InstrumentLookup, OperationModel, OperationType } from './types';
 
 const TYPE_OPTIONS: { value: OperationType; label: string }[] = [
@@ -47,17 +48,6 @@ interface Props {
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
-const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
-const toDateInputValue = (value?: string) => (value ? value.slice(0, 10) : '');
-
-const toUtcIso = (value?: string): string | undefined => {
-  if (!value) return undefined;
-  if (DATE_ONLY_REGEX.test(value)) return `${value}T00:00:00.000Z`;
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
-};
 
 const createInitialForm = (initial?: Partial<OperationModel>): OperationModel => ({
   instrumentId: initial?.instrumentId,

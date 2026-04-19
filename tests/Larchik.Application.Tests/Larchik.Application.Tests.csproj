@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Larchik.Application\Larchik.Application.csproj" />
+    <ProjectReference Include="..\..\src\Larchik.API\Larchik.API.csproj" />
+    <ProjectReference Include="..\..\src\Larchik.Infrastructure\Larchik.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Larchik.Persistence\Larchik.Persistence.csproj" />
   </ItemGroup>
 

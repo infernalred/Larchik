@@ -4,8 +4,7 @@ using Larchik.Application.Currencies.GetCurrencies;
 using Larchik.Application.Operations.ImportBroker;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
+using Larchik.Application.Tests.TestInfrastructure;
 using Xunit;
 
 namespace Larchik.Application.Tests.ReferenceData;
@@ -77,27 +76,19 @@ public sealed class ReferenceDataQueryHandlersTests
 
     private sealed class ReferenceDataHarness : IAsyncDisposable
     {
-        private readonly SqliteConnection connection;
+        private readonly SqliteTestDatabase database;
 
         public ReferenceDataHarness()
         {
-            connection = new SqliteConnection("Data Source=:memory:");
-            connection.Open();
-
-            var options = new DbContextOptionsBuilder<LarchikContext>()
-                .UseSqlite(connection)
-                .Options;
-
-            Context = new LarchikContext(options);
-            Context.Database.EnsureCreated();
+            database = SqliteTestContextFactory.Create();
+            Context = database.Context;
         }
 
         public LarchikContext Context { get; }
 
         public async ValueTask DisposeAsync()
         {
-            await Context.DisposeAsync();
-            await connection.DisposeAsync();
+            await database.DisposeAsync();
         }
     }
 

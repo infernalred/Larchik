@@ -3,23 +3,19 @@ BEGIN;
 DO $$
 DECLARE
     operations_count bigint;
-    lots_count bigint;
     position_snapshots_count bigint;
     portfolio_snapshots_count bigint;
 BEGIN
     SELECT count(*) INTO operations_count FROM operations;
-    SELECT count(*) INTO lots_count FROM lots;
     SELECT count(*) INTO position_snapshots_count FROM position_snapshots;
     SELECT count(*) INTO portfolio_snapshots_count FROM portfolio_snapshots;
 
     IF operations_count <> 0
-        OR lots_count <> 0
         OR position_snapshots_count <> 0
         OR portfolio_snapshots_count <> 0 THEN
         RAISE EXCEPTION
-            'Reset aborted: expected empty operations/lots/position_snapshots/portfolio_snapshots, got operations=%, lots=%, position_snapshots=%, portfolio_snapshots=%.',
+            'Reset aborted: expected empty operations/position_snapshots/portfolio_snapshots, got operations=%, position_snapshots=%, portfolio_snapshots=%.',
             operations_count,
-            lots_count,
             position_snapshots_count,
             portfolio_snapshots_count;
     END IF;

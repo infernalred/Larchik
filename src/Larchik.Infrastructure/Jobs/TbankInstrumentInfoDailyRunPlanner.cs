@@ -9,8 +9,6 @@ public class TbankInstrumentInfoDailyRunPlanner : IJobRunPlanner
     public IReadOnlyCollection<ScheduledRunSpec> BuildRuns(JobDefinition definition, DateTime utcNow)
     {
         var today = DateOnly.FromDateTime(utcNow.Date);
-        var payload = $"{{\"date\":\"{today:yyyy-MM-dd}\"}}";
-        var dedupKey = $"instrument-info:tbank:{today:yyyy-MM-dd}";
-        return [new ScheduledRunSpec(dedupKey, payload, utcNow)];
+        return [DailyJobRunPlannerHelper.CreateRun("instrument-info:tbank", today, utcNow)];
     }
 }

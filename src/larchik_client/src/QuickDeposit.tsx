@@ -1,29 +1,41 @@
 import { useState } from 'react';
-import { Alert, Button, Stack, TextField, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Alert, Button, MenuItem, Stack, TextField, Typography, useMediaQuery, useTheme } from '@mui/material';
+import {
+  createQuickDepositInitialState,
+  normalizeQuickDepositState,
+  validateQuickDepositAmount,
+} from './quick-deposit-domain';
+import { Currency } from './types';
 
 interface Props {
   onSubmit: (payload: { amount: number; currency: string; note: string }) => Promise<void>;
+  currencies: Currency[];
+  defaultCurrencyId?: string;
   disabled?: boolean;
 }
 
-export function QuickDeposit({ onSubmit, disabled }: Props) {
+export function QuickDeposit({ onSubmit, currencies, defaultCurrencyId, disabled }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [amount, setAmount] = useState(100000);
-  const [currency, setCurrency] = useState('RUB');
-  const [note, setNote] = useState('Ввод средств');
+  const initialState = createQuickDepositInitialState(defaultCurrencyId, currencies);
+  const currencyOptions = currencies.length ? currencies : [{ id: initialState.currency, name: initialState.currency }];
+  const [amount, setAmount] = useState(initialState.amount);
+  const [currency, setCurrency] = useState(initialState.currency);
+  const [note, setNote] = useState(initialState.note);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (amount <= 0) {
-      setError('Введите сумму больше нуля');
+    const amountError = validateQuickDepositAmount(amount);
+    if (amountError) {
+      setError(amountError);
       return;
     }
+
     setError('');
     setLoading(true);
     try {
-      await onSubmit({ amount, currency, note });
+      await onSubmit(normalizeQuickDepositState({ amount, currency, note }));
     } catch (err) {
       console.error(err);
       setError('Не удалось добавить операцию');
@@ -47,12 +59,18 @@ export function QuickDeposit({ onSubmit, disabled }: Props) {
         helperText="Сумма пополнения счета"
       />
       <TextField
+        select
         size="small"
         label="Валюта"
         value={currency}
-        onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-        slotProps={{ htmlInput: { maxLength: 5 } }}
-      />
+        onChange={(e) => setCurrency(e.target.value)}
+      >
+        {currencyOptions.map((item) => (
+          <MenuItem key={item.id} value={item.id}>
+            {item.id}
+          </MenuItem>
+        ))}
+      </TextField>
       <TextField size="small" label="Комментарий" value={note} onChange={(e) => setNote(e.target.value)} />
       {error && <Alert severity="error">{error}</Alert>}
       <Button variant="contained" onClick={handleSubmit} disabled={disabled || loading} fullWidth={isMobile}>

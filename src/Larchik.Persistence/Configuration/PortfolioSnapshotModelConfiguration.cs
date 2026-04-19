@@ -8,11 +8,11 @@ public class PortfolioSnapshotModelConfiguration : IEntityTypeConfiguration<Port
 {
     public void Configure(EntityTypeBuilder<PortfolioSnapshot> builder)
     {
-        builder.Property(x => x.NavBase).HasPrecision(20, 4);
-        builder.Property(x => x.PnlDayBase).HasPrecision(18, 4);
-        builder.Property(x => x.PnlMonthBase).HasPrecision(18, 4);
-        builder.Property(x => x.PnlYearBase).HasPrecision(18, 4);
-        builder.Property(x => x.CashBase).HasPrecision(18, 4);
+        builder.HasMoneyPrecision(x => x.NavBase, precision: 20);
+        builder.HasMoneyPrecision(x => x.PnlDayBase);
+        builder.HasMoneyPrecision(x => x.PnlMonthBase);
+        builder.HasMoneyPrecision(x => x.PnlYearBase);
+        builder.HasMoneyPrecision(x => x.CashBase);
 
         builder.HasIndex(x => new { x.PortfolioId, x.Date }).IsUnique();
     }

@@ -9,8 +9,7 @@ using Larchik.Application.Operations.GetOperations;
 using Larchik.Application.Operations.ImportBroker;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
+using Larchik.Application.Tests.TestInfrastructure;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Larchik.Application.Tests.Operations;
@@ -23,20 +22,13 @@ internal sealed class OperationsTestHarness : IAsyncDisposable
     internal static readonly Guid OtherBrokerId = Guid.Parse("4ee304a8-6f0a-490f-bfa5-58f6f958b002");
     internal static readonly DateTime SeedTimestamp = new(2026, 4, 19, 0, 0, 0, DateTimeKind.Utc);
 
-    private readonly SqliteConnection connection;
+    private readonly SqliteTestDatabase database;
     private readonly FixedUserAccessor userAccessor = new(UserId);
 
     public OperationsTestHarness()
     {
-        connection = new SqliteConnection("Data Source=:memory:");
-        connection.Open();
-
-        var options = new DbContextOptionsBuilder<LarchikContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        Context = new LarchikContext(options);
-        Context.Database.EnsureCreated();
+        database = SqliteTestContextFactory.Create();
+        Context = database.Context;
         SeedReferenceData();
     }
 
@@ -155,8 +147,7 @@ internal sealed class OperationsTestHarness : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await Context.DisposeAsync();
-        await connection.DisposeAsync();
+        await database.DisposeAsync();
     }
 
     private void SeedReferenceData()

@@ -6,7 +6,7 @@ using Larchik.Application.Stocks.EditStock;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
-using Microsoft.Data.Sqlite;
+using Larchik.Application.Tests.TestInfrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -124,20 +124,13 @@ public sealed class InstrumentWriteHandlersTests
     {
         private static readonly Guid UserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-        private readonly SqliteConnection connection;
+        private readonly SqliteTestDatabase database;
         public LarchikContext Context { get; }
 
         public InstrumentHarness()
         {
-            connection = new SqliteConnection("Data Source=:memory:");
-            connection.Open();
-
-            var options = new DbContextOptionsBuilder<LarchikContext>()
-                .UseSqlite(connection)
-                .Options;
-
-            Context = new LarchikContext(options);
-            Context.Database.EnsureCreated();
+            database = SqliteTestContextFactory.Create();
+            Context = database.Context;
             SeedCurrencies();
         }
 
@@ -193,8 +186,7 @@ public sealed class InstrumentWriteHandlersTests
 
         public async ValueTask DisposeAsync()
         {
-            await Context.DisposeAsync();
-            await connection.DisposeAsync();
+            await database.DisposeAsync();
         }
 
         private void SeedCurrencies()

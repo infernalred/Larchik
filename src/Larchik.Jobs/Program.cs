@@ -1,11 +1,4 @@
-using Larchik.Application.FxRates.SyncCbrFxRates;
-using Larchik.Application.Prices.SyncMoexPrices;
-using Larchik.Application.Prices.SyncTbankPrices;
-using Larchik.Application.Stocks.SyncTbankInstrumentInfo;
 using Larchik.Infrastructure.Jobs;
-using Larchik.Persistence.Context;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -17,8 +10,7 @@ var bootstrapEnvironment =
     Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 
 var bootstrapLoggerConfiguration = new LoggerConfiguration();
-if (string.Equals(bootstrapEnvironment, "Development", StringComparison.OrdinalIgnoreCase) ||
-    string.Equals(bootstrapEnvironment, "Local", StringComparison.OrdinalIgnoreCase))
+if (JobsHostComposition.ShouldUseConsoleBootstrapLogging(bootstrapEnvironment))
 {
     bootstrapLoggerConfiguration = bootstrapLoggerConfiguration.WriteTo.Console();
 }
@@ -33,25 +25,7 @@ try
                 .ReadFrom.Configuration(context.Configuration)
                 .ReadFrom.Services(services)
                 .Enrich.FromLogContext())
-        .ConfigureServices((context, services) =>
-        {
-            services.AddDbContext<LarchikContext>(opt =>
-            {
-                opt.UseNpgsql(context.Configuration.GetConnectionString("DefaultConnection"),
-                    o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
-                opt.UseSnakeCaseNamingConvention();
-            });
-
-            services.AddHttpClient();
-
-            // Jobs host only needs sync handlers used by background job adapters.
-            services.AddScoped<SyncCbrFxRatesCommandHandler>();
-            services.AddScoped<SyncMoexPricesCommandHandler>();
-            services.AddScoped<SyncTbankPricesCommandHandler>();
-            services.AddScoped<SyncTbankInstrumentInfoCommandHandler>();
-
-            services.AddBackgroundJobs(context.Configuration);
-        })
+        .ConfigureServices((context, services) => JobsHostComposition.ConfigureServices(services, context.Configuration))
         .Build();
 
     var options = host.Services.GetRequiredService<IOptionsMonitor<BackgroundJobsOptions>>().CurrentValue;

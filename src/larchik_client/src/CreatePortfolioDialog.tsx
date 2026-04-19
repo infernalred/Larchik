@@ -13,60 +13,48 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { Broker } from './types';
-
-const CURRENCIES = ['RUB', 'USD', 'EUR'];
-
-interface PortfolioForm {
-  name: string;
-  brokerId: string;
-  reportingCurrencyId: string;
-}
+import { createPortfolioInitialForm, normalizePortfolioForm, PortfolioFormModel } from './portfolio-domain';
+import { Broker, Currency } from './types';
 
 interface Props {
   open: boolean;
   brokers: Broker[];
+  currencies: Currency[];
   submitting: boolean;
   error?: string;
   onClose: () => void;
-  onSubmit: (form: PortfolioForm) => Promise<void>;
+  onSubmit: (form: PortfolioFormModel) => Promise<void>;
 }
 
-const INITIAL_FORM: PortfolioForm = {
-  name: '',
-  brokerId: '',
-  reportingCurrencyId: 'RUB',
-};
-
-export function CreatePortfolioDialog({ open, brokers, submitting, error, onClose, onSubmit }: Props) {
+export function CreatePortfolioDialog({ open, brokers, currencies, submitting, error, onClose, onSubmit }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [form, setForm] = useState<PortfolioForm>(INITIAL_FORM);
+  const [form, setForm] = useState<PortfolioFormModel>(() => createPortfolioInitialForm(currencies));
 
   const canSubmit = useMemo(
-    () => form.name.trim().length > 0 && form.brokerId.length > 0 && !submitting,
-    [form.brokerId, form.name, submitting],
+    () =>
+      form.name.trim().length > 0 &&
+      form.brokerId.length > 0 &&
+      form.reportingCurrencyId.trim().length > 0 &&
+      !submitting,
+    [form.brokerId, form.name, form.reportingCurrencyId, submitting],
   );
   const selectedBroker = useMemo(
     () => brokers.find((x) => x.id === form.brokerId) ?? null,
     [brokers, form.brokerId],
   );
 
-  const update = <K extends keyof PortfolioForm>(key: K, value: PortfolioForm[K]) => {
+  const update = <K extends keyof PortfolioFormModel>(key: K, value: PortfolioFormModel[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleEnter = () => {
-    setForm(INITIAL_FORM);
+    setForm(createPortfolioInitialForm(currencies));
   };
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-    await onSubmit({
-      name: form.name.trim(),
-      brokerId: form.brokerId,
-      reportingCurrencyId: form.reportingCurrencyId,
-    });
+    await onSubmit(normalizePortfolioForm(form));
   };
 
   return (
@@ -119,9 +107,9 @@ export function CreatePortfolioDialog({ open, brokers, submitting, error, onClos
             disabled={submitting}
             fullWidth
           >
-            {CURRENCIES.map((currency) => (
-              <MenuItem key={currency} value={currency}>
-                {currency}
+            {currencies.map((currency) => (
+              <MenuItem key={currency.id} value={currency.id}>
+                {currency.id}
               </MenuItem>
             ))}
           </TextField>

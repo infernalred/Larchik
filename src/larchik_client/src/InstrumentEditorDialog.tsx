@@ -13,41 +13,14 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import {
+  createInstrumentEditorInitialModel,
+  INSTRUMENT_TYPE_OPTIONS,
+  normalizeInstrumentEditorModel,
+  PRICE_SOURCE_OPTIONS,
+  requiresInstrumentIsin,
+} from './instrument-domain';
 import { Category, Currency, Instrument, InstrumentModel, InstrumentType, PriceSource } from './types';
-
-const INSTRUMENT_TYPES: { value: InstrumentType; label: string }[] = [
-  { value: 'Equity', label: 'Акция' },
-  { value: 'Bond', label: 'Облигация' },
-  { value: 'Etf', label: 'ETF' },
-  { value: 'Currency', label: 'Валюта' },
-  { value: 'Commodity', label: 'Товар' },
-  { value: 'Crypto', label: 'Крипто' },
-];
-
-const PRICE_SOURCES: { value: PriceSource; label: string }[] = [
-  { value: 'MOEX', label: 'MOEX' },
-  { value: 'TBANK', label: 'T-Bank' },
-];
-
-function requiresIsin(type: InstrumentType) {
-  return type === 'Equity' || type === 'Bond' || type === 'Etf';
-}
-
-function createInitialForm(initial?: Instrument | null, categories: Category[] = [], currencies: Currency[] = []): InstrumentModel {
-  return {
-    name: initial?.name ?? '',
-    ticker: initial?.ticker ?? '',
-    isin: initial?.isin ?? '',
-    figi: initial?.figi ?? '',
-    type: initial?.type ?? 'Equity',
-    currencyId: initial?.currencyId ?? currencies[0]?.id ?? 'USD',
-    categoryId: initial?.categoryId ?? categories[0]?.id ?? 0,
-    exchange: initial?.exchange ?? '',
-    country: initial?.country ?? '',
-    isTrading: initial?.isTrading ?? true,
-    priceSource: initial?.priceSource ?? null,
-  };
-}
 
 interface Props {
   open: boolean;
@@ -62,13 +35,13 @@ interface Props {
 export function InstrumentEditorDialog({ open, initial, categories, currencies, submitting = false, onClose, onSubmit }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [form, setForm] = useState<InstrumentModel>(() => createInitialForm(initial, categories, currencies));
+  const [form, setForm] = useState<InstrumentModel>(() => createInstrumentEditorInitialModel(initial, categories, currencies));
 
   const isValid = useMemo(() => {
     return (
       form.name.trim().length > 0 &&
       form.ticker.trim().length > 0 &&
-      (!requiresIsin(form.type) || (form.isin?.trim().length ?? 0) > 0) &&
+      (!requiresInstrumentIsin(form.type) || (form.isin?.trim().length ?? 0) > 0) &&
       form.currencyId.trim().length > 0 &&
       form.categoryId > 0
     );
@@ -79,19 +52,7 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
   };
 
   const handleSubmit = async () => {
-    await onSubmit({
-      name: form.name.trim(),
-      ticker: form.ticker.trim().toUpperCase(),
-      isin: form.isin?.trim() ? form.isin.trim().toUpperCase() : undefined,
-      figi: form.figi?.trim() ? form.figi.trim().toUpperCase() : undefined,
-      type: form.type,
-      currencyId: form.currencyId.trim().toUpperCase(),
-      categoryId: form.categoryId,
-      exchange: form.exchange?.trim() || undefined,
-      country: form.country?.trim() || undefined,
-      isTrading: form.isTrading,
-      priceSource: form.priceSource ?? null,
-    });
+    await onSubmit(normalizeInstrumentEditorModel(form));
   };
 
   return (
@@ -118,7 +79,7 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
               label="ISIN"
               value={form.isin}
               onChange={(e) => update('isin', e.target.value)}
-              required={requiresIsin(form.type)}
+              required={requiresInstrumentIsin(form.type)}
               fullWidth
             />
           </Stack>
@@ -152,7 +113,7 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
               onChange={(e) => update('type', e.target.value as InstrumentType)}
               fullWidth
             >
-              {INSTRUMENT_TYPES.map((option) => (
+              {INSTRUMENT_TYPE_OPTIONS.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
                 </MenuItem>
@@ -192,10 +153,11 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
             label="Источник цен"
             value={form.priceSource ?? ''}
             onChange={(e) => update('priceSource', e.target.value ? (e.target.value as PriceSource) : null)}
+            disabled={!form.isTrading}
             fullWidth
           >
             <MenuItem value="">Не синхронизировать</MenuItem>
-            {PRICE_SOURCES.map((option) => (
+            {PRICE_SOURCE_OPTIONS.map((option) => (
               <MenuItem key={option.value} value={option.value}>
                 {option.label}
               </MenuItem>
@@ -205,7 +167,13 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
             control={
               <Checkbox
                 checked={form.isTrading}
-                onChange={(_, checked) => update('isTrading', checked)}
+                onChange={(_, checked) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    isTrading: checked,
+                    priceSource: checked ? prev.priceSource : null,
+                  }));
+                }}
               />
             }
             label="Торгуется"

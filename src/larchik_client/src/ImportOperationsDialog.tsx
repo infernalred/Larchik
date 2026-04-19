@@ -11,6 +11,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import { resolveImportMaxFileSizeMb, validateImportFile } from './import-operations-domain';
 
 interface Props {
   open: boolean;
@@ -23,24 +24,7 @@ interface Props {
 }
 
 const ACCEPT_ATTR = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-const DEFAULT_MAX_FILE_SIZE_MB = 10;
-
-function getMaxFileSizeMb(): number {
-  const raw = import.meta.env.VITE_IMPORT_MAX_FILE_SIZE_MB;
-  const parsed = raw ? Number.parseInt(raw, 10) : NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_FILE_SIZE_MB;
-}
-
-const maxFileSizeMb = getMaxFileSizeMb();
-const maxFileSizeBytes = maxFileSizeMb * 1024 * 1024;
-
-function validateFile(file: File | null): string | null {
-  if (!file) return 'Выберите файл отчета.';
-  if (file.size === 0) return 'Нельзя загрузить пустой файл.';
-  if (file.size > maxFileSizeBytes) return `Файл отчета слишком большой. Максимальный размер ${maxFileSizeMb} MB.`;
-  if (!file.name.toLowerCase().endsWith('.xlsx')) return 'Поддерживаются только файлы .xlsx.';
-  return null;
-}
+const maxFileSizeMb = resolveImportMaxFileSizeMb(import.meta.env.VITE_IMPORT_MAX_FILE_SIZE_MB);
 
 export function ImportOperationsDialog({
   open,
@@ -70,7 +54,7 @@ export function ImportOperationsDialog({
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0] ?? null;
-    const nextError = validateFile(selected);
+    const nextError = validateImportFile(selected, maxFileSizeMb);
     if (nextError) {
       setFile(null);
       setValidationError(nextError);
@@ -84,7 +68,7 @@ export function ImportOperationsDialog({
 
   const handleSubmit = async () => {
     const selectedFile = file;
-    const nextError = validateFile(selectedFile);
+    const nextError = validateImportFile(selectedFile, maxFileSizeMb);
     if (nextError) {
       setValidationError(nextError);
       return;
