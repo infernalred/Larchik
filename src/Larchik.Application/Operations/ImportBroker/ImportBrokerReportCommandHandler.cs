@@ -55,174 +55,33 @@ public class ImportBrokerReportCommandHandler(
             return Result<ImportResultDto>.Failure("В файле не найдено операций");
         }
 
-        var instrumentCodes = parseResult.Operations
-            .Where(o => o.RequiresInstrument && !string.IsNullOrWhiteSpace(o.InstrumentCode))
-            .Select(o => o.InstrumentCode!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var resolution = await BrokerImportInstrumentResolver.ResolveAsync(
+            context,
+            parseResult.Operations,
+            cancellationToken);
 
-        var normalizedInstrumentCodes = instrumentCodes
-            .Select(NormalizeCode)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-
-        var isinMap = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
-        var tickerMap = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
-        var aliasMap = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
-        var ambiguousTickers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var instrumentDetailsById = new Dictionary<Guid, Instrument>();
-
-        if (normalizedInstrumentCodes.Length > 0)
-        {
-            var aliases = await context.InstrumentAliases
-                .Where(x => normalizedInstrumentCodes.Contains(x.NormalizedAliasCode))
-                .ToListAsync(cancellationToken);
-
-            foreach (var alias in aliases)
-            {
-                if (!aliasMap.ContainsKey(alias.AliasCode))
-                {
-                    aliasMap[alias.AliasCode] = alias.InstrumentId;
-                }
-            }
-
-            var aliasInstrumentIds = aliases
-                .Select(x => x.InstrumentId)
-                .Distinct()
-                .ToArray();
-
-            var instruments = await context.Instruments
-                .Where(i =>
-                    instrumentCodes.Contains(i.Ticker) ||
-                    instrumentCodes.Contains(i.Isin) ||
-                    aliasInstrumentIds.Contains(i.Id))
-                .ToListAsync(cancellationToken);
-
-            foreach (var instrument in instruments)
-            {
-                instrumentDetailsById[instrument.Id] = instrument;
-            }
-
-            foreach (var instrument in instruments)
-            {
-                if (!string.IsNullOrWhiteSpace(instrument.Isin) && !isinMap.ContainsKey(instrument.Isin))
-                {
-                    isinMap[instrument.Isin] = instrument.Id;
-                }
-            }
-
-            foreach (var tickerGroup in instruments
-                         .Where(x => !string.IsNullOrWhiteSpace(x.Ticker))
-                         .GroupBy(x => x.Ticker, StringComparer.OrdinalIgnoreCase))
-            {
-                var instrumentIds = tickerGroup
-                    .Select(x => x.Id)
-                    .Distinct()
-                    .ToArray();
-
-                if (instrumentIds.Length == 1)
-                {
-                    tickerMap[tickerGroup.Key] = instrumentIds[0];
-                    continue;
-                }
-
-                ambiguousTickers.Add(tickerGroup.Key);
-            }
-        }
-
-        var unresolved = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var ambiguous = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var parsed in parseResult.Operations.Where(x => x.RequiresInstrument))
-        {
-            var instrumentCode = parsed.InstrumentCode ?? "UNKNOWN";
-            if (string.IsNullOrWhiteSpace(parsed.InstrumentCode))
-            {
-                unresolved.Add(instrumentCode);
-                continue;
-            }
-
-            if (aliasMap.TryGetValue(parsed.InstrumentCode, out _))
-            {
-                continue;
-            }
-
-            if (isinMap.TryGetValue(parsed.InstrumentCode, out _))
-            {
-                continue;
-            }
-
-            if (ambiguousTickers.Contains(parsed.InstrumentCode))
-            {
-                ambiguous.Add(instrumentCode);
-                continue;
-            }
-
-            if (!tickerMap.ContainsKey(parsed.InstrumentCode))
-            {
-                unresolved.Add(instrumentCode);
-            }
-        }
-
-        if (unresolved.Count > 0 || ambiguous.Count > 0)
+        if (resolution.HasErrors)
         {
             var errors = parseResult.Errors
-                .Concat(unresolved.Select(c => $"Не найден инструмент {c}"))
-                .Concat(ambiguous.Select(c => $"Найдено несколько инструментов с тикером {c}. Используйте уникальный ISIN."))
+                .Concat(resolution.BuildErrors())
                 .ToArray();
             return Result<ImportResultDto>.Failure(string.Join("; ", errors));
         }
 
         var operationsToInsert = new List<Operation>(parseResult.Operations.Count);
-        var operationsToReconcile = new List<Operation>(parseResult.Operations.Count);
-        var importedKeys = new HashSet<string>(StringComparer.Ordinal);
         var skippedCount = 0;
         var reconciledCount = 0;
-        var instrumentCodeById = new Dictionary<Guid, string>();
-        var baseKeyOccurrences = new Dictionary<string, int>(StringComparer.Ordinal);
+        var preparedBatch = BrokerImportBatchBuilder.Prepare(parseResult.Operations, portfolio.Id, resolution);
+        var operationsToReconcile = preparedBatch.Operations;
 
-        foreach (var instrument in instrumentDetailsById.Values)
-        {
-            instrumentCodeById[instrument.Id] = !string.IsNullOrWhiteSpace(instrument.Isin)
-                ? instrument.Isin
-                : instrument.Ticker;
-        }
-
-        foreach (var parsed in parseResult.Operations)
-        {
-            if (parsed.RequiresInstrument)
-            {
-                parsed.Operation.InstrumentId = aliasMap.TryGetValue(parsed.InstrumentCode!, out var aliasId)
-                    ? aliasId
-                    : isinMap.TryGetValue(parsed.InstrumentCode!, out var isinId)
-                        ? isinId
-                        : tickerMap[parsed.InstrumentCode!];
-            }
-
-            parsed.Operation.PortfolioId = portfolio.Id;
-            var canonicalInstrumentCode = parsed.Operation.InstrumentId is { } instrumentId
-                ? instrumentCodeById[instrumentId]
-                : null;
-            var baseKey = BrokerOperationKeyBuilder.BuildBaseHash(parsed.Operation, canonicalInstrumentCode);
-            var occurrence = baseKeyOccurrences.GetValueOrDefault(baseKey) + 1;
-            baseKeyOccurrences[baseKey] = occurrence;
-            parsed.Operation.BrokerOperationKey = BrokerOperationKeyBuilder.Build(parsed.Operation, canonicalInstrumentCode, occurrence);
-            importedKeys.Add(parsed.Operation.BrokerOperationKey);
-        }
-
-        var importedInstrumentIds = parseResult.Operations
-            .Where(x => x.Operation.InstrumentId != null)
-            .Select(x => x.Operation.InstrumentId!.Value)
-            .Distinct()
-            .ToArray();
-
-        operationsToReconcile.AddRange(parseResult.Operations.Select(x => x.Operation));
-
-        var existingKeys = importedKeys.Count == 0
+        var existingKeys = preparedBatch.ImportedKeys.Count == 0
             ? new HashSet<string>(StringComparer.Ordinal)
             : (await context.Operations
                 .AsNoTracking()
-                .Where(x => x.PortfolioId == portfolio.Id && x.BrokerOperationKey != null && importedKeys.Contains(x.BrokerOperationKey))
+                .Where(x =>
+                    x.PortfolioId == portfolio.Id &&
+                    x.BrokerOperationKey != null &&
+                    preparedBatch.ImportedKeys.Contains(x.BrokerOperationKey))
                 .Select(x => x.BrokerOperationKey!)
                 .Distinct()
                 .ToListAsync(cancellationToken))
@@ -314,9 +173,6 @@ public class ImportBrokerReportCommandHandler(
 
         return Result<ImportResultDto>.Success(result);
     }
-
-    private static string NormalizeCode(string value) => value.Trim().ToUpperInvariant();
-
     private static DateTime MinDate(DateTime left, DateTime right) => left <= right ? left : right;
 
     private sealed record PortfolioIdentity(Guid Id, string? BrokerCode);

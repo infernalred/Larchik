@@ -94,6 +94,17 @@ internal sealed class OperationsTestHarness : IAsyncDisposable
         return instrumentId;
     }
 
+    public void AddInstrumentAlias(Guid instrumentId, string aliasCode)
+    {
+        Context.InstrumentAliases.Add(new InstrumentAlias
+        {
+            Id = Guid.NewGuid(),
+            InstrumentId = instrumentId,
+            AliasCode = aliasCode,
+            NormalizedAliasCode = aliasCode.Trim().ToUpperInvariant()
+        });
+    }
+
     public Guid AddOperation(
         Guid portfolioId,
         OperationType type,

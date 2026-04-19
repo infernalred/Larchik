@@ -50,6 +50,83 @@ public class SyncTbankPricesCommandHandler(
             lookbackDays,
             excludedCountries.Count == 0 ? "none" : string.Join(",", excludedCountries));
 
+        var instrumentLoad = await LoadEligibleInstrumentsAsync(date, excludedCountries, cancellationToken);
+        var instrumentStates = instrumentLoad.States;
+        var listingHistories = instrumentLoad.ListingHistories;
+        var instruments = instrumentLoad.Candidates;
+
+        if (instruments.Count == 0)
+        {
+            logger.LogInformation("TBANK price sync skipped for {Date} UTC: no eligible instruments found", date.ToString("yyyy-MM-dd"));
+            return Result<int>.Success(0);
+        }
+
+        using var client = CreateClient(allowInvalidTls);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var loadResult = await LoadPricePointsAsync(
+            client,
+            instruments,
+            date,
+            lookbackDays,
+            maxParallelism,
+            baseUrl,
+            cancellationToken);
+
+        if (loadResult.Points.Count == 0)
+        {
+            var errorMessage = loadResult.Errors.Count == 0
+                ? $"TBANK returned no prices for {date:yyyy-MM-dd}"
+                : string.Join("; ", loadResult.Errors.Take(10));
+            return Result<int>.Failure(errorMessage);
+        }
+
+        var points = loadResult.Points;
+        var sourceDates = points
+            .Select(x => x.Date)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToArray();
+
+        var upsertInputs = BuildUpsertInputs(points, instrumentStates, listingHistories, provider);
+        var upsertResult = await PriceStorageHelper.ApplyAsync(context, upsertInputs, cancellationToken);
+        var changes = await context.SaveChangesAsync(cancellationToken);
+        var sourceDateDistribution = points
+            .GroupBy(x => x.Date)
+            .OrderBy(x => x.Key)
+            .Select(x => $"{x.Key:yyyy-MM-dd}:{x.Count()}")
+            .ToArray();
+
+        logger.LogInformation(
+            "TBANK price sync finished for {Date} UTC. Eligible instruments: {Eligible}. Loaded: {Loaded}. " +
+            "Missing candles: {Missing}. Errors: {Errors}. Source dates: {SourceDates}. Inserted: {Inserted}, updated: {Updated}, db changes: {Changes}",
+            date.ToString("yyyy-MM-dd"),
+            instruments.Count,
+            points.Count,
+            loadResult.MissingCount,
+            loadResult.Errors.Count,
+            sourceDateDistribution.Length == 0 ? "none" : string.Join(", ", sourceDateDistribution),
+            upsertResult.Inserted,
+            upsertResult.Updated,
+            changes);
+
+        if (loadResult.Errors.Count > 0)
+        {
+            logger.LogWarning(
+                "TBANK price sync had {ErrorCount} request errors for {Date} UTC. Sample: {Sample}",
+                loadResult.Errors.Count,
+                date.ToString("yyyy-MM-dd"),
+                string.Join("; ", loadResult.Errors.Take(5)));
+        }
+
+        return Result<int>.Success(changes);
+    }
+
+    private async Task<TbankInstrumentLoadResult> LoadEligibleInstrumentsAsync(
+        DateOnly date,
+        ISet<string> excludedCountries,
+        CancellationToken cancellationToken)
+    {
         var instrumentsQuery = context.Instruments
             .AsNoTracking()
             .Where(x =>
@@ -67,11 +144,13 @@ public class SyncTbankPricesCommandHandler(
         var instrumentStates = await instrumentsQuery
             .Select(x => new InstrumentState(x.Id, x.Figi!, x.CurrencyId.ToUpperInvariant(), x.Ticker, x.Isin, x.Exchange))
             .ToListAsync(cancellationToken);
+
         var listingHistories = await InstrumentListingHistoryResolver.LoadAsync(
             context,
             instrumentStates.Select(x => x.Id),
             cancellationToken);
-        var instruments = instrumentStates
+
+        var candidates = instrumentStates
             .Select(x =>
             {
                 var activeListing = InstrumentListingHistoryResolver.Resolve(
@@ -87,15 +166,18 @@ public class SyncTbankPricesCommandHandler(
             })
             .ToList();
 
-        if (instruments.Count == 0)
-        {
-            logger.LogInformation("TBANK price sync skipped for {Date} UTC: no eligible instruments found", date.ToString("yyyy-MM-dd"));
-            return Result<int>.Success(0);
-        }
+        return new TbankInstrumentLoadResult(instrumentStates, candidates, listingHistories);
+    }
 
-        using var client = CreateClient(allowInvalidTls);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
+    private async Task<TbankPointLoadResult> LoadPricePointsAsync(
+        HttpClient client,
+        IReadOnlyCollection<InstrumentCandidate> instruments,
+        DateOnly date,
+        int lookbackDays,
+        int maxParallelism,
+        string baseUrl,
+        CancellationToken cancellationToken)
+    {
         var loadedPoints = new ConcurrentBag<TbankPricePoint>();
         var errors = new ConcurrentBag<string>();
         var missing = 0;
@@ -129,113 +211,40 @@ public class SyncTbankPricesCommandHandler(
             }
         }));
 
-        if (loadedPoints.IsEmpty)
-        {
-            var errorMessage = errors.IsEmpty
-                ? $"TBANK returned no prices for {date:yyyy-MM-dd}"
-                : string.Join("; ", errors.Take(10));
-            return Result<int>.Failure(errorMessage);
-        }
+        return new TbankPointLoadResult(loadedPoints.ToList(), missing, errors.ToList());
+    }
 
-        var points = loadedPoints.ToList();
-        var instrumentIds = points.Select(x => x.InstrumentId).Distinct().ToArray();
-        var sourceDates = points
-            .Select(x => x.Date)
-            .Distinct()
-            .OrderBy(x => x)
-            .ToArray();
-        var minSourceDateUtc = ToUtcDateTime(sourceDates[0]);
-        var maxSourceDateExclusiveUtc = ToUtcDateTime(sourceDates[^1].AddDays(1));
-
-        var existing = await context.Prices
-            .AsTracking()
-            .Where(x => instrumentIds.Contains(x.InstrumentId))
-            .Where(x => x.Date >= minSourceDateUtc && x.Date < maxSourceDateExclusiveUtc)
-            .Where(x => x.Provider.ToUpper() == provider)
-            .ToListAsync(cancellationToken);
-
-        var existingByInstrumentDate = existing
-            .OrderByDescending(x => x.UpdatedAt)
-            .GroupBy(x => new { x.InstrumentId, Date = DateOnly.FromDateTime(x.Date) })
-            .ToDictionary(x => x.Key, x => x.First());
+    private static List<PriceStorageHelper.UpsertPriceInput> BuildUpsertInputs(
+        IReadOnlyCollection<TbankPricePoint> points,
+        IReadOnlyCollection<InstrumentState> instrumentStates,
+        IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> listingHistories,
+        string provider)
+    {
         var instrumentStateById = instrumentStates.ToDictionary(x => x.Id);
 
-        var inserted = 0;
-        var updated = 0;
-        var now = DateTime.UtcNow;
-
-        foreach (var point in points)
-        {
-            if (!instrumentStateById.TryGetValue(point.InstrumentId, out var instrumentState))
+        return points
+            .Where(point => instrumentStateById.ContainsKey(point.InstrumentId))
+            .Select(point =>
             {
-                continue;
-            }
+                var instrumentState = instrumentStateById[point.InstrumentId];
+                var activeListing = InstrumentListingHistoryResolver.Resolve(
+                    instrumentState.Id,
+                    instrumentState.Ticker,
+                    instrumentState.Figi,
+                    instrumentState.Exchange,
+                    instrumentState.CurrencyId,
+                    listingHistories,
+                    ToUtcDateTime(point.Date));
 
-            var activeListing = InstrumentListingHistoryResolver.Resolve(
-                instrumentState.Id,
-                instrumentState.Ticker,
-                instrumentState.Figi,
-                instrumentState.Exchange,
-                instrumentState.CurrencyId,
-                listingHistories,
-                ToUtcDateTime(point.Date));
-            var existingKey = new { point.InstrumentId, point.Date };
-            if (existingByInstrumentDate.TryGetValue(existingKey, out var price))
-            {
-                price.Value = point.Value;
-                price.CurrencyId = instrumentState.CurrencyId;
-                price.SourceCurrencyId = activeListing.CurrencyId;
-                price.Provider = provider;
-                price.UpdatedAt = now;
-                updated++;
-                continue;
-            }
-
-            await context.Prices.AddAsync(new Price
-            {
-                Id = Guid.NewGuid(),
-                InstrumentId = point.InstrumentId,
-                Date = ToUtcDateTime(point.Date),
-                Value = point.Value,
-                CurrencyId = instrumentState.CurrencyId,
-                SourceCurrencyId = activeListing.CurrencyId,
-                Provider = provider,
-                CreatedAt = now,
-                UpdatedAt = now
-            }, cancellationToken);
-            inserted++;
-        }
-
-        var changes = await context.SaveChangesAsync(cancellationToken);
-        var sourceDateDistribution = points
-            .GroupBy(x => x.Date)
-            .OrderBy(x => x.Key)
-            .Select(x => $"{x.Key:yyyy-MM-dd}:{x.Count()}")
-            .ToArray();
-
-        logger.LogInformation(
-            "TBANK price sync finished for {Date} UTC. Eligible instruments: {Eligible}. Loaded: {Loaded}. " +
-            "Missing candles: {Missing}. Errors: {Errors}. Source dates: {SourceDates}. Inserted: {Inserted}, updated: {Updated}, db changes: {Changes}",
-            date.ToString("yyyy-MM-dd"),
-            instruments.Count,
-            points.Count,
-            missing,
-            errors.Count,
-            sourceDateDistribution.Length == 0 ? "none" : string.Join(", ", sourceDateDistribution),
-            inserted,
-            updated,
-            changes);
-
-        if (!errors.IsEmpty)
-        {
-            logger.LogWarning(
-                "TBANK price sync had {ErrorCount} request errors for {Date} UTC. Sample: {Sample}",
-                errors.Count,
-                date.ToString("yyyy-MM-dd"),
-                string.Join("; ", errors.Take(5)));
-        }
-
-        return Result<int>.Success(changes);
+                return new PriceStorageHelper.UpsertPriceInput(
+                    point.InstrumentId,
+                    ToUtcDateTime(point.Date),
+                    point.Value,
+                    instrumentState.CurrencyId,
+                    activeListing.CurrencyId,
+                    provider);
+            })
+            .ToList();
     }
 
     private HttpClient CreateClient(bool allowInvalidTls)
@@ -402,6 +411,16 @@ public class SyncTbankPricesCommandHandler(
     {
         return DateTime.SpecifyKind(date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
     }
+
+    private sealed record TbankInstrumentLoadResult(
+        List<InstrumentState> States,
+        List<InstrumentCandidate> Candidates,
+        IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> ListingHistories);
+
+    private sealed record TbankPointLoadResult(
+        List<TbankPricePoint> Points,
+        int MissingCount,
+        List<string> Errors);
 
     private sealed record InstrumentCandidate(Guid Id, string Figi, string CurrencyId, string Ticker, string? Isin, string? Exchange);
     private sealed record InstrumentState(Guid Id, string Figi, string CurrencyId, string Ticker, string? Isin, string? Exchange);

@@ -84,6 +84,33 @@ public class ImportBrokerReportCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ResolvesInstrumentByAlias()
+    {
+        await using var harness = new OperationsTestHarness();
+        var portfolioId = harness.AddPortfolio("Main");
+        var instrumentId = harness.AddInstrument("SBER", isin: "RU0009029540");
+        harness.AddInstrumentAlias(instrumentId, "BBG004730N88");
+        await harness.Context.SaveChangesAsync();
+
+        var handler = harness.CreateImportHandler(
+            new OperationsTestHarness.FakeBrokerReportParser("tbank", () => BuildParseResult(
+                buyInstrumentCode: "BBG004730N88",
+                tradeDate: new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc))));
+
+        var result = await handler.Handle(
+            new ImportBrokerReportCommand(portfolioId, "tbank", new MemoryStream(), "report.xlsx"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+
+        var importedBuy = await harness.Context.Operations
+            .AsNoTracking()
+            .SingleAsync(x => x.Type == OperationType.Buy);
+
+        Assert.Equal(instrumentId, importedBuy.InstrumentId);
+    }
+
+    [Fact]
     public async Task Handle_SkipsDuplicates_OnRepeatedImport()
     {
         await using var harness = new OperationsTestHarness();
@@ -102,6 +129,28 @@ public class ImportBrokerReportCommandHandlerTests
         Assert.Equal(0, second.Value!.ImportedOperations);
         Assert.Equal(2, second.Value.SkippedOperations);
         Assert.Equal(2, await harness.Context.Operations.AsNoTracking().CountAsync());
+    }
+
+    [Fact]
+    public async Task Handle_Fails_WhenTickerIsAmbiguous()
+    {
+        await using var harness = new OperationsTestHarness();
+        var portfolioId = harness.AddPortfolio("Main");
+        harness.AddInstrument("SBER", isin: "RU0009029540");
+        harness.AddInstrument("SBER", isin: "RU000A0JX0J2");
+        await harness.Context.SaveChangesAsync();
+
+        var handler = harness.CreateImportHandler(
+            new OperationsTestHarness.FakeBrokerReportParser("tbank", () => BuildParseResult(
+                buyInstrumentCode: "SBER",
+                tradeDate: new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc))));
+
+        var result = await handler.Handle(
+            new ImportBrokerReportCommand(portfolioId, "tbank", new MemoryStream(), "report.xlsx"),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Найдено несколько инструментов с тикером SBER. Используйте уникальный ISIN.", result.Error);
     }
 
     [Fact]

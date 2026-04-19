@@ -11,6 +11,8 @@ public class GetCurrenciesQueryHandler(LarchikContext context) : IRequestHandler
     public async Task<Result<Currency[]>> Handle(GetCurrenciesQuery request, CancellationToken cancellationToken)
     {
         var result = await context.Currencies
+            .AsNoTracking()
+            .OrderBy(x => x.Id)
             .ToArrayAsync(cancellationToken);
 
         return Result<Currency[]>.Success(result);

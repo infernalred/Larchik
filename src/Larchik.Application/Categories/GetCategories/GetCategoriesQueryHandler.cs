@@ -11,6 +11,7 @@ public class GetCategoriesQueryHandler(LarchikContext context) : IRequestHandler
     public async Task<Result<Category[]>> Handle(GetCategoriesQuery request, CancellationToken cancellationToken)
     {
         var result = await context.Categories
+            .AsNoTracking()
             .OrderBy(x => x.Id)
             .ToArrayAsync(cancellationToken);
 

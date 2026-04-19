@@ -12,42 +12,19 @@ public class SyncPricesCommandHandler(LarchikContext context)
 {
     public async Task<Result<int>> Handle(SyncPricesCommand request, CancellationToken cancellationToken)
     {
-        var instrumentIds = request.Prices.Select(p => p.InstrumentId).Distinct().ToArray();
-        var knownInstruments = await context.Instruments
-            .AsNoTracking()
-            .Where(i => instrumentIds.Contains(i.Id))
-            .ToDictionaryAsync(i => i.Id, cancellationToken);
+        var knownInstruments = await LoadKnownInstrumentsAsync(request, cancellationToken);
+        if (knownInstruments.Count == 0)
+        {
+            return Result<int>.Success(0);
+        }
 
-        var filtered = request.Prices
-            .Where(p => knownInstruments.ContainsKey(p.InstrumentId))
-            .ToList();
+        var normalizedInputs = await NormalizeInputsAsync(request, knownInstruments, cancellationToken);
+        if (normalizedInputs.Count == 0)
+        {
+            return Result<int>.Success(0);
+        }
 
-        var listingHistories = await InstrumentListingHistoryResolver.LoadAsync(context, knownInstruments.Keys, cancellationToken);
-        var normalizedInputs = filtered
-            .Select(priceModel =>
-            {
-                var instrument = knownInstruments[priceModel.InstrumentId];
-                var sourceCurrency = priceModel.CurrencyId.Trim().ToUpperInvariant();
-                var expectedSourceCurrency = InstrumentListingHistoryResolver.ResolveCurrency(instrument, listingHistories, priceModel.Date);
-                return new
-                {
-                    Model = priceModel,
-                    Instrument = instrument,
-                    SourceCurrency = sourceCurrency,
-                    ExpectedSourceCurrency = expectedSourceCurrency
-                };
-            })
-            .ToList();
-        var normalizedInputsByKey = normalizedInputs.ToDictionary(
-            x => (x.Model.InstrumentId, x.Model.Date.Date, Provider: x.Model.Provider.ToUpperInvariant()));
-
-        var mismatches = normalizedInputs
-            .Where(x => !string.Equals(x.SourceCurrency, x.ExpectedSourceCurrency, StringComparison.OrdinalIgnoreCase))
-            .Take(5)
-            .Select(x =>
-                $"{x.Instrument.Ticker} {x.Model.Date:yyyy-MM-dd}: source {x.SourceCurrency}, expected {x.ExpectedSourceCurrency}")
-            .ToArray();
-
+        var mismatches = GetCurrencyMismatchErrors(normalizedInputs);
         if (mismatches.Length > 0)
         {
             return Result<int>.Failure($"Price currency mismatch with active listing: {string.Join("; ", mismatches)}");
@@ -61,73 +38,115 @@ public class SyncPricesCommandHandler(LarchikContext context)
             ? []
             : await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
         var data = new HistoricalDataLookup([], fxRates);
-        var missingRates = normalizedInputs
-            .Where(x =>
-                !string.Equals(x.SourceCurrency, x.Instrument.CurrencyId, StringComparison.OrdinalIgnoreCase) &&
-                data.GetRate(x.SourceCurrency, x.Instrument.CurrencyId, x.Model.Date) is null)
-            .Take(5)
-            .Select(x =>
-                $"{x.Instrument.Ticker} {x.Model.Date:yyyy-MM-dd}: {x.SourceCurrency}->{x.Instrument.CurrencyId}")
-            .ToArray();
-
+        var missingRates = GetMissingFxErrors(normalizedInputs, data);
         if (missingRates.Length > 0)
         {
             return Result<int>.Failure($"FX rate is missing for price normalization: {string.Join("; ", missingRates)}");
         }
 
-        var instrumentPriceDates = filtered
-            .Select(p => (p.InstrumentId, Date: p.Date.Date, Provider: p.Provider.ToUpperInvariant()))
-            .ToHashSet();
+        var upsertInputs = BuildUpsertInputs(normalizedInputs, data);
 
-        var existing = await context.Prices
-            .AsTracking()
-            .Where(x => instrumentIds.Contains(x.InstrumentId))
-            .Where(x => instrumentPriceDates.Any(t =>
-                t.Item1 == x.InstrumentId &&
-                t.Item2 == x.Date.Date &&
-                t.Item3 == x.Provider.ToUpper()))
-            .ToListAsync(cancellationToken);
-
-        foreach (var priceModel in filtered)
-        {
-            var provider = priceModel.Provider.ToUpperInvariant();
-            var normalizedInput = normalizedInputsByKey[(priceModel.InstrumentId, priceModel.Date.Date, provider)];
-            var existingPrice = existing.FirstOrDefault(x =>
-                x.InstrumentId == priceModel.InstrumentId &&
-                x.Date.Date == priceModel.Date.Date &&
-                x.Provider.ToUpper() == provider);
-            var normalizedValue = data.Convert(
-                priceModel.Value,
-                normalizedInput.SourceCurrency,
-                normalizedInput.Instrument.CurrencyId,
-                priceModel.Date);
-
-            if (existingPrice is null)
-            {
-                await context.Prices.AddAsync(new Price
-                {
-                    Id = Guid.NewGuid(),
-                    InstrumentId = priceModel.InstrumentId,
-                    Date = priceModel.Date,
-                    Value = normalizedValue,
-                    CurrencyId = normalizedInput.Instrument.CurrencyId.ToUpperInvariant(),
-                    SourceCurrencyId = normalizedInput.SourceCurrency,
-                    Provider = provider,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                }, cancellationToken);
-            }
-            else
-            {
-                existingPrice.Value = normalizedValue;
-                existingPrice.CurrencyId = normalizedInput.Instrument.CurrencyId.ToUpperInvariant();
-                existingPrice.SourceCurrencyId = normalizedInput.SourceCurrency;
-                existingPrice.Provider = provider;
-                existingPrice.UpdatedAt = DateTime.UtcNow;
-            }
-        }
+        await PriceStorageHelper.ApplyAsync(context, upsertInputs, cancellationToken);
 
         var changes = await context.SaveChangesAsync(cancellationToken);
         return Result<int>.Success(changes);
     }
+
+    private async Task<Dictionary<Guid, Instrument>> LoadKnownInstrumentsAsync(
+        SyncPricesCommand request,
+        CancellationToken cancellationToken)
+    {
+        var requestedInstrumentIds = request.Prices
+            .Select(x => x.InstrumentId)
+            .Distinct()
+            .ToArray();
+
+        return await context.Instruments
+            .AsNoTracking()
+            .Where(x => requestedInstrumentIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+    }
+
+    private async Task<List<NormalizedPriceInput>> NormalizeInputsAsync(
+        SyncPricesCommand request,
+        IReadOnlyDictionary<Guid, Instrument> knownInstruments,
+        CancellationToken cancellationToken)
+    {
+        var filteredInputs = request.Prices
+            .Where(x => knownInstruments.ContainsKey(x.InstrumentId))
+            .ToList();
+
+        if (filteredInputs.Count == 0)
+        {
+            return [];
+        }
+
+        var listingHistories = await InstrumentListingHistoryResolver.LoadAsync(
+            context,
+            knownInstruments.Keys,
+            cancellationToken);
+
+        return filteredInputs
+            .Select(model =>
+            {
+                var instrument = knownInstruments[model.InstrumentId];
+                var normalizedDate = PriceStorageHelper.NormalizeUtcDate(model.Date);
+                var sourceCurrency = model.CurrencyId.Trim().ToUpperInvariant();
+                var provider = model.Provider.Trim().ToUpperInvariant();
+                var expectedSourceCurrency = InstrumentListingHistoryResolver.ResolveCurrency(
+                    instrument,
+                    listingHistories,
+                    normalizedDate);
+
+                return new NormalizedPriceInput(
+                    model.InstrumentId,
+                    normalizedDate,
+                    model.Value,
+                    provider,
+                    sourceCurrency,
+                    expectedSourceCurrency,
+                    instrument);
+            })
+            .ToList();
+    }
+
+    private static string[] GetCurrencyMismatchErrors(IReadOnlyCollection<NormalizedPriceInput> normalizedInputs) =>
+        normalizedInputs
+            .Where(x => !string.Equals(x.SourceCurrency, x.ExpectedSourceCurrency, StringComparison.OrdinalIgnoreCase))
+            .Take(5)
+            .Select(x => $"{x.Instrument.Ticker} {x.Date:yyyy-MM-dd}: source {x.SourceCurrency}, expected {x.ExpectedSourceCurrency}")
+            .ToArray();
+
+    private static string[] GetMissingFxErrors(
+        IReadOnlyCollection<NormalizedPriceInput> normalizedInputs,
+        HistoricalDataLookup data) =>
+        normalizedInputs
+            .Where(x =>
+                !string.Equals(x.SourceCurrency, x.Instrument.CurrencyId, StringComparison.OrdinalIgnoreCase) &&
+                data.GetRate(x.SourceCurrency, x.Instrument.CurrencyId, x.Date) is null)
+            .Take(5)
+            .Select(x => $"{x.Instrument.Ticker} {x.Date:yyyy-MM-dd}: {x.SourceCurrency}->{x.Instrument.CurrencyId}")
+            .ToArray();
+
+    private static List<PriceStorageHelper.UpsertPriceInput> BuildUpsertInputs(
+        IReadOnlyCollection<NormalizedPriceInput> normalizedInputs,
+        HistoricalDataLookup data) =>
+        normalizedInputs
+            .Select(x => new PriceStorageHelper.UpsertPriceInput(
+                x.InstrumentId,
+                x.Date,
+                data.Convert(x.Value, x.SourceCurrency, x.Instrument.CurrencyId, x.Date),
+                x.Instrument.CurrencyId,
+                x.SourceCurrency,
+                x.Provider))
+            .ToList();
+
+    private sealed record NormalizedPriceInput(
+        Guid InstrumentId,
+        DateTime Date,
+        decimal Value,
+        string Provider,
+        string SourceCurrency,
+        string ExpectedSourceCurrency,
+        Instrument Instrument);
 }

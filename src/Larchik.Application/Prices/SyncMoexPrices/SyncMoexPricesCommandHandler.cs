@@ -57,7 +57,130 @@ public class SyncMoexPricesCommandHandler(
             provider,
             string.Join(",", boards));
 
-        var instruments = await context.Instruments
+        var instrumentLoad = await LoadEligibleInstrumentsAsync(cancellationToken);
+        var instruments = instrumentLoad.Candidates;
+        var listingHistories = instrumentLoad.ListingHistories;
+
+        if (instruments.Count == 0)
+        {
+            logger.LogInformation("MOEX price sync skipped for {Date} UTC: no eligible instruments found", date.ToString("yyyy-MM-dd"));
+            return Result<int>.Success(0);
+        }
+
+        var boardLoad = await LoadBoardsAsync(date, boards, baseUrl, cancellationToken);
+        var pricesByTicker = boardLoad.PricesByTicker;
+
+        if (boardLoad.LoadedBoards == 0 && boardLoad.Errors.Count > 0)
+        {
+            return Result<int>.Failure(string.Join("; ", boardLoad.Errors));
+        }
+
+        if (pricesByTicker.Count == 0)
+        {
+            logger.LogInformation(
+                "MOEX price sync got no price records for {Date} UTC after loading {LoadedBoards}/{TotalBoards} boards (lookback: {LookbackDays} days); trading flags will still be refreshed",
+                date.ToString("yyyy-MM-dd"),
+                boardLoad.LoadedBoards,
+                boards.Length,
+                MaxHistoryLookbackDays);
+        }
+
+        var instrumentIds = instruments
+            .Select(x => x.Id)
+            .ToArray();
+        var aliasCodes = await context.InstrumentAliases
+            .AsNoTracking()
+            .Where(x => instrumentIds.Contains(x.InstrumentId))
+            .Select(x => new InstrumentAliasCandidate(x.InstrumentId, x.NormalizedAliasCode))
+            .ToListAsync(cancellationToken);
+
+        var codeMap = BuildCodeMap(instruments, aliasCodes, listingHistories);
+
+        var tradingStatusByInstrument = await LoadTradingStates(
+            instruments,
+            aliasCodes,
+            listingHistories,
+            boards,
+            baseUrl,
+            cancellationToken);
+
+        var trackedInstruments = await context.Instruments
+            .AsTracking()
+            .Where(x => instrumentIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+
+        var matches = BuildMatches(pricesByTicker, codeMap);
+
+        if (matches.Count == 0)
+        {
+            var tradingOnlyChanges = ApplyTradingStateUpdates(trackedInstruments, tradingStatusByInstrument);
+            var tradingOnlyDbChanges = tradingOnlyChanges == 0 ? 0 : await context.SaveChangesAsync(cancellationToken);
+            logger.LogInformation(
+                "MOEX price sync finished for {Date} UTC: received {MoexRecords} records, no local instrument matches. Trading flag updates: {TradingUpdates}, db changes: {Changes}",
+                date.ToString("yyyy-MM-dd"),
+                pricesByTicker.Count,
+                tradingOnlyChanges,
+                tradingOnlyDbChanges);
+            return Result<int>.Success(tradingOnlyDbChanges);
+        }
+
+        var sourceDates = matches
+            .Select(x => x.Point.Date)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToArray();
+        var neededCurrencies = BuildNeededCurrencies(matches, listingHistories);
+        var fxRates = neededCurrencies.Length == 0
+            ? []
+            : await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
+        fxRates.AddRange(MarketFxRateLoader.BuildFromSamples(
+            matches
+                .Where(x => x.Instrument.Type == InstrumentType.Currency)
+                .Select(x => new MarketFxSample(
+                    x.Instrument.Ticker,
+                    ToUtcDateTime(x.Point.Date),
+                    x.Point.Value,
+                    provider))));
+        var data = new HistoricalDataLookup([], fxRates);
+        var upsertInputs = BuildUpsertInputs(matches, listingHistories, data, provider);
+        var upsertResult = await PriceStorageHelper.ApplyAsync(context, upsertInputs, cancellationToken);
+
+        var tradingUpdates = ApplyTradingStateUpdates(trackedInstruments, tradingStatusByInstrument);
+
+        var changes = await context.SaveChangesAsync(cancellationToken);
+        var sourceDateDistribution = matches
+            .GroupBy(x => x.Point.Date)
+            .OrderBy(x => x.Key)
+            .Select(x => $"{x.Key:yyyy-MM-dd}:{x.Count()}")
+            .ToArray();
+        var aliasMatchCount = matches.Count(x => !string.Equals(x.Instrument.Ticker, x.Point.SecId, StringComparison.OrdinalIgnoreCase));
+
+        logger.LogInformation(
+            "MOEX price sync finished for {Date} UTC. Boards loaded: {LoadedBoards}/{TotalBoards}. " +
+            "Records from MOEX: {MoexRecordsFromBoards} ({MoexUniqueSecIds} unique). Local matches: {Matches}/{InstrumentCount}. " +
+            "Alias matches: {AliasMatches}. " +
+            "Matched source dates: {SourceDates}. " +
+            "Trading flag updates: {TradingUpdates}. Inserted: {Inserted}, updated: {Updated}, db changes: {Changes}",
+            date.ToString("yyyy-MM-dd"),
+            boardLoad.LoadedBoards,
+            boards.Length,
+            boardLoad.MoexRecordsTotal,
+            pricesByTicker.Count,
+            matches.Count,
+            instruments.Count,
+            aliasMatchCount,
+            sourceDateDistribution.Length == 0 ? "none" : string.Join(", ", sourceDateDistribution),
+            tradingUpdates,
+            upsertResult.Inserted,
+            upsertResult.Updated,
+            changes);
+
+        return Result<int>.Success(changes);
+    }
+
+    private async Task<MoexInstrumentLoadResult> LoadEligibleInstrumentsAsync(CancellationToken cancellationToken)
+    {
+        var candidates = await context.Instruments
             .AsNoTracking()
             .Where(x =>
                 (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf || x.Type == InstrumentType.Currency) &&
@@ -67,19 +190,23 @@ public class SyncMoexPricesCommandHandler(
                 x.Ticker != "")
             .Select(x => new InstrumentCandidate(x.Id, x.Ticker.ToUpper(), x.CurrencyId.ToUpperInvariant(), x.Type))
             .ToListAsync(cancellationToken);
+
         var listingHistories = await InstrumentListingHistoryResolver.LoadAsync(
             context,
-            instruments.Select(x => x.Id),
+            candidates.Select(x => x.Id),
             cancellationToken);
 
-        if (instruments.Count == 0)
-        {
-            logger.LogInformation("MOEX price sync skipped for {Date} UTC: no eligible instruments found", date.ToString("yyyy-MM-dd"));
-            return Result<int>.Success(0);
-        }
+        return new MoexInstrumentLoadResult(candidates, listingHistories);
+    }
 
+    private async Task<MoexBoardLoadResult> LoadBoardsAsync(
+        DateOnly date,
+        IReadOnlyCollection<string> boards,
+        string baseUrl,
+        CancellationToken cancellationToken)
+    {
         var pricesByTicker = new Dictionary<string, MoexPricePoint>(StringComparer.OrdinalIgnoreCase);
-        var boardErrors = new List<string>();
+        var errors = new List<string>();
         var loadedBoards = 0;
         var moexRecordsTotal = 0;
 
@@ -88,7 +215,7 @@ public class SyncMoexPricesCommandHandler(
             var boardResult = await LoadBoardPrices(date, board, baseUrl, cancellationToken);
             if (!boardResult.IsSuccess)
             {
-                boardErrors.Add(boardResult.Error ?? $"Board '{board}' sync failed");
+                errors.Add(boardResult.Error ?? $"Board '{board}' sync failed");
                 logger.LogWarning(
                     "MOEX board {Board} sync failed for {Date} UTC: {Error}",
                     board,
@@ -107,47 +234,26 @@ public class SyncMoexPricesCommandHandler(
                 date.ToString("yyyy-MM-dd"),
                 boardResult.Value.SourceDate?.ToString("yyyy-MM-dd") ?? "n/a");
 
-            foreach (var kvp in boardResult.Value.Prices)
+            foreach (var (secId, point) in boardResult.Value.Prices)
             {
-                if (!pricesByTicker.ContainsKey(kvp.Key))
-                {
-                    pricesByTicker[kvp.Key] = kvp.Value;
-                }
+                pricesByTicker.TryAdd(secId, point);
             }
         }
 
-        if (loadedBoards == 0 && boardErrors.Count > 0)
-        {
-            return Result<int>.Failure(string.Join("; ", boardErrors));
-        }
+        return new MoexBoardLoadResult(pricesByTicker, errors, loadedBoards, moexRecordsTotal);
+    }
 
-        if (pricesByTicker.Count == 0)
-        {
-            logger.LogInformation(
-                "MOEX price sync got no price records for {Date} UTC after loading {LoadedBoards}/{TotalBoards} boards (lookback: {LookbackDays} days); trading flags will still be refreshed",
-                date.ToString("yyyy-MM-dd"),
-                loadedBoards,
-                boards.Length,
-                MaxHistoryLookbackDays);
-        }
-
-        var instrumentIds = instruments
-            .Select(x => x.Id)
-            .ToArray();
-        var aliasCodes = await context.InstrumentAliases
-            .AsNoTracking()
-            .Where(x => instrumentIds.Contains(x.InstrumentId))
-            .Select(x => new InstrumentAliasCandidate(x.InstrumentId, x.NormalizedAliasCode))
-            .ToListAsync(cancellationToken);
-
+    private static Dictionary<string, InstrumentCandidate> BuildCodeMap(
+        IReadOnlyCollection<InstrumentCandidate> instruments,
+        IReadOnlyCollection<InstrumentAliasCandidate> aliases,
+        IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> listingHistories)
+    {
         var instrumentsById = instruments.ToDictionary(x => x.Id);
         var codeMap = new Dictionary<string, InstrumentCandidate>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var instrument in instruments)
         {
-            if (!codeMap.ContainsKey(instrument.Ticker))
-            {
-                codeMap[instrument.Ticker] = instrument;
-            }
+            codeMap.TryAdd(instrument.Ticker, instrument);
         }
 
         foreach (var listing in listingHistories.Values.SelectMany(x => x))
@@ -157,184 +263,71 @@ public class SyncMoexPricesCommandHandler(
                 continue;
             }
 
-            if (instrumentsById.TryGetValue(listing.InstrumentId, out var instrument) &&
-                !codeMap.ContainsKey(listing.Ticker))
+            if (instrumentsById.TryGetValue(listing.InstrumentId, out var instrument))
             {
-                codeMap[listing.Ticker] = instrument;
+                codeMap.TryAdd(listing.Ticker, instrument);
             }
         }
 
-        foreach (var alias in aliasCodes)
+        foreach (var alias in aliases)
         {
-            if (codeMap.ContainsKey(alias.NormalizedAliasCode))
-            {
-                continue;
-            }
-
             if (instrumentsById.TryGetValue(alias.InstrumentId, out var instrument))
             {
-                codeMap[alias.NormalizedAliasCode] = instrument;
+                codeMap.TryAdd(alias.NormalizedAliasCode, instrument);
             }
         }
 
-        var tradingStatusByInstrument = await LoadTradingStates(
-            instruments,
-            aliasCodes,
-            listingHistories,
-            boards,
-            baseUrl,
-            cancellationToken);
+        return codeMap;
+    }
 
-        var trackedInstruments = await context.Instruments
-            .AsTracking()
-            .Where(x => instrumentIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, cancellationToken);
-
-        var matches = pricesByTicker
-            .Select(kvp => codeMap.TryGetValue(kvp.Key, out var instrument)
-                ? new MatchedPricePoint(instrument, kvp.Value)
-                : null)
-            .Where(x => x is not null)
-            .Select(x => x!)
+    private static List<MatchedPricePoint> BuildMatches(
+        IReadOnlyDictionary<string, MoexPricePoint> pricesByTicker,
+        IReadOnlyDictionary<string, InstrumentCandidate> codeMap) =>
+        pricesByTicker
+            .Select(x => codeMap.TryGetValue(x.Key, out var instrument) ? new MatchedPricePoint(instrument, x.Value) : null)
+            .OfType<MatchedPricePoint>()
             .ToList();
 
-        if (matches.Count == 0)
-        {
-            var tradingOnlyChanges = ApplyTradingStateUpdates(trackedInstruments, tradingStatusByInstrument);
-            var tradingOnlyDbChanges = tradingOnlyChanges == 0 ? 0 : await context.SaveChangesAsync(cancellationToken);
-            logger.LogInformation(
-                "MOEX price sync finished for {Date} UTC: received {MoexRecords} records, no local instrument matches. Trading flag updates: {TradingUpdates}, db changes: {Changes}",
-                date.ToString("yyyy-MM-dd"),
-                pricesByTicker.Count,
-                tradingOnlyChanges,
-                tradingOnlyDbChanges);
-            return Result<int>.Success(tradingOnlyDbChanges);
-        }
-
-        instrumentIds = matches.Select(x => x.Instrument.Id).Distinct().ToArray();
-        var sourceDates = matches
-            .Select(x => x.Point.Date)
-            .Distinct()
-            .OrderBy(x => x)
-            .ToArray();
-        var minSourceDateUtc = ToUtcDateTime(sourceDates[0]);
-        var maxSourceDateExclusiveUtc = ToUtcDateTime(sourceDates[^1].AddDays(1));
-        var neededCurrencies = matches
-            .SelectMany(x => new[]
-            {
-                x.Instrument.CurrencyId,
-                x.Point.CurrencyId,
-                x.Point.FaceCurrencyId
-            })
+    private static string[] BuildNeededCurrencies(
+        IReadOnlyCollection<MatchedPricePoint> matches,
+        IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> listingHistories) =>
+        matches
+            .SelectMany(x => new[] { x.Instrument.CurrencyId, x.Point.CurrencyId, x.Point.FaceCurrencyId })
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Select(x => x!.ToUpperInvariant())
             .Concat(listingHistories.Values.SelectMany(x => x).Select(x => x.CurrencyId.ToUpperInvariant()))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var fxRates = neededCurrencies.Length == 0
-            ? []
-            : await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
-        fxRates.AddRange(MarketFxRateLoader.BuildFromSamples(
-            matches
-                .Where(x => x.Instrument.Type == InstrumentType.Currency)
-                .Select(x => new MarketFxSample(
-                    x.Instrument.Ticker,
-                    ToUtcDateTime(x.Point.Date),
-                    x.Point.Value,
-                    provider))));
-        var data = new HistoricalDataLookup([], fxRates);
 
-        var existing = await context.Prices
-            .AsTracking()
-            .Where(x => instrumentIds.Contains(x.InstrumentId))
-            .Where(x => x.Date >= minSourceDateUtc && x.Date < maxSourceDateExclusiveUtc)
-            .Where(x => x.Provider.ToUpper() == provider)
-            .ToListAsync(cancellationToken);
-
-        var existingByInstrumentDate = existing
-            .OrderByDescending(x => x.UpdatedAt)
-            .GroupBy(x => new { x.InstrumentId, Date = DateOnly.FromDateTime(x.Date) })
-            .ToDictionary(x => x.Key, x => x.First());
-
-        var inserted = 0;
-        var updated = 0;
-        var tradingUpdates = 0;
-
-        foreach (var matched in matches)
-        {
-            var instrument = matched.Instrument;
-            var point = matched.Point;
-            var activeListing = InstrumentListingHistoryResolver.Resolve(
-                instrument.Id,
-                instrument.Ticker,
-                null,
-                null,
-                instrument.CurrencyId,
-                listingHistories,
-                ToUtcDateTime(point.Date));
-            var normalizedValue = NormalizeStoredPrice(instrument, point, data);
-            var storedCurrencyId = ResolveStoredCurrency(instrument, point, activeListing.CurrencyId);
-            var existingKey = new { InstrumentId = instrument.Id, Date = point.Date };
-
-            if (existingByInstrumentDate.TryGetValue(existingKey, out var price))
+    private static List<PriceStorageHelper.UpsertPriceInput> BuildUpsertInputs(
+        IReadOnlyCollection<MatchedPricePoint> matches,
+        IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> listingHistories,
+        HistoricalDataLookup data,
+        string provider) =>
+        matches
+            .Select(matched =>
             {
-                price.Value = normalizedValue;
-                price.CurrencyId = storedCurrencyId;
-                price.SourceCurrencyId = point.CurrencyId ?? activeListing.CurrencyId;
-                price.Provider = provider;
-                price.UpdatedAt = DateTime.UtcNow;
-                updated++;
-            }
-            else
-            {
-                await context.Prices.AddAsync(new Price
-                {
-                    Id = Guid.NewGuid(),
-                    InstrumentId = instrument.Id,
-                    Date = ToUtcDateTime(point.Date),
-                    Value = normalizedValue,
-                    CurrencyId = storedCurrencyId,
-                    SourceCurrencyId = point.CurrencyId ?? activeListing.CurrencyId,
-                    Provider = provider,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                }, cancellationToken);
-                inserted++;
-            }
-        }
+                var instrument = matched.Instrument;
+                var point = matched.Point;
+                var pointDateUtc = ToUtcDateTime(point.Date);
+                var activeListing = InstrumentListingHistoryResolver.Resolve(
+                    instrument.Id,
+                    instrument.Ticker,
+                    null,
+                    null,
+                    instrument.CurrencyId,
+                    listingHistories,
+                    pointDateUtc);
 
-        tradingUpdates = ApplyTradingStateUpdates(trackedInstruments, tradingStatusByInstrument);
-
-        var changes = await context.SaveChangesAsync(cancellationToken);
-        var sourceDateDistribution = matches
-            .GroupBy(x => x.Point.Date)
-            .OrderBy(x => x.Key)
-            .Select(x => $"{x.Key:yyyy-MM-dd}:{x.Count()}")
-            .ToArray();
-        var aliasMatchCount = matches.Count(x => !string.Equals(x.Instrument.Ticker, x.Point.SecId, StringComparison.OrdinalIgnoreCase));
-
-        logger.LogInformation(
-            "MOEX price sync finished for {Date} UTC. Boards loaded: {LoadedBoards}/{TotalBoards}. " +
-            "Records from MOEX: {MoexRecordsFromBoards} ({MoexUniqueSecIds} unique). Local matches: {Matches}/{InstrumentCount}. " +
-            "Alias matches: {AliasMatches}. " +
-            "Matched source dates: {SourceDates}. " +
-            "Trading flag updates: {TradingUpdates}. Inserted: {Inserted}, updated: {Updated}, db changes: {Changes}",
-            date.ToString("yyyy-MM-dd"),
-            loadedBoards,
-            boards.Length,
-            moexRecordsTotal,
-            pricesByTicker.Count,
-            matches.Count,
-            instruments.Count,
-            aliasMatchCount,
-            sourceDateDistribution.Length == 0 ? "none" : string.Join(", ", sourceDateDistribution),
-            tradingUpdates,
-            inserted,
-            updated,
-            changes);
-
-        return Result<int>.Success(changes);
-    }
+                return new PriceStorageHelper.UpsertPriceInput(
+                    instrument.Id,
+                    pointDateUtc,
+                    NormalizeStoredPrice(instrument, point, data),
+                    ResolveStoredCurrency(instrument, point, activeListing.CurrencyId),
+                    point.CurrencyId ?? activeListing.CurrencyId,
+                    provider);
+            })
+            .ToList();
 
     private async Task<Result<MoexBoardPrices>> LoadBoardPrices(
         DateOnly date,
@@ -898,6 +891,14 @@ public class SyncMoexPricesCommandHandler(
     private sealed record InstrumentAliasCandidate(Guid InstrumentId, string NormalizedAliasCode);
     private sealed record MoexBoardRoute(string Engine, string Market);
     private sealed record MatchedPricePoint(InstrumentCandidate Instrument, MoexPricePoint Point);
+    private sealed record MoexInstrumentLoadResult(
+        List<InstrumentCandidate> Candidates,
+        IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> ListingHistories);
+    private sealed record MoexBoardLoadResult(
+        Dictionary<string, MoexPricePoint> PricesByTicker,
+        List<string> Errors,
+        int LoadedBoards,
+        int MoexRecordsTotal);
     private sealed record MoexPricePoint(
         string SecId,
         decimal Value,
