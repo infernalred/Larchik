@@ -1,7 +1,6 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
-using Larchik.Application.Stocks.InstrumentCorporateActions.CreateInstrumentCorporateAction;
 using Larchik.Persistence.Context;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +12,7 @@ public class EditInstrumentCorporateActionCommandHandler(LarchikContext context,
 {
     public async Task<Result<Unit>?> Handle(EditInstrumentCorporateActionCommand request, CancellationToken cancellationToken)
     {
-        var validationError = CreateInstrumentCorporateActionCommandHandler.Validate(request.Model);
+        var validationError = InstrumentCorporateActionWriteHelper.Validate(request.Model);
         if (validationError is not null)
         {
             return Result<Unit>.Failure(validationError);
@@ -28,38 +27,37 @@ public class EditInstrumentCorporateActionCommandHandler(LarchikContext context,
             return null;
         }
 
-        var effectiveDate = InstrumentCorporateActionRules.NormalizeEffectiveDate(request.Model.EffectiveDate);
-        var note = request.Model.Note.Trim();
-        var duplicateExists = await context.InstrumentCorporateActions
-            .AsNoTracking()
-            .AnyAsync(x =>
-                x.Id != request.Id &&
-                x.InstrumentId == request.InstrumentId &&
-                x.Type == request.Model.Type &&
-                x.EffectiveDate == effectiveDate,
-                cancellationToken);
+        var input = InstrumentCorporateActionWriteHelper.Normalize(request.Model);
+        var duplicateExists = await InstrumentCorporateActionWriteHelper.HasDuplicateAsync(
+            context,
+            request.InstrumentId,
+            input,
+            request.Id,
+            cancellationToken);
 
         if (duplicateExists)
         {
             return Result<Unit>.Failure("A corporate action with the same type and effective date already exists.");
         }
 
-        var rebuildFrom = entity.EffectiveDate < effectiveDate
+        var rebuildFrom = entity.EffectiveDate < input.EffectiveDate
             ? entity.EffectiveDate
-            : effectiveDate;
+            : input.EffectiveDate;
 
-        entity.Type = request.Model.Type;
-        entity.Factor = request.Model.Factor;
-        entity.EffectiveDate = effectiveDate;
-        entity.Note = note;
+        entity.Type = input.Type;
+        entity.Factor = input.Factor;
+        entity.EffectiveDate = input.EffectiveDate;
+        entity.Note = input.Note;
 
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
-        await CreateInstrumentCorporateActionCommandHandler.ScheduleAffectedPortfoliosRebuildAsync(
+        await InstrumentCorporateActionWriteHelper.ScheduleAffectedPortfoliosRebuildAsync(
             context,
             recalc,
             request.InstrumentId,
             rebuildFrom,
             cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<Unit>.Success(Unit.Value);
     }

@@ -1,8 +1,8 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
+using Larchik.Application.Stocks;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using Mapster;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,14 +19,16 @@ public class EditInstrumentCommandHandler(LarchikContext context, IUserAccessor 
 
         if (instrument is null) return null;
 
-        var listingChanged =
-            !string.Equals(instrument.Ticker, request.Model.Ticker, StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(instrument.Figi, request.Model.Figi, StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(instrument.CurrencyId, request.Model.CurrencyId, StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(instrument.Exchange, request.Model.Exchange, StringComparison.OrdinalIgnoreCase);
+        var input = InstrumentInputNormalizer.Normalize(request.Model);
+        var listingChanged = InstrumentListingHistoryWriter.HasListingChanged(instrument, input);
 
-        request.Model.Adapt(instrument);
-        instrument.Isin = NormalizeIsin(request.Model.Isin);
+        var validationError = await InstrumentWriteGuard.ValidateAsync(context, input, instrument.Id, cancellationToken);
+        if (validationError is not null)
+        {
+            return Result<Unit>.Failure(validationError);
+        }
+
+        InstrumentInputNormalizer.ApplyTo(instrument, input);
 
         var now = DateTime.UtcNow;
         instrument.UpdatedBy = userAccessor.GetUserId();
@@ -34,67 +36,11 @@ public class EditInstrumentCommandHandler(LarchikContext context, IUserAccessor 
 
         if (listingChanged)
         {
-            await UpsertListingHistory(instrument, now, cancellationToken);
+            await InstrumentListingHistoryWriter.UpsertCurrentAsync(context, instrument, now, cancellationToken);
         }
 
         await context.SaveChangesAsync(cancellationToken);
 
         return Result<Unit>.Success(Unit.Value);
     }
-
-    private async Task UpsertListingHistory(Instrument instrument, DateTime now, CancellationToken cancellationToken)
-    {
-        var effectiveFrom = now.Date;
-        var activeListing = await context.InstrumentListingHistories
-            .AsTracking()
-            .Where(x => x.InstrumentId == instrument.Id && (!x.EffectiveTo.HasValue || x.EffectiveTo >= effectiveFrom))
-            .OrderByDescending(x => x.EffectiveFrom)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (activeListing is null)
-        {
-            await context.InstrumentListingHistories.AddAsync(new InstrumentListingHistory
-            {
-                Id = Guid.NewGuid(),
-                InstrumentId = instrument.Id,
-                Ticker = instrument.Ticker,
-                Figi = instrument.Figi,
-                CurrencyId = instrument.CurrencyId,
-                Exchange = instrument.Exchange,
-                EffectiveFrom = effectiveFrom,
-                CreatedAt = now,
-                UpdatedAt = now
-            }, cancellationToken);
-            return;
-        }
-
-        if (activeListing.EffectiveFrom.Date >= effectiveFrom)
-        {
-            activeListing.Ticker = instrument.Ticker;
-            activeListing.Figi = instrument.Figi;
-            activeListing.CurrencyId = instrument.CurrencyId;
-            activeListing.Exchange = instrument.Exchange;
-            activeListing.UpdatedAt = now;
-            return;
-        }
-
-        activeListing.EffectiveTo = effectiveFrom.AddDays(-1);
-        activeListing.UpdatedAt = now;
-
-        await context.InstrumentListingHistories.AddAsync(new InstrumentListingHistory
-        {
-            Id = Guid.NewGuid(),
-            InstrumentId = instrument.Id,
-            Ticker = instrument.Ticker,
-            Figi = instrument.Figi,
-            CurrencyId = instrument.CurrencyId,
-            Exchange = instrument.Exchange,
-            EffectiveFrom = effectiveFrom,
-            CreatedAt = now,
-            UpdatedAt = now
-        }, cancellationToken);
-    }
-
-    private static string? NormalizeIsin(string? isin) =>
-        string.IsNullOrWhiteSpace(isin) ? null : isin.Trim().ToUpperInvariant();
 }

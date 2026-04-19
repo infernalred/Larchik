@@ -1,5 +1,6 @@
 using FluentValidation;
 using Larchik.Application.Models;
+using Larchik.Application.Stocks;
 using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Stocks.CreateStock;
@@ -13,7 +14,7 @@ public class InstrumentValidator : AbstractValidator<InstrumentModel>
         RuleFor(x => x.Isin).MaximumLength(12);
         RuleFor(x => x.Isin)
             .NotEmpty()
-            .When(x => RequiresIsin(x.Type))
+            .When(x => InstrumentRules.RequiresIsin(x.Type))
             .WithMessage("ISIN is required for equity, bond, and ETF instruments.");
         RuleFor(x => x.Figi).MaximumLength(32);
         RuleFor(x => x.Type).IsInEnum();
@@ -26,9 +27,4 @@ public class InstrumentValidator : AbstractValidator<InstrumentModel>
             .When(x => x.IsTrading && x.PriceSource == Persistence.Entities.PriceSource.TBANK)
             .WithMessage("FIGI is required for TBANK price source.");
     }
-
-    private static bool RequiresIsin(InstrumentType type) => type is
-        InstrumentType.Equity or
-        InstrumentType.Bond or
-        InstrumentType.Etf;
 }

@@ -27,7 +27,7 @@ public class GetInstrumentCorporateActionsQueryHandler(LarchikContext context)
             .AsNoTracking()
             .Where(x =>
                 x.InstrumentId == request.InstrumentId &&
-                (x.Type == OperationType.Split || x.Type == OperationType.ReverseSplit))
+                InstrumentCorporateActionRules.IsSupportedType(x.Type))
             .OrderByDescending(x => x.EffectiveDate)
             .ThenByDescending(x => x.Type)
             .Select(x => new InstrumentCorporateActionDto

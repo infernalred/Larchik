@@ -1,6 +1,7 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
+using Larchik.Application.Stocks.InstrumentCorporateActions;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
@@ -13,7 +14,7 @@ public class CreateInstrumentCorporateActionCommandHandler(LarchikContext contex
 {
     public async Task<Result<Guid>> Handle(CreateInstrumentCorporateActionCommand request, CancellationToken cancellationToken)
     {
-        var validationError = Validate(request.Model);
+        var validationError = InstrumentCorporateActionWriteHelper.Validate(request.Model);
         if (validationError is not null)
         {
             return Result<Guid>.Failure(validationError);
@@ -28,16 +29,14 @@ public class CreateInstrumentCorporateActionCommandHandler(LarchikContext contex
             return Result<Guid>.Failure("Instrument not found.");
         }
 
-        var effectiveDate = InstrumentCorporateActionRules.NormalizeEffectiveDate(request.Model.EffectiveDate);
-        var note = request.Model.Note.Trim();
+        var input = InstrumentCorporateActionWriteHelper.Normalize(request.Model);
 
-        var duplicateExists = await context.InstrumentCorporateActions
-            .AsNoTracking()
-            .AnyAsync(x =>
-                x.InstrumentId == request.InstrumentId &&
-                x.Type == request.Model.Type &&
-                x.EffectiveDate == effectiveDate,
-                cancellationToken);
+        var duplicateExists = await InstrumentCorporateActionWriteHelper.HasDuplicateAsync(
+            context,
+            request.InstrumentId,
+            input,
+            excludeId: null,
+            cancellationToken);
 
         if (duplicateExists)
         {
@@ -48,72 +47,24 @@ public class CreateInstrumentCorporateActionCommandHandler(LarchikContext contex
         {
             Id = Guid.NewGuid(),
             InstrumentId = request.InstrumentId,
-            Type = request.Model.Type,
-            Factor = request.Model.Factor,
-            EffectiveDate = effectiveDate,
-            Note = note
+            Type = input.Type,
+            Factor = input.Factor,
+            EffectiveDate = input.EffectiveDate,
+            Note = input.Note
         };
 
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         await context.InstrumentCorporateActions.AddAsync(entity, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
-        await ScheduleAffectedPortfoliosRebuildAsync(context, recalc, request.InstrumentId, effectiveDate, cancellationToken);
+        await InstrumentCorporateActionWriteHelper.ScheduleAffectedPortfoliosRebuildAsync(
+            context,
+            recalc,
+            request.InstrumentId,
+            input.EffectiveDate,
+            cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<Guid>.Success(entity.Id);
-    }
-
-    internal static string? Validate(InstrumentCorporateActionModel model)
-    {
-        if (!InstrumentCorporateActionRules.IsSupportedType(model.Type))
-        {
-            return "Only split and reverse split are supported as instrument corporate actions.";
-        }
-
-        if (model.Factor <= 0)
-        {
-            return "Split factor must be greater than 0.";
-        }
-
-        if (model.Factor == 1m)
-        {
-            return "Split factor must be different from 1.";
-        }
-
-        if (model.EffectiveDate.Offset != TimeSpan.Zero)
-        {
-            return "EffectiveDate must be in UTC (ISO format with 'Z').";
-        }
-
-        if (string.IsNullOrWhiteSpace(model.Note))
-        {
-            return "Note is required.";
-        }
-
-        if (model.Note.Trim().Length > 500)
-        {
-            return "Note must be 500 characters or fewer.";
-        }
-
-        return null;
-    }
-
-    internal static async Task ScheduleAffectedPortfoliosRebuildAsync(
-        LarchikContext context,
-        IPortfolioRecalcService recalc,
-        Guid instrumentId,
-        DateTime fromDate,
-        CancellationToken cancellationToken)
-    {
-        var portfolioIds = await context.Operations
-            .AsNoTracking()
-            .Where(x => x.InstrumentId == instrumentId)
-            .Select(x => x.PortfolioId)
-            .Distinct()
-            .ToListAsync(cancellationToken);
-
-        foreach (var portfolioId in portfolioIds)
-        {
-            await recalc.ScheduleRebuild(portfolioId, fromDate, cancellationToken);
-        }
     }
 }

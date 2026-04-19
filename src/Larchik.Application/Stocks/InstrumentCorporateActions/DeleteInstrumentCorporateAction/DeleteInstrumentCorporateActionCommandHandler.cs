@@ -1,6 +1,6 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
-using Larchik.Application.Stocks.InstrumentCorporateActions.CreateInstrumentCorporateAction;
+using Larchik.Application.Stocks.InstrumentCorporateActions;
 using Larchik.Persistence.Context;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -22,15 +22,17 @@ public class DeleteInstrumentCorporateActionCommandHandler(LarchikContext contex
         }
 
         var rebuildFrom = entity.EffectiveDate;
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         context.InstrumentCorporateActions.Remove(entity);
         await context.SaveChangesAsync(cancellationToken);
 
-        await CreateInstrumentCorporateActionCommandHandler.ScheduleAffectedPortfoliosRebuildAsync(
+        await InstrumentCorporateActionWriteHelper.ScheduleAffectedPortfoliosRebuildAsync(
             context,
             recalc,
             request.InstrumentId,
             rebuildFrom,
             cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<Unit>.Success(Unit.Value);
     }
