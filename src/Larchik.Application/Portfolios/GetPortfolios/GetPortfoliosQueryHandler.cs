@@ -2,7 +2,6 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using Mapster;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +16,7 @@ public class GetPortfoliosQueryHandler(LarchikContext context, IUserAccessor use
         var items = await context.Portfolios
             .AsNoTracking()
             .Where(x => x.UserId == userId)
-            .ProjectToType<PortfolioDto>()
+            .ProjectToDto()
             .ToListAsync(cancellationToken);
 
         return Result<IReadOnlyCollection<PortfolioDto>>.Success(items);

@@ -18,9 +18,16 @@ public class EditPortfolioCommandHandler(LarchikContext context, IUserAccessor u
 
         if (portfolio is null) return null;
 
-        portfolio.Name = request.Model.Name;
-        portfolio.BrokerId = request.Model.BrokerId;
-        portfolio.ReportingCurrencyId = request.Model.ReportingCurrencyId.ToUpperInvariant();
+        var resolvedInputResult = await PortfolioWriteHelper.ResolveInputAsync(context, request.Model, cancellationToken);
+        if (!resolvedInputResult.IsSuccess)
+        {
+            return Result<Unit>.Failure(resolvedInputResult.Error!);
+        }
+
+        var resolvedInput = resolvedInputResult.Value!;
+        portfolio.Name = resolvedInput.Name;
+        portfolio.BrokerId = resolvedInput.BrokerId;
+        portfolio.ReportingCurrencyId = resolvedInput.ReportingCurrencyId;
 
         await context.SaveChangesAsync(cancellationToken);
 

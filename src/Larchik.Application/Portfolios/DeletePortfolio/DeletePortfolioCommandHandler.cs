@@ -13,6 +13,7 @@ public class DeletePortfolioCommandHandler(LarchikContext context, IUserAccessor
     {
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
+            .AsTracking()
             .FirstOrDefaultAsync(x => x.Id == request.Id && x.UserId == userId, cancellationToken);
 
         if (portfolio is null) return Result<Unit>.Failure("Not found");
