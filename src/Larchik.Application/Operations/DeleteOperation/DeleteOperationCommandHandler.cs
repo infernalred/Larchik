@@ -23,10 +23,12 @@ public class DeleteOperationCommandHandler(LarchikContext context, IUserAccessor
             return Result<Unit>.Failure("Split and reverse split must be managed as administrative corporate actions.");
         }
 
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         context.Operations.Remove(op);
         await context.SaveChangesAsync(cancellationToken);
 
         await recalc.ScheduleRebuild(op.PortfolioId, op.TradeDate, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<Unit>.Success(Unit.Value);
     }

@@ -2,7 +2,6 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Operations.ImportBroker;
 using Larchik.Persistence.Context;
-using Larchik.Persistence.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,67 +30,46 @@ public class EditOperationCommandHandler(LarchikContext context, IUserAccessor u
         }
 
         var originalTradeDate = op.TradeDate;
-        var instrumentId = request.Model.InstrumentId;
-        var requiresInstrument = OperationTypeRules.RequiresInstrument(request.Model.Type);
-        if (requiresInstrument && instrumentId is null)
+        var resolvedInputResult = await OperationWriteHelper.ResolveInputAsync(context, request.Model, cancellationToken);
+        if (!resolvedInputResult.IsSuccess)
         {
-            return Result<Unit>.Failure("Instrument is required for selected operation type.");
+            return Result<Unit>.Failure(resolvedInputResult.Error!);
         }
 
-        Instrument? instrument = null;
-        if (instrumentId is not null)
-        {
-            instrument = await context.Instruments
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == instrumentId.Value, cancellationToken);
-
-            if (instrument is null)
-            {
-                return Result<Unit>.Failure("Selected instrument was not found.");
-            }
-        }
-
-        var tradeDate = OperationInputNormalizer.NormalizeUtc(request.Model.TradeDate);
-        var settlementDate = OperationInputNormalizer.NormalizeUtc(request.Model.SettlementDate) ?? tradeDate;
-        var brokerCode = await context.Brokers
+        var resolvedInput = resolvedInputResult.Value!;
+        var brokerCode = await context.Portfolios
             .AsNoTracking()
-            .Where(x => x.Id == op.Portfolio!.BrokerId)
-            .Select(x => x.Code)
+            .Where(x => x.Id == op.PortfolioId)
+            .Select(x => x.Broker == null ? null : x.Broker.Code)
             .FirstOrDefaultAsync(cancellationToken);
+        var now = DateTime.UtcNow;
 
-        op.InstrumentId = instrumentId;
-        op.Type = request.Model.Type;
-        op.Quantity = request.Model.Quantity;
-        op.Price = request.Model.Price;
-        op.Fee = request.Model.Fee;
-        op.CurrencyId = request.Model.CurrencyId.ToUpperInvariant();
-        op.TradeDate = tradeDate;
-        op.SettlementDate = settlementDate;
-        op.Note = request.Model.Note;
+        OperationWriteHelper.Apply(op, request.Model, resolvedInput, now);
         if (!BrokerOperationIdentityHelper.IsConfirmedImportedKey(op.BrokerOperationKey))
         {
-            var canonicalInstrumentCode = instrument is null
-                ? null
-                : !string.IsNullOrWhiteSpace(instrument.Isin)
-                    ? instrument.Isin
-                    : instrument.Ticker;
-
             op.BrokerOperationKey = await BrokerOperationIdentityHelper.BuildProvisionalManualKeyAsync(
                 context,
                 op.PortfolioId,
                 brokerCode,
                 op,
-                canonicalInstrumentCode,
+                resolvedInput.CanonicalInstrumentCode,
                 op.Id,
                 cancellationToken);
         }
 
-        op.UpdatedAt = DateTime.UtcNow;
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
 
-        await context.SaveChangesAsync(cancellationToken);
-
-        var fromDate = originalTradeDate < op.TradeDate ? originalTradeDate : op.TradeDate;
-        await recalc.ScheduleRebuild(op.PortfolioId, fromDate, cancellationToken);
+            var fromDate = originalTradeDate < op.TradeDate ? originalTradeDate : op.TradeDate;
+            await recalc.ScheduleRebuild(op.PortfolioId, fromDate, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (OperationWriteHelper.IsBrokerOperationKeyConflict(ex))
+        {
+            return Result<Unit>.Failure("Operation with the same broker identity already exists. Please retry the request.");
+        }
 
         return Result<Unit>.Success(Unit.Value);
     }

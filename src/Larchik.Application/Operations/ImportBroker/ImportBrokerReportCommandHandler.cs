@@ -22,8 +22,9 @@ public class ImportBrokerReportCommandHandler(
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
             .AsNoTracking()
-            .Include(x => x.Broker)
-            .FirstOrDefaultAsync(x => x.Id == request.PortfolioId && x.UserId == userId, cancellationToken);
+            .Where(x => x.Id == request.PortfolioId && x.UserId == userId)
+            .Select(x => new PortfolioIdentity(x.Id, x.Broker == null ? null : x.Broker.Code))
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (portfolio is null)
         {
@@ -229,7 +230,7 @@ public class ImportBrokerReportCommandHandler(
 
         var manualCandidates = Array.Empty<Operation>();
         if (operationsToReconcile.Count > 0 &&
-            BrokerImportReconciliationHelper.SupportsManualReconciliation(portfolio.Broker?.Code))
+            BrokerImportReconciliationHelper.SupportsManualReconciliation(portfolio.BrokerCode))
         {
             var (fromDate, toDate) = BrokerImportReconciliationHelper.GetManualCandidateWindow(operationsToReconcile);
             manualCandidates = await context.Operations
@@ -255,7 +256,7 @@ public class ImportBrokerReportCommandHandler(
             }
 
             var manualMatch = BrokerImportReconciliationHelper.TryFindManualMatch(
-                portfolio.Broker?.Code,
+                portfolio.BrokerCode,
                 operation,
                 manualCandidates,
                 reservedManualIds);
@@ -288,19 +289,22 @@ public class ImportBrokerReportCommandHandler(
                 request.FileName);
         }
 
-        if (operationsToInsert.Count > 0)
-        {
-            await context.Operations.AddRangeAsync(operationsToInsert, cancellationToken);
-        }
-
         if (operationsToInsert.Count > 0 || reconciledCount > 0)
         {
-            await context.SaveChangesAsync(cancellationToken);
-        }
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            if (operationsToInsert.Count > 0)
+            {
+                await context.Operations.AddRangeAsync(operationsToInsert, cancellationToken);
+            }
 
-        if (earliestTouchedDate is not null)
-        {
-            await recalc.ScheduleRebuild(portfolio.Id, earliestTouchedDate.Value, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+
+            if (earliestTouchedDate is not null)
+            {
+                await recalc.ScheduleRebuild(portfolio.Id, earliestTouchedDate.Value, cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
         }
 
         var result = new ImportResultDto(
@@ -313,15 +317,7 @@ public class ImportBrokerReportCommandHandler(
 
     private static string NormalizeCode(string value) => value.Trim().ToUpperInvariant();
 
-    private static DateTime EnsureUtc(DateTime value)
-    {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
-    }
-
     private static DateTime MinDate(DateTime left, DateTime right) => left <= right ? left : right;
+
+    private sealed record PortfolioIdentity(Guid Id, string? BrokerCode);
 }
