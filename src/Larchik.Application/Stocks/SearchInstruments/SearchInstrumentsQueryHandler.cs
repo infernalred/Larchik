@@ -24,7 +24,7 @@ public class SearchInstrumentsQueryHandler(LarchikContext context)
             // Keep the SQL part translatable and broad, then do normalized matching in memory.
             query = query.Where(x =>
                 x.Ticker.ToUpper().StartsWith(rawKey) ||
-                x.Isin.ToUpper().StartsWith(rawKey) ||
+                (x.Isin != null && x.Isin.ToUpper().StartsWith(rawKey)) ||
                 (x.Figi != null && x.Figi.ToUpper().StartsWith(rawKey)) ||
                 x.Name.ToUpper().Contains(rawKey) ||
                 x.Name.ToUpper().Contains(normalizedKey) ||

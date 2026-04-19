@@ -53,7 +53,7 @@ export interface InstrumentLookup {
   id: string;
   name: string;
   ticker: string;
-  isin: string;
+  isin?: string | null;
   figi?: string;
   currencyId: string;
 }
@@ -61,7 +61,7 @@ export interface InstrumentLookup {
 export interface InstrumentModel {
   name: string;
   ticker: string;
-  isin: string;
+  isin?: string | null;
   figi?: string;
   type: InstrumentType;
   currencyId: string;
@@ -199,8 +199,6 @@ export interface ClearPortfolioDataResult {
   deletedOperations: number;
   deletedPositionSnapshots: number;
   deletedPortfolioSnapshots: number;
-  deletedLots: number;
-  deletedCashBalances: number;
 }
 
 export interface RecalculatePortfolioResult {

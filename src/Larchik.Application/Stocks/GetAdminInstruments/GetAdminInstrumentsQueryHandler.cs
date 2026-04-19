@@ -27,7 +27,7 @@ public class GetAdminInstrumentsQueryHandler(LarchikContext context)
             query = query.Where(x =>
                 EF.Functions.ILike(x.Ticker, pattern) ||
                 EF.Functions.ILike(x.Name, pattern) ||
-                EF.Functions.ILike(x.Isin, pattern) ||
+                (x.Isin != null && EF.Functions.ILike(x.Isin, pattern)) ||
                 (x.Figi != null && EF.Functions.ILike(x.Figi, pattern)) ||
                 (x.Exchange != null && EF.Functions.ILike(x.Exchange, pattern)) ||
                 (x.Country != null && EF.Functions.ILike(x.Country, pattern)));

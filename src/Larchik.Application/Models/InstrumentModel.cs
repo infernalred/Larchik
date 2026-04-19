@@ -5,7 +5,7 @@ namespace Larchik.Application.Models;
 public record InstrumentModel(
     string Name,
     string Ticker,
-    string Isin,
+    string? Isin,
     string? Figi,
     InstrumentType Type,
     string CurrencyId,

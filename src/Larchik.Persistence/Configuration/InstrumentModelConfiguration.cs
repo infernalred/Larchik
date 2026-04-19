@@ -35,8 +35,6 @@ public class InstrumentModelConfiguration : IEntityTypeConfiguration<Instrument>
             .HasConversion<string>()
             .HasMaxLength(16);
 
-        builder.Property(x => x.Price).HasPrecision(18, 4);
-
         builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd();
 
         builder.Property(x => x.UpdatedAt);

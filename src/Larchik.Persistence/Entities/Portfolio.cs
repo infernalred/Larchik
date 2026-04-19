@@ -12,7 +12,6 @@ public class Portfolio
     public Broker? Broker { get; set; }
     public AppUser? User { get; set; }
     public ICollection<Operation> Operations { get; set; } = new List<Operation>();
-    public ICollection<CashBalance> CashBalances { get; set; } = new List<CashBalance>();
     public ICollection<PositionSnapshot> PositionSnapshots { get; set; } = new List<PositionSnapshot>();
     public ICollection<PortfolioSnapshot> PortfolioSnapshots { get; set; } = new List<PortfolioSnapshot>();
 }

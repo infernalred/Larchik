@@ -26,6 +26,7 @@ public class EditInstrumentCommandHandler(LarchikContext context, IUserAccessor 
             !string.Equals(instrument.Exchange, request.Model.Exchange, StringComparison.OrdinalIgnoreCase);
 
         request.Model.Adapt(instrument);
+        instrument.Isin = NormalizeIsin(request.Model.Isin);
 
         var now = DateTime.UtcNow;
         instrument.UpdatedBy = userAccessor.GetUserId();
@@ -93,4 +94,7 @@ public class EditInstrumentCommandHandler(LarchikContext context, IUserAccessor 
             UpdatedAt = now
         }, cancellationToken);
     }
+
+    private static string? NormalizeIsin(string? isin) =>
+        string.IsNullOrWhiteSpace(isin) ? null : isin.Trim().ToUpperInvariant();
 }

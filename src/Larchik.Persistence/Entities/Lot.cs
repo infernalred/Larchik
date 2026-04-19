@@ -1,5 +1,7 @@
 namespace Larchik.Persistence.Entities;
 
+// Legacy entity kept only so historical EF migrations continue to compile.
+// The active model no longer maps Lot.
 public class Lot
 {
     public Guid Id { get; set; }

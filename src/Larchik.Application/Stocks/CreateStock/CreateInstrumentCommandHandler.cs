@@ -17,6 +17,7 @@ public class CreateInstrumentCommandHandler(LarchikContext context, IUserAccesso
 
         var instrument = request.Model.Adapt<Instrument>();
         instrument.Id = Guid.NewGuid();
+        instrument.Isin = NormalizeIsin(request.Model.Isin);
         instrument.CreatedBy = userId;
         instrument.UpdatedBy = userId;
         instrument.CreatedAt = now;
@@ -39,4 +40,7 @@ public class CreateInstrumentCommandHandler(LarchikContext context, IUserAccesso
 
         return Result<Unit>.Success(Unit.Value);
     }
+
+    private static string? NormalizeIsin(string? isin) =>
+        string.IsNullOrWhiteSpace(isin) ? null : isin.Trim().ToUpperInvariant();
 }

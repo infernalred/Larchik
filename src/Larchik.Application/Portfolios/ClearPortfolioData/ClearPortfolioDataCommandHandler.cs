@@ -33,14 +33,6 @@ public class ClearPortfolioDataCommandHandler(LarchikContext context, IUserAcces
             .Where(x => x.PortfolioId == request.Id)
             .ExecuteDeleteAsync(cancellationToken);
 
-        var deletedLots = await context.Lots
-            .Where(x => x.PortfolioId == request.Id)
-            .ExecuteDeleteAsync(cancellationToken);
-
-        var deletedCashBalances = await context.CashBalances
-            .Where(x => x.PortfolioId == request.Id)
-            .ExecuteDeleteAsync(cancellationToken);
-
         var deletedOperations = await context.Operations
             .Where(x => x.PortfolioId == request.Id)
             .ExecuteDeleteAsync(cancellationToken);
@@ -50,8 +42,6 @@ public class ClearPortfolioDataCommandHandler(LarchikContext context, IUserAcces
         return Result<ClearPortfolioDataResultDto>.Success(new ClearPortfolioDataResultDto(
             deletedOperations,
             deletedPositionSnapshots,
-            deletedPortfolioSnapshots,
-            deletedLots,
-            deletedCashBalances));
+            deletedPortfolioSnapshots));
     }
 }

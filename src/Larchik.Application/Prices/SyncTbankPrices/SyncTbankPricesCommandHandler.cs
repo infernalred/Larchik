@@ -403,7 +403,7 @@ public class SyncTbankPricesCommandHandler(
         return DateTime.SpecifyKind(date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
     }
 
-    private sealed record InstrumentCandidate(Guid Id, string Figi, string CurrencyId, string Ticker, string Isin, string? Exchange);
-    private sealed record InstrumentState(Guid Id, string Figi, string CurrencyId, string Ticker, string Isin, string? Exchange);
-    private sealed record TbankPricePoint(Guid InstrumentId, DateOnly Date, decimal Value, string CurrencyId, string Ticker, string Isin);
+    private sealed record InstrumentCandidate(Guid Id, string Figi, string CurrencyId, string Ticker, string? Isin, string? Exchange);
+    private sealed record InstrumentState(Guid Id, string Figi, string CurrencyId, string Ticker, string? Isin, string? Exchange);
+    private sealed record TbankPricePoint(Guid InstrumentId, DateOnly Date, decimal Value, string CurrencyId, string Ticker, string? Isin);
 }

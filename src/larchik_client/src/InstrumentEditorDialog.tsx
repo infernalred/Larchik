@@ -29,6 +29,10 @@ const PRICE_SOURCES: { value: PriceSource; label: string }[] = [
   { value: 'TBANK', label: 'T-Bank' },
 ];
 
+function requiresIsin(type: InstrumentType) {
+  return type === 'Equity' || type === 'Bond' || type === 'Etf';
+}
+
 function createInitialForm(initial?: Instrument | null, categories: Category[] = [], currencies: Currency[] = []): InstrumentModel {
   return {
     name: initial?.name ?? '',
@@ -64,7 +68,7 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
     return (
       form.name.trim().length > 0 &&
       form.ticker.trim().length > 0 &&
-      form.isin.trim().length > 0 &&
+      (!requiresIsin(form.type) || (form.isin?.trim().length ?? 0) > 0) &&
       form.currencyId.trim().length > 0 &&
       form.categoryId > 0
     );
@@ -78,7 +82,7 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
     await onSubmit({
       name: form.name.trim(),
       ticker: form.ticker.trim().toUpperCase(),
-      isin: form.isin.trim().toUpperCase(),
+      isin: form.isin?.trim() ? form.isin.trim().toUpperCase() : undefined,
       figi: form.figi?.trim() ? form.figi.trim().toUpperCase() : undefined,
       type: form.type,
       currencyId: form.currencyId.trim().toUpperCase(),
@@ -114,7 +118,7 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
               label="ISIN"
               value={form.isin}
               onChange={(e) => update('isin', e.target.value)}
-              required
+              required={requiresIsin(form.type)}
               fullWidth
             />
           </Stack>

@@ -94,7 +94,7 @@ public static class MarketFxRateLoader
         var instruments = await context.Instruments
             .AsNoTracking()
             .Where(x => x.Type == InstrumentType.Currency)
-            .Where(x => codes.Contains(x.Ticker.ToUpper()) || codes.Contains(x.Isin.ToUpper()))
+            .Where(x => codes.Contains(x.Ticker.ToUpper()) || (x.Isin != null && codes.Contains(x.Isin.ToUpper())))
             .Select(x => new { x.Id, x.Ticker, x.Isin })
             .ToListAsync(cancellationToken);
 

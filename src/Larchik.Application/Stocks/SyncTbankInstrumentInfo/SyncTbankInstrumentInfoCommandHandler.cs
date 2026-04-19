@@ -295,7 +295,7 @@ public class SyncTbankInstrumentInfoCommandHandler(
         return normalized.Length <= 180 ? normalized : normalized[..180];
     }
 
-    private sealed record InstrumentCandidate(Guid Id, string Figi, string Ticker, string Isin, bool IsTrading);
-    private sealed record InstrumentState(Guid Id, string Figi, string Ticker, string Isin, bool IsTrading, string? Exchange, string CurrencyId);
+    private sealed record InstrumentCandidate(Guid Id, string Figi, string Ticker, string? Isin, bool IsTrading);
+    private sealed record InstrumentState(Guid Id, string Figi, string Ticker, string? Isin, bool IsTrading, string? Exchange, string CurrencyId);
     private sealed record InstrumentTradingInfo(bool IsTrading, string? TradingStatus);
 }
