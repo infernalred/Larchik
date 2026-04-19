@@ -1,7 +1,6 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
-using Larchik.Application.Portfolios.Valuation;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
@@ -28,7 +27,7 @@ public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context
             return Result<IReadOnlyCollection<PortfolioPerformanceDto>>.Success([]);
         }
 
-        var baseCurrency = ResolveBaseCurrency(request.Currency, portfolios);
+        var baseCurrency = PortfolioAnalyticsQueryHelper.ResolveBaseCurrency(request.Currency, portfolios);
         if (baseCurrency is null)
         {
             return Result<IReadOnlyCollection<PortfolioPerformanceDto>>.Failure(
@@ -49,52 +48,25 @@ public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context
             return Result<IReadOnlyCollection<PortfolioPerformanceDto>>.Success([]);
         }
 
-        var instrumentIds = operations
-            .Where(x => x.InstrumentId != null)
-            .Select(x => x.InstrumentId!.Value)
-            .Distinct()
-            .ToArray();
-
-        var instruments = await context.Instruments
-            .AsNoTracking()
-            .Where(x => instrumentIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, cancellationToken);
-        var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
-
-        var prices = await context.Prices
-            .AsNoTracking()
-            .Where(x => instrumentIds.Contains(x.InstrumentId))
-            .ToListAsync(cancellationToken);
-
-        var neededCurrencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { baseCurrency };
-        foreach (var op in operations)
-        {
-            neededCurrencies.Add(op.CurrencyId);
-        }
-
-        foreach (var instrument in instruments.Values)
-        {
-            neededCurrencies.Add(instrument.CurrencyId);
-        }
-
-        var fxRates = await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
-
-        var data = new HistoricalDataLookup(prices, fxRates);
         var method = request.Method ?? "adjustingAvg";
         var calculator = new PortfolioAnalyticsCalculator();
-        var operationsByPortfolio = operations
+        var maxPriceDate = (request.To?.Date ?? DateTime.UtcNow.Date).AddDays(1).AddTicks(-1);
+        var analytics = await PortfolioAnalyticsQueryHelper.LoadAsync(
+            context,
+            operations,
+            baseCurrency,
+            maxPriceDate,
+            cancellationToken);
+        var operationsByPortfolio = analytics.Operations
             .GroupBy(x => x.PortfolioId)
             .ToDictionary(x => x.Key, x => (IReadOnlyList<Operation>)x.ToList());
 
         var series = portfolios
             .SelectMany(portfolio => calculator.CalculatePerformance(
                 portfolio,
-                InstrumentCorporateActionOperationMerger.Merge(
-                    operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [],
-                    corporateActions,
-                    instruments),
-                instruments,
-                data,
+                operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [],
+                analytics.Instruments,
+                analytics.Data,
                 method,
                 baseCurrency,
                 request.From,
@@ -124,20 +96,5 @@ public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context
             .ToList();
 
         return Result<IReadOnlyCollection<PortfolioPerformanceDto>>.Success(series);
-    }
-
-    private static string? ResolveBaseCurrency(string? requestedCurrency, IReadOnlyCollection<Portfolio> portfolios)
-    {
-        if (!string.IsNullOrWhiteSpace(requestedCurrency))
-        {
-            return requestedCurrency.Trim().ToUpperInvariant();
-        }
-
-        var distinct = portfolios
-            .Select(x => x.ReportingCurrencyId.ToUpperInvariant())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        return distinct.Length == 1 ? distinct[0] : null;
     }
 }

@@ -1,7 +1,6 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
-using Larchik.Application.Portfolios.Valuation;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
@@ -30,7 +29,7 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
             return Result<PortfolioSummaryDto>.Failure("No portfolios found");
         }
 
-        var baseCurrency = ResolveBaseCurrency(request.Currency, portfolios);
+        var baseCurrency = PortfolioAnalyticsQueryHelper.ResolveBaseCurrency(request.Currency, portfolios);
         if (baseCurrency is null)
         {
             return Result<PortfolioSummaryDto>.Failure(
@@ -46,54 +45,24 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
             .ThenBy(x => x.TradeDate)
             .ThenBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
-
-        var instrumentIds = operations
-            .Where(x => x.InstrumentId != null)
-            .Select(x => x.InstrumentId!.Value)
-            .Distinct()
-            .ToArray();
-
-        var instruments = await context.Instruments
-            .Include(x => x.Category)
-            .AsNoTracking()
-            .Where(x => instrumentIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, cancellationToken);
-        var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
-
-        var prices = await context.Prices
-            .AsNoTracking()
-            .Where(x => instrumentIds.Contains(x.InstrumentId) && x.Date <= asOfDateTime)
-            .ToListAsync(cancellationToken);
-
-        var neededCurrencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { baseCurrency };
-        foreach (var op in operations)
-        {
-            neededCurrencies.Add(op.CurrencyId);
-        }
-
-        foreach (var instrument in instruments.Values)
-        {
-            neededCurrencies.Add(instrument.CurrencyId);
-        }
-
-        var fxRates = await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
-
-        var data = new HistoricalDataLookup(prices, fxRates);
         var method = request.Method ?? DefaultValuationMethod;
         var calculator = new PortfolioAnalyticsCalculator();
-        var operationsByPortfolio = operations
+        var analytics = await PortfolioAnalyticsQueryHelper.LoadAsync(
+            context,
+            operations,
+            baseCurrency,
+            asOfDateTime,
+            cancellationToken);
+        var operationsByPortfolio = analytics.Operations
             .GroupBy(x => x.PortfolioId)
             .ToDictionary(x => x.Key, x => (IReadOnlyList<Operation>)x.ToList());
 
         var summaries = portfolios
             .Select(portfolio => calculator.CalculateSummary(
                 portfolio,
-                InstrumentCorporateActionOperationMerger.Merge(
-                    operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [],
-                    corporateActions,
-                    instruments),
-                instruments,
-                data,
+                operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [],
+                analytics.Instruments,
+                analytics.Data,
                 method,
                 baseCurrency,
                 asOfDateTime))
@@ -160,8 +129,8 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
 
         var navBase = summaries.Sum(x => x.NavBase);
         var annualizedReturnPct = MoneyWeightedReturnCalculator.CalculateAnnualizedReturn(
-            operations,
-            data,
+            analytics.Operations,
+            analytics.Data,
             baseCurrency,
             navBase,
             asOfDateTime);
@@ -186,20 +155,5 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
             Positions = positions,
             RealizedByInstrument = realized
         });
-    }
-
-    private static string? ResolveBaseCurrency(string? requestedCurrency, IReadOnlyCollection<Portfolio> portfolios)
-    {
-        if (!string.IsNullOrWhiteSpace(requestedCurrency))
-        {
-            return requestedCurrency.Trim().ToUpperInvariant();
-        }
-
-        var distinct = portfolios
-            .Select(x => x.ReportingCurrencyId.ToUpperInvariant())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        return distinct.Length == 1 ? distinct[0] : null;
     }
 }
