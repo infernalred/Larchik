@@ -90,6 +90,105 @@ public class TbankReportParserEdgeCaseTests
         Assert.Equal(new DateTime(2026, 3, 15, 10, 30, 0, DateTimeKind.Utc), operation.Operation.TradeDate);
     }
 
+    [Fact]
+    public async Task Parse_ResolvesInstrumentAliasToIsin_FromReferenceSection()
+    {
+        await using var stream = CreateWorkbook(
+            new WorksheetSpec("Report", "worksheets/sheet1.xml",
+                CreateWorksheet(
+                    Row(1, (1, "Код актива"), (2, "ISIN"), (3, "Наименование актива")),
+                    Row(2, (1, "AAPL"), (2, "US0378331005"), (3, "Apple Inc")),
+                    Row(4,
+                        (1, "Номер сделки"),
+                        (2, "Вид сделки"),
+                        (3, "Дата заключения"),
+                        (4, "Время"),
+                        (5, "Код актива"),
+                        (6, "Цена за единицу"),
+                        (7, "Количество"),
+                        (8, "Валюта цены")),
+                    Row(5,
+                        (1, "1"),
+                        (2, "Покупка"),
+                        (3, "15.03.2026"),
+                        (4, "10:30:00"),
+                        (5, "AAPL"),
+                        (6, "10"),
+                        (7, "2"),
+                        (8, "USD")))));
+
+        var result = await Parser.ParseAsync(stream, "broker-report-2026-01-01-2026-03-31.xlsx", CancellationToken.None);
+
+        Assert.Empty(result.Errors);
+        var operation = Assert.Single(result.Operations);
+        Assert.Equal("US0378331005", operation.InstrumentCode);
+    }
+
+    [Fact]
+    public async Task Parse_ConvertsBondPercentPrice_ToMoneyPriceUsingDealAmount()
+    {
+        await using var stream = CreateWorkbook(
+            new WorksheetSpec("Report", "worksheets/sheet1.xml",
+                CreateWorksheet(
+                    Row(1,
+                        (1, "Номер сделки"),
+                        (2, "Вид сделки"),
+                        (3, "Дата заключения"),
+                        (4, "Время"),
+                        (5, "Код актива"),
+                        (6, "Цена за единицу"),
+                        (7, "Количество"),
+                        (8, "Валюта цены"),
+                        (9, "Валюта расчетов"),
+                        (10, "Сумма сделки"),
+                        (11, "НКД")),
+                    Row(2,
+                        (1, "1"),
+                        (2, "Покупка"),
+                        (3, "15.03.2026"),
+                        (4, "10:30:00"),
+                        (5, "BOND1"),
+                        (6, "95"),
+                        (7, "2"),
+                        (8, "%"),
+                        (9, "RUB"),
+                        (10, "210"),
+                        (11, "10")))));
+
+        var result = await Parser.ParseAsync(stream, "broker-report-2026-01-01-2026-03-31.xlsx", CancellationToken.None);
+
+        Assert.Empty(result.Errors);
+        var operation = Assert.Single(result.Operations);
+        Assert.Equal(OperationType.Buy, operation.Operation.Type);
+        Assert.Equal(105m, operation.Operation.Price);
+        Assert.Equal("RUB", operation.Operation.CurrencyId);
+    }
+
+    [Fact]
+    public async Task Parse_CorporateActionCashNote_CreatesInstrumentOperation()
+    {
+        await using var stream = CreateWorkbook(
+            new WorksheetSpec("Report", "worksheets/sheet1.xml",
+                CreateWorksheet(
+                    Row(1, (1, "дата"), (2, "операция"), (3, "сумма зачисления"), (4, "примечание")),
+                    Row(2,
+                        (1, "15.03.2026"),
+                        (2, "Корпоративное действие"),
+                        (3, "150"),
+                        (4, "Тип КД: Частичное погашение; ISIN: RU000A0JX0J2; Количество: 3 шт; Выплата на 1 бумагу: 50")))));
+
+        var result = await Parser.ParseAsync(stream, "broker-report-2026-01-01-2026-03-31.xlsx", CancellationToken.None);
+
+        Assert.Empty(result.Errors);
+        var operation = Assert.Single(result.Operations);
+        Assert.True(operation.RequiresInstrument);
+        Assert.Equal("RU000A0JX0J2", operation.InstrumentCode);
+        Assert.Equal(OperationType.BondPartialRedemption, operation.Operation.Type);
+        Assert.Equal(3m, operation.Operation.Quantity);
+        Assert.Equal(50m, operation.Operation.Price);
+        Assert.Equal("RUB", operation.Operation.CurrencyId);
+    }
+
     private static MemoryStream CreateWorkbook(params WorksheetSpec[] worksheets)
     {
         var stream = new MemoryStream();

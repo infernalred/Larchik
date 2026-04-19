@@ -43,17 +43,15 @@ public static class InstrumentCorporateActionOperationMerger
             return operations;
         }
 
-        var instrumentIds = operations
-            .Where(x => x.InstrumentId != null)
-            .Select(x => x.InstrumentId!.Value)
-            .ToHashSet();
+        var earliestTradeDateByInstrument = operations
+            .Where(x => x.InstrumentId is not null)
+            .GroupBy(x => x.InstrumentId!.Value)
+            .ToDictionary(x => x.Key, x => x.Min(y => y.TradeDate.Date));
 
         var relevantActions = corporateActions
             .Where(x =>
-                instrumentIds.Contains(x.InstrumentId) &&
-                operations.Any(op =>
-                    op.InstrumentId == x.InstrumentId &&
-                    op.TradeDate.Date < x.EffectiveDate.Date))
+                earliestTradeDateByInstrument.TryGetValue(x.InstrumentId, out var earliestTradeDate) &&
+                earliestTradeDate < x.EffectiveDate.Date)
             .ToArray();
 
         if (relevantActions.Length == 0)
@@ -65,48 +63,14 @@ public static class InstrumentCorporateActionOperationMerger
             .Select(ToKey)
             .ToHashSet();
 
-        var portfolioId = operations[0].PortfolioId;
-        var merged = new List<Operation>(operations.Count + relevantActions.Length);
-
-        foreach (var operation in operations)
-        {
-            if (IsLegacyCorporateActionOperation(operation, actionKeys))
-            {
-                continue;
-            }
-
-            merged.Add(operation);
-        }
-
-        foreach (var action in relevantActions)
-        {
-            if (!instruments.TryGetValue(action.InstrumentId, out var instrument))
-            {
-                continue;
-            }
-
-            merged.Add(new Operation
-            {
-                Id = action.Id,
-                PortfolioId = portfolioId,
-                InstrumentId = action.InstrumentId,
-                Type = action.Type,
-                Quantity = action.Factor,
-                Price = 0,
-                Fee = 0,
-                CurrencyId = instrument.CurrencyId,
-                TradeDate = DateTime.SpecifyKind(action.EffectiveDate.Date, DateTimeKind.Utc),
-                SettlementDate = DateTime.SpecifyKind(action.EffectiveDate.Date, DateTimeKind.Utc),
-                Note = action.Note,
-                CreatedAt = CorporateActionCreatedAt,
-                UpdatedAt = CorporateActionCreatedAt
-            });
-        }
-
-        return merged
+        var merged = operations
+            .Where(x => !IsLegacyCorporateActionOperation(x, actionKeys))
+            .Concat(BuildSyntheticOperations(relevantActions, instruments, operations[0].PortfolioId))
             .OrderBy(x => x.TradeDate)
             .ThenBy(x => x.CreatedAt)
             .ToList();
+
+        return merged;
     }
 
     private static bool IsLegacyCorporateActionOperation(
@@ -127,6 +91,35 @@ public static class InstrumentCorporateActionOperationMerger
 
     private static CorporateActionKey ToKey(InstrumentCorporateAction action) =>
         new(action.InstrumentId, action.Type, action.EffectiveDate.Date, action.Factor);
+
+    private static IEnumerable<Operation> BuildSyntheticOperations(
+        IEnumerable<InstrumentCorporateAction> actions,
+        IReadOnlyDictionary<Guid, Instrument> instruments,
+        Guid portfolioId) =>
+        actions
+            .Where(x => instruments.ContainsKey(x.InstrumentId))
+            .Select(action =>
+            {
+                var instrument = instruments[action.InstrumentId];
+                var effectiveDateUtc = DateTime.SpecifyKind(action.EffectiveDate.Date, DateTimeKind.Utc);
+
+                return new Operation
+                {
+                    Id = action.Id,
+                    PortfolioId = portfolioId,
+                    InstrumentId = action.InstrumentId,
+                    Type = action.Type,
+                    Quantity = action.Factor,
+                    Price = 0,
+                    Fee = 0,
+                    CurrencyId = instrument.CurrencyId,
+                    TradeDate = effectiveDateUtc,
+                    SettlementDate = effectiveDateUtc,
+                    Note = action.Note,
+                    CreatedAt = CorporateActionCreatedAt,
+                    UpdatedAt = CorporateActionCreatedAt
+                };
+            });
 
     private readonly record struct CorporateActionKey(
         Guid InstrumentId,

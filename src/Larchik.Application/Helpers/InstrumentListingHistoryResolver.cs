@@ -6,6 +6,9 @@ namespace Larchik.Application.Helpers;
 
 public static class InstrumentListingHistoryResolver
 {
+    private static readonly IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> EmptyHistories =
+        new Dictionary<Guid, IReadOnlyList<InstrumentListingHistory>>();
+
     public static async Task<IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>>> LoadAsync(
         LarchikContext context,
         IEnumerable<Guid> instrumentIds,
@@ -17,7 +20,7 @@ public static class InstrumentListingHistoryResolver
 
         if (ids.Length == 0)
         {
-            return new Dictionary<Guid, IReadOnlyList<InstrumentListingHistory>>();
+            return EmptyHistories;
         }
 
         var rows = await context.InstrumentListingHistories
@@ -58,31 +61,36 @@ public static class InstrumentListingHistoryResolver
         IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> histories,
         DateTime asOfDate)
     {
-        if (histories.TryGetValue(instrumentId, out var instrumentHistory))
-        {
-            var activeListing = instrumentHistory.FirstOrDefault(x =>
-                x.EffectiveFrom.Date <= asOfDate.Date &&
-                (!x.EffectiveTo.HasValue || x.EffectiveTo.Value.Date >= asOfDate.Date));
-
-            if (activeListing is not null)
-            {
-                return new InstrumentListingSnapshot(
-                    activeListing.Ticker,
-                    activeListing.Figi,
-                    activeListing.Exchange,
-                    activeListing.CurrencyId);
-            }
-        }
-
-        return new InstrumentListingSnapshot(ticker, figi, exchange, currencyId);
+        var activeListing = TryResolveActiveListing(instrumentId, histories, asOfDate);
+        return activeListing is null
+            ? new InstrumentListingSnapshot(ticker, figi, exchange, currencyId)
+            : new InstrumentListingSnapshot(
+                activeListing.Ticker,
+                activeListing.Figi,
+                activeListing.Exchange,
+                activeListing.CurrencyId);
     }
 
     public static string ResolveCurrency(
         Instrument instrument,
         IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> histories,
+        DateTime asOfDate) =>
+        Resolve(instrument, histories, asOfDate).CurrencyId;
+
+    private static InstrumentListingHistory? TryResolveActiveListing(
+        Guid instrumentId,
+        IReadOnlyDictionary<Guid, IReadOnlyList<InstrumentListingHistory>> histories,
         DateTime asOfDate)
     {
-        return Resolve(instrument, histories, asOfDate).CurrencyId;
+        if (!histories.TryGetValue(instrumentId, out var instrumentHistory))
+        {
+            return null;
+        }
+
+        var asOfDateOnly = asOfDate.Date;
+        return instrumentHistory.FirstOrDefault(x =>
+            x.EffectiveFrom.Date <= asOfDateOnly &&
+            (!x.EffectiveTo.HasValue || x.EffectiveTo.Value.Date >= asOfDateOnly));
     }
 
     public sealed record InstrumentListingSnapshot(

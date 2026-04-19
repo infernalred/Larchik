@@ -381,102 +381,50 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             var stampDutyCol = headers.GetValueOrDefault("гербовый сбор");
             var stampDutyCurCol = headers.GetValueOrDefault("валюта гербового сбора");
             var settlementDateCol = headers.GetValueOrDefault("дата расчетов план/факт");
+            var layout = new TradeLayout(
+                DealColumn: dealCol,
+                TypeColumn: typeCol,
+                DateColumn: dateCol,
+                TimeColumn: timeCol,
+                CodeColumn: codeCol,
+                PriceColumn: priceCol,
+                PriceCurrencyColumn: priceCurrencyCol,
+                SettlementCurrencyColumn: settlementCurrencyCol,
+                QuantityColumn: qtyCol,
+                SumWithoutAccruedColumn: sumWithoutAccruedCol,
+                AccruedColumn: accruedCol,
+                TotalDealColumn: totalDealCol,
+                FeeBrokerColumn: feeBrokerCol,
+                FeeBrokerCurrencyColumn: feeBrokerCurCol,
+                FeeExchangeColumn: feeExchangeCol,
+                FeeExchangeCurrencyColumn: feeExchangeCurCol,
+                FeeClearColumn: feeClearCol,
+                FeeClearCurrencyColumn: feeClearCurCol,
+                StampDutyColumn: stampDutyCol,
+                StampDutyCurrencyColumn: stampDutyCurCol,
+                SettlementDateColumn: settlementDateCol);
 
             var startIndex = headerRow.RowNumber + 1;
             for (var i = startIndex; i <= rows.Count; i++)
             {
                 var row = rows[i - 1];
-                var dealId = row.GetString(dealCol);
-                if (string.IsNullOrWhiteSpace(dealId))
-                {
-                    continue;
-                }
-
-                var normalizedDealId = Normalize(dealId);
-                if (normalizedDealId == "номер сделки" ||
-                    normalizedDealId == "валюта" ||
-                    normalizedDealId == "дата" ||
-                    IsTradeSectionMarker(normalizedDealId))
+                var tradeRow = TryParseTradeRow(row, layout, instrumentAliases);
+                if (tradeRow.ShouldStop)
                 {
                     break;
                 }
 
-                if (IsTradePager(normalizedDealId))
+                if (tradeRow.Error is not null)
+                {
+                    errors.Add(tradeRow.Error);
+                }
+
+                if (tradeRow.Operation is null)
                 {
                     continue;
                 }
 
-                var typeText = row.GetString(typeCol);
-                var tradeType = ParseTradeType(typeText);
-                if (tradeType is null) continue;
-
-                var dateText = row.GetString(dateCol);
-                var timeText = timeCol > 0 ? row.GetString(timeCol) : null;
-                var tradeDate = ParseDateTime(dateText, timeText);
-                if (tradeDate is null)
-                {
-                    errors.Add($"Не удалось распарсить дату сделки {dealId}");
-                    continue;
-                }
-
-                var instrumentCode = codeCol > 0 ? NormalizeCode(row.GetString(codeCol)) : null;
-                if (instrumentCode is not null && instrumentAliases.TryGetValue(instrumentCode, out var resolvedIsin))
-                {
-                    instrumentCode = resolvedIsin;
-                }
-
-                var price = priceCol > 0 ? row.GetDecimal(priceCol) ?? 0 : 0;
-                var quantity = qtyCol > 0 ? row.GetDecimal(qtyCol) ?? 0 : 0;
-
-                var rawPriceCurrency = priceCurrencyCol > 0 ? row.GetString(priceCurrencyCol)?.Trim() : null;
-                var priceCurrency = NormalizeCurrency(rawPriceCurrency);
-                var settlementCurrency = settlementCurrencyCol > 0 ? NormalizeCurrency(row.GetString(settlementCurrencyCol)) : null;
-                var currency = priceCurrency ?? settlementCurrency ?? "RUB";
-                var sumWithoutAccrued = sumWithoutAccruedCol > 0 ? row.GetDecimal(sumWithoutAccruedCol) : null;
-                var accrued = accruedCol > 0 ? row.GetDecimal(accruedCol) : null;
-                var totalDeal = totalDealCol > 0 ? row.GetDecimal(totalDealCol) : null;
-
-                // T-Bank reports bond prices as % of nominal in the trade table.
-                // For portfolio accounting we need money-per-bond dirty price.
-                if (string.Equals(rawPriceCurrency, "%", StringComparison.OrdinalIgnoreCase) && quantity > 0)
-                {
-                    var dirtyTradeAmount = totalDeal ?? ((sumWithoutAccrued ?? 0) + (accrued ?? 0));
-                    if (dirtyTradeAmount > 0)
-                    {
-                        price = dirtyTradeAmount / quantity;
-                        currency = settlementCurrency ?? "RUB";
-                    }
-                }
-
-                // T-Bank has two trade table layouts in historical reports:
-                // 1) newer files expose итоговую клиентскую комиссию in "Комиссия брокера";
-                // 2) older files do not have that column and only expose exchange/clearing/stamp components.
-                // For portfolio accounting we should prefer the explicit client-withheld total when present,
-                // and only fall back to summing the legacy components when that total column is absent.
-                var fee = feeBrokerCol > 0
-                    ? SumFee(row, currency, feeBrokerCol, feeBrokerCurCol)
-                    : SumFee(row, currency, feeExchangeCol, feeExchangeCurCol)
-                      + SumFee(row, currency, feeClearCol, feeClearCurCol)
-                      + SumFee(row, currency, stampDutyCol, stampDutyCurCol);
-
-                var settlementText = settlementDateCol > 0 ? row.GetString(settlementDateCol) : null;
-                var settlementDate = ParseSettlementDate(settlementText);
-
-                var op = new Operation
-                {
-                    Id = Guid.NewGuid(),
-                    Type = tradeType.Value,
-                    Quantity = quantity,
-                    Price = price,
-                    Fee = fee,
-                    CurrencyId = currency,
-                    TradeDate = tradeDate.Value,
-                    SettlementDate = settlementDate,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-
-                parsed.Add(new ParsedOperation(op, instrumentCode, true));
+                parsed.Add(tradeRow.Operation);
             }
         }
     }
@@ -511,70 +459,180 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
                 continue;
             }
 
-            var opText = row.GetString(layout.OperationColumn);
-            var dateText = row.GetString(layout.DateColumn);
-            if (string.IsNullOrWhiteSpace(dateText) && layout.ExecutionDateColumn > 0)
+            var cashRow = TryParseCashRow(row, layout, currentCurrency, reportPeriodEnd);
+            if (cashRow.Error is not null)
             {
-                dateText = row.GetString(layout.ExecutionDateColumn);
+                errors.Add(cashRow.Error);
             }
 
-            if (string.IsNullOrWhiteSpace(dateText) && string.IsNullOrWhiteSpace(opText)) continue;
-            if (string.IsNullOrWhiteSpace(opText)) continue;
-            if (string.IsNullOrWhiteSpace(dateText)) continue;
-            if (IsCashLayoutMarker(opText, dateText)) continue;
-
-            var timeText = layout.TimeColumn > 0 ? row.GetString(layout.TimeColumn) : null;
-            var tradeDate = ParseDateTime(dateText, timeText);
-            if (tradeDate is null)
+            if (cashRow.NextCurrency is not null)
             {
-                errors.Add($"Не удалось распарсить дату денежной операции '{opText}' в строке {row.RowNumber}");
+                currentCurrency = cashRow.NextCurrency;
                 continue;
             }
 
-            if (reportPeriodEnd.HasValue && tradeDate.Value.Date > reportPeriodEnd.Value.Date)
+            if (cashRow.Operation is null)
             {
                 continue;
             }
 
-            var income = layout.IncomeColumn > 0 ? row.GetDecimal(layout.IncomeColumn) ?? 0 : 0;
-            var outcome = layout.OutcomeColumn > 0 ? row.GetDecimal(layout.OutcomeColumn) ?? 0 : 0;
-            var signedAmount = income - outcome;
-            if (signedAmount == 0)
-            {
-                continue;
-            }
-
-            var note = layout.NoteColumn > 0 ? row.GetString(layout.NoteColumn) : opText;
-            var corporateAction = TryParseCorporateAction(note, signedAmount, currentCurrency, tradeDate.Value, opText);
-            if (corporateAction is not null)
-            {
-                parsed.Add(corporateAction);
-                continue;
-            }
-
-            var mapped = MapCashOperation(opText, signedAmount);
-            if (mapped is null)
-            {
-                continue;
-            }
-
-            var operation = new Operation
-            {
-                Id = Guid.NewGuid(),
-                Type = mapped.Value.Type,
-                Quantity = 0,
-                Price = mapped.Value.Amount,
-                Fee = 0,
-                CurrencyId = currentCurrency,
-                TradeDate = tradeDate.Value,
-                SettlementDate = tradeDate.Value,
-                Note = string.IsNullOrWhiteSpace(note) ? opText : $"{opText}: {note}",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            parsed.Add(new ParsedOperation(operation, null, false));
+            parsed.Add(cashRow.Operation);
         }
+    }
+
+    private static TradeRowParseResult TryParseTradeRow(
+        ReportRow row,
+        TradeLayout layout,
+        IReadOnlyDictionary<string, string> instrumentAliases)
+    {
+        var dealId = row.GetString(layout.DealColumn);
+        if (string.IsNullOrWhiteSpace(dealId))
+        {
+            return TradeRowParseResult.Skip;
+        }
+
+        var normalizedDealId = Normalize(dealId);
+        if (normalizedDealId == "номер сделки" ||
+            normalizedDealId == "валюта" ||
+            normalizedDealId == "дата" ||
+            IsTradeSectionMarker(normalizedDealId))
+        {
+            return TradeRowParseResult.Stop;
+        }
+
+        if (IsTradePager(normalizedDealId))
+        {
+            return TradeRowParseResult.Skip;
+        }
+
+        var tradeType = ParseTradeType(row.GetString(layout.TypeColumn));
+        if (tradeType is null)
+        {
+            return TradeRowParseResult.Skip;
+        }
+
+        var tradeDate = ParseDateTime(
+            row.GetString(layout.DateColumn),
+            layout.TimeColumn > 0 ? row.GetString(layout.TimeColumn) : null);
+        if (tradeDate is null)
+        {
+            return new TradeRowParseResult(null, $"Не удалось распарсить дату сделки {dealId}", false);
+        }
+
+        var instrumentCode = layout.CodeColumn > 0 ? NormalizeCode(row.GetString(layout.CodeColumn)) : null;
+        if (instrumentCode is not null && instrumentAliases.TryGetValue(instrumentCode, out var resolvedIsin))
+        {
+            instrumentCode = resolvedIsin;
+        }
+
+        var quantity = layout.QuantityColumn > 0 ? row.GetDecimal(layout.QuantityColumn) ?? 0 : 0;
+        var rawPriceCurrency = layout.PriceCurrencyColumn > 0 ? row.GetString(layout.PriceCurrencyColumn)?.Trim() : null;
+        var settlementCurrency = layout.SettlementCurrencyColumn > 0 ? NormalizeCurrency(row.GetString(layout.SettlementCurrencyColumn)) : null;
+        var tradeMoney = ResolveTradeMoney(row, layout, rawPriceCurrency, settlementCurrency, quantity);
+        var fee = ResolveTradeFee(row, tradeMoney.Currency, layout);
+        var settlementDate = layout.SettlementDateColumn > 0
+            ? ParseSettlementDate(row.GetString(layout.SettlementDateColumn))
+            : null;
+
+        return new TradeRowParseResult(
+            new ParsedOperation(
+                CreateOperation(
+                    tradeType.Value,
+                    quantity,
+                    tradeMoney.Price,
+                    fee,
+                    tradeMoney.Currency,
+                    tradeDate.Value,
+                    settlementDate),
+                instrumentCode,
+                true),
+            null,
+            false);
+    }
+
+    private static CashRowParseResult TryParseCashRow(
+        ReportRow row,
+        CashLayout layout,
+        string currentCurrency,
+        DateTime? reportPeriodEnd)
+    {
+        var rowCurrency = TryGetCashSectionCurrency(row);
+        if (rowCurrency is not null)
+        {
+            return new CashRowParseResult(null, null, rowCurrency);
+        }
+
+        var opText = row.GetString(layout.OperationColumn);
+        var dateText = row.GetString(layout.DateColumn);
+        if (string.IsNullOrWhiteSpace(dateText) && layout.ExecutionDateColumn > 0)
+        {
+            dateText = row.GetString(layout.ExecutionDateColumn);
+        }
+
+        if (string.IsNullOrWhiteSpace(dateText) && string.IsNullOrWhiteSpace(opText))
+        {
+            return CashRowParseResult.Skip;
+        }
+
+        if (string.IsNullOrWhiteSpace(opText) ||
+            string.IsNullOrWhiteSpace(dateText) ||
+            IsCashLayoutMarker(opText, dateText))
+        {
+            return CashRowParseResult.Skip;
+        }
+
+        var tradeDate = ParseDateTime(
+            dateText,
+            layout.TimeColumn > 0 ? row.GetString(layout.TimeColumn) : null);
+        if (tradeDate is null)
+        {
+            return new CashRowParseResult(
+                null,
+                $"Не удалось распарсить дату денежной операции '{opText}' в строке {row.RowNumber}",
+                null);
+        }
+
+        if (reportPeriodEnd.HasValue && tradeDate.Value.Date > reportPeriodEnd.Value.Date)
+        {
+            return CashRowParseResult.Skip;
+        }
+
+        var income = layout.IncomeColumn > 0 ? row.GetDecimal(layout.IncomeColumn) ?? 0 : 0;
+        var outcome = layout.OutcomeColumn > 0 ? row.GetDecimal(layout.OutcomeColumn) ?? 0 : 0;
+        var signedAmount = income - outcome;
+        if (signedAmount == 0)
+        {
+            return CashRowParseResult.Skip;
+        }
+
+        var note = layout.NoteColumn > 0 ? row.GetString(layout.NoteColumn) : opText;
+        var corporateAction = TryParseCorporateAction(note, signedAmount, currentCurrency, tradeDate.Value, opText);
+        if (corporateAction is not null)
+        {
+            return new CashRowParseResult(corporateAction, null, null);
+        }
+
+        var mapped = MapCashOperation(opText, signedAmount);
+        if (mapped is null)
+        {
+            return CashRowParseResult.Skip;
+        }
+
+        return new CashRowParseResult(
+            new ParsedOperation(
+                CreateOperation(
+                    mapped.Value.Type,
+                    0,
+                    mapped.Value.Amount,
+                    0,
+                    currentCurrency,
+                    tradeDate.Value,
+                    tradeDate.Value,
+                    ComposeNote(opText, note)),
+                null,
+                false),
+            null,
+            null);
     }
 
     private static CashLayout? BuildCashLayoutFromHeader(IReadOnlyList<ReportRow> rows, ReportRow headerRow)
@@ -935,6 +993,80 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     // We persist them as UTC without timezone conversion to keep trade dates stable across server locales.
     private static DateTime NormalizeImportedDate(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
 
+    private static Operation CreateOperation(
+        OperationType type,
+        decimal quantity,
+        decimal price,
+        decimal fee,
+        string currency,
+        DateTime tradeDate,
+        DateTime? settlementDate = null,
+        string? note = null)
+    {
+        var now = DateTime.UtcNow;
+
+        return new Operation
+        {
+            Id = Guid.NewGuid(),
+            Type = type,
+            Quantity = quantity,
+            Price = price,
+            Fee = fee,
+            CurrencyId = currency,
+            TradeDate = tradeDate,
+            SettlementDate = settlementDate ?? tradeDate,
+            Note = note,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+    }
+
+    private static (decimal Price, string Currency) ResolveTradeMoney(
+        ReportRow row,
+        TradeLayout layout,
+        string? rawPriceCurrency,
+        string? settlementCurrency,
+        decimal quantity)
+    {
+        var price = layout.PriceColumn > 0 ? row.GetDecimal(layout.PriceColumn) ?? 0 : 0;
+        var priceCurrency = NormalizeCurrency(rawPriceCurrency);
+        var currency = priceCurrency ?? settlementCurrency ?? "RUB";
+        var sumWithoutAccrued = layout.SumWithoutAccruedColumn > 0 ? row.GetDecimal(layout.SumWithoutAccruedColumn) : null;
+        var accrued = layout.AccruedColumn > 0 ? row.GetDecimal(layout.AccruedColumn) : null;
+        var totalDeal = layout.TotalDealColumn > 0 ? row.GetDecimal(layout.TotalDealColumn) : null;
+
+        // T-Bank reports bond prices as % of nominal in the trade table.
+        // For portfolio accounting we need money-per-bond dirty price.
+        if (string.Equals(rawPriceCurrency, "%", StringComparison.OrdinalIgnoreCase) && quantity > 0)
+        {
+            var dirtyTradeAmount = totalDeal ?? ((sumWithoutAccrued ?? 0) + (accrued ?? 0));
+            if (dirtyTradeAmount > 0)
+            {
+                price = dirtyTradeAmount / quantity;
+                currency = settlementCurrency ?? "RUB";
+            }
+        }
+
+        return (price, currency);
+    }
+
+    private static decimal ResolveTradeFee(ReportRow row, string currency, TradeLayout layout)
+    {
+        // T-Bank has two trade table layouts in historical reports:
+        // 1) newer files expose итоговую клиентскую комиссию in "Комиссия брокера";
+        // 2) older files do not have that column and only expose exchange/clearing/stamp components.
+        // For portfolio accounting we should prefer the explicit client-withheld total when present,
+        // and only fall back to summing the legacy components when that total column is absent.
+        return layout.FeeBrokerColumn > 0
+            ? SumFee(row, currency, layout.FeeBrokerColumn, layout.FeeBrokerCurrencyColumn)
+            : SumFee(row, currency, layout.FeeExchangeColumn, layout.FeeExchangeCurrencyColumn)
+              + SumFee(row, currency, layout.FeeClearColumn, layout.FeeClearCurrencyColumn)
+              + SumFee(row, currency, layout.StampDutyColumn, layout.StampDutyCurrencyColumn);
+    }
+
+    private static string ComposeNote(string opText, string? note) =>
+        string.IsNullOrWhiteSpace(note) ? opText : $"{opText}: {note}";
+
     private sealed record ReportRow(int RowNumber, IReadOnlyDictionary<int, string> Cells)
     {
         public string GetString(int column) => Cells.TryGetValue(column, out var value) ? value : string.Empty;
@@ -966,6 +1098,40 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         int NoteColumn,
         string InitialCurrency,
         Func<ReportRow, bool> IsSectionBoundary);
+
+    private sealed record TradeLayout(
+        int DealColumn,
+        int TypeColumn,
+        int DateColumn,
+        int TimeColumn,
+        int CodeColumn,
+        int PriceColumn,
+        int PriceCurrencyColumn,
+        int SettlementCurrencyColumn,
+        int QuantityColumn,
+        int SumWithoutAccruedColumn,
+        int AccruedColumn,
+        int TotalDealColumn,
+        int FeeBrokerColumn,
+        int FeeBrokerCurrencyColumn,
+        int FeeExchangeColumn,
+        int FeeExchangeCurrencyColumn,
+        int FeeClearColumn,
+        int FeeClearCurrencyColumn,
+        int StampDutyColumn,
+        int StampDutyCurrencyColumn,
+        int SettlementDateColumn);
+
+    private sealed record TradeRowParseResult(ParsedOperation? Operation, string? Error, bool ShouldStop)
+    {
+        public static TradeRowParseResult Skip { get; } = new(null, null, false);
+        public static TradeRowParseResult Stop { get; } = new(null, null, true);
+    }
+
+    private sealed record CashRowParseResult(ParsedOperation? Operation, string? Error, string? NextCurrency)
+    {
+        public static CashRowParseResult Skip { get; } = new(null, null, null);
+    }
 
     private sealed record LoadRowsResult(IReadOnlyList<ReportRow> Rows, string Source);
 }
