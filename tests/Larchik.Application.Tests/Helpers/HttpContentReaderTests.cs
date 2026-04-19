@@ -1,4 +1,3 @@
-using System.Net.Http;
 using System.Text;
 using Larchik.Application.Helpers;
 using Xunit;

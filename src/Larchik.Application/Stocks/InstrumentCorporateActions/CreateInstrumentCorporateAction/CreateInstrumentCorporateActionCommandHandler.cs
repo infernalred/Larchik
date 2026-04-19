@@ -1,7 +1,5 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
-using Larchik.Application.Models;
-using Larchik.Application.Stocks.InstrumentCorporateActions;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;

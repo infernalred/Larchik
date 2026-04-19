@@ -1,7 +1,6 @@
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using Mapster;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,8 +11,10 @@ public class GetInstrumentQueryHandler(LarchikContext context) : IRequestHandler
     public async Task<Result<InstrumentDto?>> Handle(GetInstrumentQuery request, CancellationToken cancellationToken)
     {
         var instrument = await context.Instruments
-            .ProjectToType<InstrumentDto>()
-            .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
+            .AsNoTracking()
+            .Where(x => x.Id == request.Id)
+            .Select(InstrumentQueryHelper.AdminDtoProjection)
+            .FirstOrDefaultAsync(cancellationToken);
 
         return Result<InstrumentDto?>.Success(instrument);
     }

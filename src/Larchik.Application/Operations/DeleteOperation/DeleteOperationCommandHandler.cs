@@ -1,6 +1,5 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
-using Larchik.Application.Operations;
 using Larchik.Persistence.Context;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

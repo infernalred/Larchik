@@ -1,6 +1,5 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
-using Larchik.Application.Stocks;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using MediatR;
