@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -19,7 +19,6 @@ import {
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
 import { api } from './api';
-import { AdminInstrumentsPage } from './AdminInstrumentsPage';
 import { getApiErrorMessage } from './error-utils';
 import {
   Broker,
@@ -74,6 +73,10 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
   Commodity: 4,
   Crypto: 5,
 };
+const AdminInstrumentsPage = lazy(async () => {
+  const module = await import('./AdminInstrumentsPage');
+  return { default: module.AdminInstrumentsPage };
+});
 
 function formatPercent(value: number): string {
   return `${(value * 100).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
@@ -733,7 +736,17 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
             </Stack>
           )}
 
-          {portfolioPage === 'instruments' && user.isAdmin && <AdminInstrumentsPage />}
+          {portfolioPage === 'instruments' && user.isAdmin && (
+            <Suspense
+              fallback={
+                <Stack sx={{ py: 4, alignItems: 'center' }}>
+                  <CircularProgress />
+                </Stack>
+              }
+            >
+              <AdminInstrumentsPage />
+            </Suspense>
+          )}
 
           {viewMode === 'portfolio' && portfolioPage === 'overview' && !loadingSummary && summary && (
             <Stack spacing={{ xs: 2, md: 3 }}>
