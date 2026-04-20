@@ -51,13 +51,16 @@ public class AccountController(
     [HttpPost("register")]
     public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
     {
-        if (await userManager.Users.AnyAsync(x => x.UserName == registerDto.UserName))
+        var email = AccountInputNormalizer.NormalizeEmail(registerDto.Email);
+        var userName = AccountInputNormalizer.NormalizeUserName(registerDto.UserName);
+
+        if (await userManager.FindByNameAsync(userName) is not null)
         {
             ModelState.AddModelError("username", "Username taken");
             return ValidationProblem();
         }
 
-        if (await userManager.Users.AnyAsync(x => x.Email == registerDto.Email))
+        if (await FindUserByEmailAsync(email) is not null)
         {
             ModelState.AddModelError("email", "Email taken");
             return ValidationProblem();
@@ -65,8 +68,8 @@ public class AccountController(
 
         var user = new AppUser
         {
-            Email = registerDto.Email,
-            UserName = registerDto.UserName
+            Email = email,
+            UserName = userName
         };
 
         var result = await userManager.CreateAsync(user, registerDto.Password);
@@ -77,14 +80,14 @@ public class AccountController(
 
         await SendEmailConfirmationAsync(user);
 
-        return CreatedAtAction(nameof(Me), BuildUserDto(user, [Roles.User]));
+        return CreatedAtAction(nameof(Me), await BuildUserDtoAsync(user));
     }
 
     [AllowAnonymous]
     [HttpPost("login")]
     public async Task<ActionResult<UserDto>> Login(LoginDto login)
     {
-        var user = await userManager.Users.FirstOrDefaultAsync(x => x.Email == login.Email);
+        var user = await FindUserByEmailAsync(login.Email);
 
         if (user is null) return Unauthorized();
 
@@ -98,9 +101,7 @@ public class AccountController(
 
         await signInManager.SignInAsync(user, login.RememberMe);
 
-        var roles = await userManager.GetRolesAsync(user);
-
-        return Ok(BuildUserDto(user, roles));
+        return Ok(await BuildUserDtoAsync(user));
     }
 
     [HttpPost("logout")]
@@ -126,13 +127,12 @@ public class AccountController(
     [HttpPost("refresh")]
     public async Task<ActionResult<UserDto>> Refresh()
     {
-        var user = await userManager.GetUserAsync(User);
+        var user = await GetCurrentUserAsync();
         if (user is null) return Unauthorized();
 
         await signInManager.RefreshSignInAsync(user);
 
-        var roles = await userManager.GetRolesAsync(user);
-        return Ok(BuildUserDto(user, roles));
+        return Ok(await BuildUserDtoAsync(user));
     }
 
     [AllowAnonymous]
@@ -153,7 +153,7 @@ public class AccountController(
     [HttpPost("resend-confirmation")]
     public async Task<IActionResult> ResendConfirmation(ResendConfirmationDto dto)
     {
-        var user = await userManager.FindByEmailAsync(dto.Email);
+        var user = await FindUserByEmailAsync(dto.Email);
         if (user is null) return NoContent();
         if (await userManager.IsEmailConfirmedAsync(user)) return NoContent();
 
@@ -165,7 +165,7 @@ public class AccountController(
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDto dto)
     {
-        var user = await userManager.FindByEmailAsync(dto.Email);
+        var user = await FindUserByEmailAsync(dto.Email);
         if (user is null || !await userManager.IsEmailConfirmedAsync(user))
         {
             return NoContent();
@@ -198,11 +198,10 @@ public class AccountController(
     [HttpGet("me")]
     public async Task<ActionResult<UserDto>> Me()
     {
-        var user = await userManager.GetUserAsync(User);
+        var user = await GetCurrentUserAsync();
         if (user is null) return Unauthorized();
 
-        var roles = await userManager.GetRolesAsync(user);
-        return Ok(BuildUserDto(user, roles));
+        return Ok(await BuildUserDtoAsync(user));
     }
 
     private async Task SendEmailConfirmationAsync(AppUser user)
@@ -226,6 +225,17 @@ public class AccountController(
             ["token"] = token
         });
         return $"{origin.TrimEnd('/')}{path}{qs}";
+    }
+
+    private Task<AppUser?> FindUserByEmailAsync(string? email) =>
+        userManager.FindByEmailAsync(AccountInputNormalizer.NormalizeEmail(email));
+
+    private Task<AppUser?> GetCurrentUserAsync() => userManager.GetUserAsync(User);
+
+    private async Task<UserDto> BuildUserDtoAsync(AppUser user)
+    {
+        var roles = await userManager.GetRolesAsync(user);
+        return BuildUserDto(user, roles);
     }
 
     private static string EncodeToken(string token) =>

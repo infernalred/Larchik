@@ -11,49 +11,17 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-
-type AuthMode = 'login' | 'register';
+import {
+  AuthMode,
+  getAuthErrorMessage,
+  normalizeLoginInput,
+  normalizeRegisterInput,
+  validateRegisterPasswords,
+} from './auth-domain';
 
 interface Props {
   onLogin: (email: string, password: string, rememberMe: boolean) => Promise<void>;
   onRegister: (email: string, username: string, password: string) => Promise<void>;
-}
-
-function getAuthErrorMessage(error: unknown, fallback: string): string {
-  if (!(error instanceof Error)) return fallback;
-
-  try {
-    const payload = JSON.parse(error.message) as
-      | {
-          title?: string;
-          errors?: Record<string, string[]>;
-          message?: string;
-        }
-      | Array<{ description?: string }>;
-
-    if (Array.isArray(payload)) {
-      const identityErrors = payload.map((item) => item.description).filter(Boolean);
-      if (identityErrors.length > 0) {
-        return identityErrors[0]!;
-      }
-    } else {
-      const validationErrors = payload.errors
-        ? Object.values(payload.errors)
-            .flat()
-            .filter(Boolean)
-        : [];
-
-      if (validationErrors.length > 0) {
-        return validationErrors[0];
-      }
-
-      return payload.message || payload.title || error.message || fallback;
-    }
-  } catch {
-    return error.message || fallback;
-  }
-
-  return error.message || fallback;
 }
 
 export function AuthForm({ onLogin, onRegister }: Props) {
@@ -86,8 +54,9 @@ export function AuthForm({ onLogin, onRegister }: Props) {
     setError('');
     setSuccess('');
 
-    if (isRegister && password !== confirmPassword) {
-      setError('Пароли не совпадают.');
+    const passwordError = isRegister ? validateRegisterPasswords(password, confirmPassword) : null;
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -95,14 +64,19 @@ export function AuthForm({ onLogin, onRegister }: Props) {
 
     try {
       if (isRegister) {
-        await onRegister(email, username, password);
+        const input = normalizeRegisterInput({ email, username, password });
+        await onRegister(input.email, input.username, input.password);
         setSuccess('Аккаунт создан. Подтвердите email и затем войдите.');
         setMode('login');
+        setEmail(input.email);
+        setUsername(input.username);
         setPassword('');
         setConfirmPassword('');
         setRememberMe(true);
       } else {
-        await onLogin(email, password, rememberMe);
+        const input = normalizeLoginInput({ email, password, rememberMe });
+        await onLogin(input.email, input.password, input.rememberMe);
+        setEmail(input.email);
       }
     } catch (err) {
       setError(
