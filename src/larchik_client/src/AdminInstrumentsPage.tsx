@@ -4,7 +4,9 @@ import {
   Box,
   Button,
   Chip,
+  Checkbox,
   CircularProgress,
+  FormControlLabel,
   IconButton,
   Pagination,
   Paper,
@@ -53,6 +55,7 @@ export function AdminInstrumentsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [searchInput, setSearchInput] = useState('');
   const [countryInput, setCountryInput] = useState('');
+  const [onlyTrading, setOnlyTrading] = useState(true);
   const [query, setQuery] = useState('');
   const [country, setCountry] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -105,7 +108,7 @@ export function AdminInstrumentsPage() {
   const loadInstruments = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.listAdminInstruments({ query, country, page, pageSize });
+      const data = await api.listAdminInstruments({ query, country, isTrading: onlyTrading ? true : null, page, pageSize });
       setItems(data.items);
       setTotalCount(data.totalCount);
       if (data.page !== page) {
@@ -121,7 +124,7 @@ export function AdminInstrumentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [country, page, pageSize, query, showToast]);
+  }, [country, onlyTrading, page, pageSize, query, showToast]);
 
   useEffect(() => {
     void loadCategories();
@@ -320,6 +323,19 @@ export function AdminInstrumentsPage() {
               sx={{ maxWidth: { md: 280 } }}
             />
           </Stack>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={onlyTrading}
+                onChange={(event) => {
+                  setOnlyTrading(event.target.checked);
+                  setPage(1);
+                }}
+              />
+            }
+            label="Только торгуемые"
+          />
 
           {loading || categoriesLoading || currenciesLoading || loadingEditor ? (
             <Stack sx={{ py: 4, alignItems: 'center' }}>

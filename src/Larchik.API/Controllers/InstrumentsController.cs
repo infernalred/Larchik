@@ -27,9 +27,10 @@ public class InstrumentsController : BaseApiController
     public async Task<ActionResult<PagedResult<InstrumentDto>>> ListAdmin(
         [FromQuery] string? query,
         [FromQuery] string? country,
+        [FromQuery] bool? isTrading,
         [FromQuery] PageQuery paging)
     {
-        return HandleResult(await Mediator.Send(new GetAdminInstrumentsQuery(query, country, paging), HttpContext.RequestAborted));
+        return HandleResult(await Mediator.Send(new GetAdminInstrumentsQuery(query, country, isTrading, paging), HttpContext.RequestAborted));
     }
 
     [HttpGet]

@@ -27,6 +27,11 @@ public class GetAdminInstrumentsQueryHandler(LarchikContext context)
             query = query.Where(x => x.Country != null && EF.Functions.ILike(x.Country, countryPattern));
         }
 
+        if (request.IsTrading is { } isTrading)
+        {
+            query = query.Where(x => x.IsTrading == isTrading);
+        }
+
         var result = await InstrumentQueryHelper.ApplyDefaultOrdering(query)
             .Select(InstrumentQueryHelper.AdminDtoProjection)
             .ToPagedResultAsync(request.Paging, MaxPageSize, cancellationToken);

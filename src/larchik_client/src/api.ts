@@ -180,10 +180,11 @@ export const api = {
     return request<InstrumentLookup[]>(`/instruments?${params.toString()}`);
   },
 
-  async listAdminInstruments(options: { query?: string; country?: string; page?: number; pageSize?: number } = {}): Promise<PagedResult<Instrument>> {
+  async listAdminInstruments(options: { query?: string; country?: string; isTrading?: boolean | null; page?: number; pageSize?: number } = {}): Promise<PagedResult<Instrument>> {
     const params = new URLSearchParams();
     if (options.query?.trim()) params.set('query', options.query.trim());
     if (options.country?.trim()) params.set('country', options.country.trim());
+    if (options.isTrading != null) params.set('isTrading', String(options.isTrading));
     if (options.page != null) params.set('page', String(options.page));
     if (options.pageSize != null) params.set('pageSize', String(options.pageSize));
 
