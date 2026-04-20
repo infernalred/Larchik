@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, CssBaseline, Stack, ThemeProvider, createTheme } from '@mui/material';
 import { ApiError, api } from './api';
+import { resolveAppViewState } from './app-view-state';
 import { AuthForm } from './AuthForm';
 import { Dashboard } from './Dashboard';
 import { User } from './types';
@@ -225,7 +226,9 @@ export function App() {
   };
 
   const content = useMemo(() => {
-    if (booting || authLoading) {
+    const viewState = resolveAppViewState({ booting, authLoading, hasUser: user !== null });
+
+    if (viewState === 'booting') {
       return (
         <Stack sx={{ alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
           <CircularProgress />
@@ -233,7 +236,7 @@ export function App() {
       );
     }
 
-    if (!user) {
+    if (viewState === 'auth') {
       return (
         <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2 }}>
           <AuthForm onLogin={handleLogin} onRegister={handleRegister} />
@@ -241,7 +244,7 @@ export function App() {
       );
     }
 
-    return <Dashboard onLogout={handleLogout} route={route} onRouteChange={navigateRoute} user={user} />;
+    return <Dashboard onLogout={handleLogout} route={route} onRouteChange={navigateRoute} user={user!} />;
   }, [authLoading, booting, navigateRoute, route, user]);
 
   return (
