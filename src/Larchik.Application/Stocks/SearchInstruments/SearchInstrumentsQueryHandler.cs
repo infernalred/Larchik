@@ -13,7 +13,7 @@ public class SearchInstrumentsQueryHandler(LarchikContext context)
     {
         var limit = Math.Clamp(request.Limit, 1, 50);
         var input = request.Query?.Trim();
-        var query = context.Instruments.AsNoTracking();
+        IQueryable<Larchik.Persistence.Entities.Instrument> query = context.Instruments;
 
         if (!string.IsNullOrWhiteSpace(input))
         {

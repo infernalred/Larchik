@@ -21,7 +21,6 @@ public class ImportBrokerReportCommandHandler(
     {
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
-            .AsNoTracking()
             .Where(x => x.Id == request.PortfolioId && x.UserId == userId)
             .Select(x => new PortfolioIdentity(x.Id, x.Broker == null ? null : x.Broker.Code))
             .FirstOrDefaultAsync(cancellationToken);
@@ -77,7 +76,6 @@ public class ImportBrokerReportCommandHandler(
         var existingKeys = preparedBatch.ImportedKeys.Count == 0
             ? new HashSet<string>(StringComparer.Ordinal)
             : (await context.Operations
-                .AsNoTracking()
                 .Where(x =>
                     x.PortfolioId == portfolio.Id &&
                     x.BrokerOperationKey != null &&

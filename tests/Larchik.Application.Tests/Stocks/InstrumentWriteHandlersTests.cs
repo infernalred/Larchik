@@ -35,8 +35,8 @@ public sealed class InstrumentWriteHandlersTests
         Assert.NotNull(result);
         Assert.True(result!.IsSuccess, result.Error);
 
-        var instrument = await harness.Context.Instruments.AsNoTracking().SingleAsync();
-        var listing = await harness.Context.InstrumentListingHistories.AsNoTracking().SingleAsync();
+        var instrument = await harness.Context.Instruments.SingleAsync();
+        var listing = await harness.Context.InstrumentListingHistories.SingleAsync();
 
         Assert.Equal("Sberbank", instrument.Name);
         Assert.Equal("SBER", instrument.Ticker);
@@ -105,11 +105,10 @@ public sealed class InstrumentWriteHandlersTests
         Assert.True(result!.IsSuccess, result.Error);
 
         var listings = await harness.Context.InstrumentListingHistories
-            .AsNoTracking()
             .Where(x => x.InstrumentId == instrumentId)
             .OrderBy(x => x.EffectiveFrom)
             .ToListAsync();
-        var instrument = await harness.Context.Instruments.AsNoTracking().SingleAsync(x => x.Id == instrumentId);
+        var instrument = await harness.Context.Instruments.SingleAsync(x => x.Id == instrumentId);
 
         Assert.Single(listings);
         Assert.Equal("SBER", instrument.Ticker);
@@ -191,7 +190,7 @@ public sealed class InstrumentWriteHandlersTests
 
         private void SeedCurrencies()
         {
-            if (Context.Currencies.AsNoTracking().Any())
+            if (Context.Currencies.Any())
             {
                 return;
             }

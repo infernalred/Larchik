@@ -19,7 +19,6 @@ public class CreateInstrumentCorporateActionCommandHandler(LarchikContext contex
         }
 
         var instrument = await context.Instruments
-            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.InstrumentId, cancellationToken);
 
         if (instrument is null)

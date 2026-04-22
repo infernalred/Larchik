@@ -17,14 +17,12 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
             .Include(x => x.Broker)
-            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.Id && x.UserId == userId, cancellationToken);
 
         if (portfolio is null) return null!;
 
         var asOfDateTime = DateTime.UtcNow;
         var operations = await context.Operations
-            .AsNoTracking()
             .Where(x => x.PortfolioId == request.Id && x.TradeDate <= asOfDateTime)
             .OrderBy(x => x.TradeDate)
             .ThenBy(x => x.CreatedAt)

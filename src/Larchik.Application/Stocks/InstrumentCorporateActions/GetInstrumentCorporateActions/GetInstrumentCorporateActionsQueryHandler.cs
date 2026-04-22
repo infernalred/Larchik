@@ -14,7 +14,6 @@ public class GetInstrumentCorporateActionsQueryHandler(LarchikContext context)
         CancellationToken cancellationToken)
     {
         var exists = await context.Instruments
-            .AsNoTracking()
             .AnyAsync(x => x.Id == request.InstrumentId, cancellationToken);
 
         if (!exists)
@@ -23,7 +22,6 @@ public class GetInstrumentCorporateActionsQueryHandler(LarchikContext context)
         }
 
         var items = await context.InstrumentCorporateActions
-            .AsNoTracking()
             .Where(x =>
                 x.InstrumentId == request.InstrumentId &&
                 InstrumentCorporateActionRules.IsSupportedType(x.Type))

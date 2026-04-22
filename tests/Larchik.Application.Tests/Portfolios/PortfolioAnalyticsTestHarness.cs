@@ -207,7 +207,7 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
 
     private void SeedReferenceData()
     {
-        if (!context.Users.AsNoTracking().Any(x => x.Id == UserId))
+        if (!context.Users.Any(x => x.Id == UserId))
         {
             context.Users.Add(new AppUser
             {
@@ -219,7 +219,7 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
             });
         }
 
-        if (!context.Users.AsNoTracking().Any(x => x.Id == OtherUserId))
+        if (!context.Users.Any(x => x.Id == OtherUserId))
         {
             context.Users.Add(new AppUser
             {
@@ -231,27 +231,27 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
             });
         }
 
-        if (!context.Currencies.AsNoTracking().Any(x => x.Id == "RUB"))
+        if (!context.Currencies.Any(x => x.Id == "RUB"))
         {
             context.Currencies.Add(new Currency { Id = "RUB" });
         }
 
-        if (!context.Currencies.AsNoTracking().Any(x => x.Id == "USD"))
+        if (!context.Currencies.Any(x => x.Id == "USD"))
         {
             context.Currencies.Add(new Currency { Id = "USD" });
         }
 
-        if (!context.Currencies.AsNoTracking().Any(x => x.Id == "EUR"))
+        if (!context.Currencies.Any(x => x.Id == "EUR"))
         {
             context.Currencies.Add(new Currency { Id = "EUR" });
         }
 
-        if (!context.Categories.AsNoTracking().Any(x => x.Id == 1))
+        if (!context.Categories.Any(x => x.Id == 1))
         {
             context.Categories.Add(new Category { Id = 1, Name = "Stocks" });
         }
 
-        if (!context.Brokers.AsNoTracking().Any(x => x.Id == BrokerId))
+        if (!context.Brokers.Any(x => x.Id == BrokerId))
         {
             context.Brokers.Add(new Broker
             {

@@ -17,7 +17,6 @@ public class GetBrokersQueryHandler(LarchikContext context, IEnumerable<IBrokerR
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var brokers = await context.Brokers
-            .AsNoTracking()
             .OrderBy(x => x.Name)
             .Select(x => new
             {

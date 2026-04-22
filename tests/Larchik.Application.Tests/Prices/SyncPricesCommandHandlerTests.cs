@@ -25,7 +25,7 @@ public sealed class SyncPricesCommandHandlerTests
 
         Assert.True(result.IsSuccess, result.Error);
 
-        var price = await harness.Context.Prices.AsNoTracking().SingleAsync();
+        var price = await harness.Context.Prices.SingleAsync();
         Assert.Equal(instrumentId, price.InstrumentId);
         Assert.Equal(date, price.Date);
         Assert.Equal(800m, price.Value);
@@ -50,7 +50,7 @@ public sealed class SyncPricesCommandHandlerTests
             CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
-        var prices = await harness.Context.Prices.AsNoTracking().ToListAsync();
+        var prices = await harness.Context.Prices.ToListAsync();
         Assert.Single(prices);
         Assert.Equal(120m, prices[0].Value);
         Assert.Equal("MOEX", prices[0].Provider);
@@ -72,7 +72,7 @@ public sealed class SyncPricesCommandHandlerTests
             CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
-        var price = await harness.Context.Prices.AsNoTracking().SingleAsync();
+        var price = await harness.Context.Prices.SingleAsync();
         Assert.Equal(new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc), price.Date);
     }
 

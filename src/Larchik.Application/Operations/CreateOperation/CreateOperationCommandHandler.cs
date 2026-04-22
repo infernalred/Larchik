@@ -20,7 +20,6 @@ public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor
 
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
-            .AsNoTracking()
             .Where(x => x.Id == request.PortfolioId && x.UserId == userId)
             .Select(x => new PortfolioIdentity(x.Id, x.Broker == null ? null : x.Broker.Code))
             .FirstOrDefaultAsync(cancellationToken);

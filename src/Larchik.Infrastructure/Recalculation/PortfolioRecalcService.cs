@@ -15,7 +15,6 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
     {
         var portfolio = await context.Portfolios
             .Include(x => x.Broker)
-            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == portfolioId, cancellationToken);
 
         if (portfolio is null)
@@ -45,13 +44,11 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
 
         var instruments = await context.Instruments
             .Where(x => instrumentIds.Contains(x.Id))
-            .AsNoTracking()
             .ToDictionaryAsync(x => x.Id, cancellationToken);
         var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
         operations = InstrumentCorporateActionOperationMerger.Merge(operations, corporateActions, instruments).ToList();
 
         var prices = await context.Prices
-            .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.InstrumentId))
             .ToListAsync(cancellationToken);
 

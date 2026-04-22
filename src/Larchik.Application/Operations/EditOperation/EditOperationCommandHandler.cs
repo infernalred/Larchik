@@ -38,7 +38,6 @@ public class EditOperationCommandHandler(LarchikContext context, IUserAccessor u
 
         var resolvedInput = resolvedInputResult.Value!;
         var brokerCode = await context.Portfolios
-            .AsNoTracking()
             .Where(x => x.Id == op.PortfolioId)
             .Select(x => x.Broker == null ? null : x.Broker.Code)
             .FirstOrDefaultAsync(cancellationToken);

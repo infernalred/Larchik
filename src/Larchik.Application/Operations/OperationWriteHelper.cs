@@ -34,7 +34,6 @@ internal static class OperationWriteHelper
         if (instrumentId is not null)
         {
             instrument = await context.Instruments
-                .AsNoTracking()
                 .Where(x => x.Id == instrumentId.Value)
                 .Select(x => new ResolvedInstrument(x.Id, x.Isin, x.Ticker))
                 .FirstOrDefaultAsync(cancellationToken);

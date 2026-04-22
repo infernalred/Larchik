@@ -18,7 +18,6 @@ internal static class PortfolioWriteHelper
         }
 
         var brokerExists = await context.Brokers
-            .AsNoTracking()
             .AnyAsync(x => x.Id == model.BrokerId, cancellationToken);
         if (!brokerExists)
         {
@@ -32,7 +31,6 @@ internal static class PortfolioWriteHelper
         }
 
         var currencyExists = await context.Currencies
-            .AsNoTracking()
             .AnyAsync(x => x.Id == reportingCurrencyId, cancellationToken);
         if (!currencyExists)
         {

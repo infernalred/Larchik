@@ -24,7 +24,6 @@ public static class InstrumentListingHistoryResolver
         }
 
         var rows = await context.InstrumentListingHistories
-            .AsNoTracking()
             .Where(x => ids.Contains(x.InstrumentId))
             .OrderBy(x => x.InstrumentId)
             .ThenByDescending(x => x.EffectiveFrom)

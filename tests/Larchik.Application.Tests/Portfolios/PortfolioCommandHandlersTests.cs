@@ -21,7 +21,7 @@ public sealed class PortfolioCommandHandlersTests
 
         Assert.True(result.IsSuccess, result.Error);
 
-        var portfolio = await harness.Context.Portfolios.AsNoTracking().SingleAsync();
+        var portfolio = await harness.Context.Portfolios.SingleAsync();
         Assert.Equal("Main Portfolio", portfolio.Name);
         Assert.Equal("USD", portfolio.ReportingCurrencyId);
         Assert.Equal(PortfolioHandlersTestHarness.TbankBrokerId, portfolio.BrokerId);
@@ -57,7 +57,7 @@ public sealed class PortfolioCommandHandlersTests
         Assert.NotNull(result);
         Assert.True(result!.IsSuccess, result.Error);
 
-        var portfolio = await harness.Context.Portfolios.AsNoTracking().SingleAsync();
+        var portfolio = await harness.Context.Portfolios.SingleAsync();
         Assert.Equal("Updated Name", portfolio.Name);
         Assert.Equal(PortfolioHandlersTestHarness.VtbBrokerId, portfolio.BrokerId);
         Assert.Equal("EUR", portfolio.ReportingCurrencyId);
@@ -109,7 +109,7 @@ public sealed class PortfolioCommandHandlersTests
         var result = await harness.DeleteHandler.Handle(new DeletePortfolioCommand(portfolioId), CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
-        Assert.Empty(await harness.Context.Portfolios.AsNoTracking().ToListAsync());
+        Assert.Empty(await harness.Context.Portfolios.ToListAsync());
     }
 
     [Fact]
@@ -135,10 +135,10 @@ public sealed class PortfolioCommandHandlersTests
         Assert.Equal(1, result.Value!.DeletedOperations);
         Assert.Equal(1, result.Value.DeletedPositionSnapshots);
         Assert.Equal(1, result.Value.DeletedPortfolioSnapshots);
-        Assert.Single(await harness.Context.Operations.AsNoTracking().ToListAsync());
-        Assert.Single(await harness.Context.PositionSnapshots.AsNoTracking().ToListAsync());
-        Assert.Single(await harness.Context.PortfolioSnapshots.AsNoTracking().ToListAsync());
-        Assert.Equal(otherPortfolioId, (await harness.Context.Operations.AsNoTracking().SingleAsync()).PortfolioId);
+        Assert.Single(await harness.Context.Operations.ToListAsync());
+        Assert.Single(await harness.Context.PositionSnapshots.ToListAsync());
+        Assert.Single(await harness.Context.PortfolioSnapshots.ToListAsync());
+        Assert.Equal(otherPortfolioId, (await harness.Context.Operations.SingleAsync()).PortfolioId);
     }
 
     [Fact]

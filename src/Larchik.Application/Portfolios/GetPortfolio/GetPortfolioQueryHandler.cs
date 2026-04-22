@@ -14,7 +14,6 @@ public class GetPortfolioQueryHandler(LarchikContext context, IUserAccessor user
     {
         var userId = userAccessor.GetUserId();
         var item = await context.Portfolios
-            .AsNoTracking()
             .Where(x => x.UserId == userId && x.Id == request.Id)
             .ProjectToDto()
             .FirstOrDefaultAsync(cancellationToken);

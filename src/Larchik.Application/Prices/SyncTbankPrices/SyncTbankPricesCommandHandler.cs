@@ -128,7 +128,6 @@ public class SyncTbankPricesCommandHandler(
         CancellationToken cancellationToken)
     {
         var instrumentsQuery = context.Instruments
-            .AsNoTracking()
             .Where(x =>
                 (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf || x.Type == InstrumentType.Currency) &&
                 x.IsTrading &&

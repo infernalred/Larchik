@@ -11,7 +11,6 @@ public class GetInstrumentQueryHandler(LarchikContext context) : IRequestHandler
     public async Task<Result<InstrumentDto?>> Handle(GetInstrumentQuery request, CancellationToken cancellationToken)
     {
         var instrument = await context.Instruments
-            .AsNoTracking()
             .Where(x => x.Id == request.Id)
             .Select(InstrumentQueryHelper.AdminDtoProjection)
             .FirstOrDefaultAsync(cancellationToken);

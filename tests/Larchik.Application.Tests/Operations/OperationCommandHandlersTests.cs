@@ -26,7 +26,7 @@ public class OperationCommandHandlersTests
 
         Assert.True(result.IsSuccess, result.Error);
 
-        var operation = await harness.Context.Operations.AsNoTracking().SingleAsync();
+        var operation = await harness.Context.Operations.SingleAsync();
         Assert.Equal(portfolioId, operation.PortfolioId);
         Assert.Equal(instrumentId, operation.InstrumentId);
         Assert.Equal("RUB", operation.CurrencyId);
@@ -51,7 +51,7 @@ public class OperationCommandHandlersTests
             CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
-        var operation = await harness.Context.Operations.AsNoTracking().SingleAsync();
+        var operation = await harness.Context.Operations.SingleAsync();
         Assert.Null(operation.InstrumentId);
     }
 
@@ -106,7 +106,7 @@ public class OperationCommandHandlersTests
         Assert.NotNull(result);
         Assert.True(result!.IsSuccess, result.Error);
 
-        var operation = await harness.Context.Operations.AsNoTracking().SingleAsync();
+        var operation = await harness.Context.Operations.SingleAsync();
         Assert.Equal(2m, operation.Quantity);
         Assert.Equal(110m, operation.Price);
         Assert.Equal(1m, operation.Fee);
@@ -174,7 +174,7 @@ public class OperationCommandHandlersTests
         Assert.NotNull(result);
         Assert.True(result!.IsSuccess, result.Error);
 
-        var operation = await harness.Context.Operations.AsNoTracking().SingleAsync();
+        var operation = await harness.Context.Operations.SingleAsync();
         Assert.Null(operation.InstrumentId);
         Assert.Equal("USD", operation.CurrencyId);
         Assert.Equal("edited cash", operation.Note);
@@ -223,7 +223,7 @@ public class OperationCommandHandlersTests
         var result = await harness.DeleteHandler.Handle(new DeleteOperationCommand(operationId), CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
-        Assert.Empty(await harness.Context.Operations.AsNoTracking().ToListAsync());
+        Assert.Empty(await harness.Context.Operations.ToListAsync());
         Assert.Single(harness.Recalc.Calls);
         Assert.Equal((portfolioId, tradeDate), harness.Recalc.Calls[0]);
     }

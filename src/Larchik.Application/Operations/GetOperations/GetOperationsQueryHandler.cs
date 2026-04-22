@@ -17,7 +17,6 @@ public class GetOperationsQueryHandler(LarchikContext context, IUserAccessor use
     {
         var userId = userAccessor.GetUserId();
         var result = await context.Operations
-            .AsNoTracking()
             .Where(x =>
                 x.PortfolioId == request.PortfolioId &&
                 x.Portfolio != null &&

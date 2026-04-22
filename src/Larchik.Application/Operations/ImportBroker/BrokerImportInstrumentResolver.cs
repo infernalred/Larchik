@@ -22,7 +22,6 @@ internal static class BrokerImportInstrumentResolver
         }
 
         var aliasEntries = await context.InstrumentAliases
-            .AsNoTracking()
             .Where(x => normalizedCodes.Contains(x.NormalizedAliasCode))
             .ToListAsync(cancellationToken);
 
@@ -36,7 +35,6 @@ internal static class BrokerImportInstrumentResolver
             .ToArray();
 
         var instruments = await context.Instruments
-            .AsNoTracking()
             .Where(x =>
                 normalizedCodes.Contains(x.Ticker.ToUpper()) ||
                 (x.Isin != null && normalizedCodes.Contains(x.Isin.ToUpper())) ||

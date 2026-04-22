@@ -17,7 +17,7 @@ public class GetAdminInstrumentsQueryHandler(LarchikContext context)
         CancellationToken cancellationToken)
     {
         var query = InstrumentQueryHelper.ApplyAdminSearch(
-            context.Instruments.AsNoTracking().AsQueryable(),
+            context.Instruments.AsQueryable(),
             request.Query);
 
         var country = request.Country?.Trim();

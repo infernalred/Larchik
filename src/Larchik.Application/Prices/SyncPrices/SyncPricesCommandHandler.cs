@@ -62,7 +62,6 @@ public class SyncPricesCommandHandler(LarchikContext context)
             .ToArray();
 
         return await context.Instruments
-            .AsNoTracking()
             .Where(x => requestedInstrumentIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
     }

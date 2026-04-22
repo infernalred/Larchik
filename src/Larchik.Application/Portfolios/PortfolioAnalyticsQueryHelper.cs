@@ -38,7 +38,6 @@ internal static class PortfolioAnalyticsQueryHelper
 
         var instruments = await context.Instruments
             .Include(x => x.Category)
-            .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
 
@@ -46,7 +45,6 @@ internal static class PortfolioAnalyticsQueryHelper
         var mergedOperations = InstrumentCorporateActionOperationMerger.Merge(operations, corporateActions, instruments).ToList();
 
         var prices = await context.Prices
-            .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.InstrumentId) && x.Date <= maxPriceDate)
             .ToListAsync(cancellationToken);
 

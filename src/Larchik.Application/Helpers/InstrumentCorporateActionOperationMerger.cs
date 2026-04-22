@@ -25,7 +25,6 @@ public static class InstrumentCorporateActionOperationMerger
         }
 
         return await context.InstrumentCorporateActions
-            .AsNoTracking()
             .Where(x =>
                 ids.Contains(x.InstrumentId) &&
                 (x.Type == OperationType.Split || x.Type == OperationType.ReverseSplit))

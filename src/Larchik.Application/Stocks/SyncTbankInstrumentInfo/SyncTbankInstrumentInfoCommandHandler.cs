@@ -39,7 +39,6 @@ public class SyncTbankInstrumentInfoCommandHandler(
         }
 
         var candidatesQuery = context.Instruments
-            .AsNoTracking()
             .Where(x =>
                 (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf || x.Type == InstrumentType.Currency) &&
                 x.PriceSource == Persistence.Entities.PriceSource.TBANK &&

@@ -19,7 +19,6 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         var userId = userAccessor.GetUserId();
         var portfolio = await context.Portfolios
             .Include(x => x.Broker)
-            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.Id && x.UserId == userId, cancellationToken);
 
         if (portfolio is null)
@@ -28,7 +27,6 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
         }
 
         var operations = await context.Operations
-            .AsNoTracking()
             .Where(x => x.PortfolioId == request.Id)
             .OrderBy(x => x.TradeDate)
             .ThenBy(x => x.CreatedAt)

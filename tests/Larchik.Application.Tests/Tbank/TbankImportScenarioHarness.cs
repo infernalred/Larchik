@@ -56,7 +56,6 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
 
         SeedReferenceData(TbankReferenceData.Load());
         _instrumentIdByTicker = _context.Instruments
-            .AsNoTracking()
             .ToDictionary(x => x.Ticker, x => x.Id, StringComparer.OrdinalIgnoreCase);
     }
 
@@ -202,7 +201,6 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
     {
         var summary = await GetSummaryAsync();
         var instrumentById = await _context.Instruments
-            .AsNoTracking()
             .ToDictionaryAsync(x => x.Id);
 
         return summary.Positions
@@ -228,7 +226,6 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
     public async Task<IReadOnlyList<OperationSnapshotItem>> GetOperationsAsync()
     {
         var operations = await _context.Operations
-            .AsNoTracking()
             .Where(x => x.PortfolioId == PortfolioId)
             .Include(x => x.Instrument)
             .OrderBy(x => x.TradeDate)
@@ -252,8 +249,8 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
 
     private void SeedReferenceData(TbankReferenceData data)
     {
-        var existingCurrencyIds = _context.Currencies.AsNoTracking().Select(x => x.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var existingCategoryIds = _context.Categories.AsNoTracking().Select(x => x.Id).ToHashSet();
+        var existingCurrencyIds = _context.Currencies.Select(x => x.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var existingCategoryIds = _context.Categories.Select(x => x.Id).ToHashSet();
 
         _context.Currencies.AddRange(data.Currencies
             .Where(x => !existingCurrencyIds.Contains(x.Id))

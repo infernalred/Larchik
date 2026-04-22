@@ -75,7 +75,7 @@ public class ImportBrokerReportCommandHandlerTests
         Assert.Equal(2, result.Value!.ImportedOperations);
         Assert.Equal(0, result.Value.SkippedOperations);
 
-        var operations = await harness.Context.Operations.AsNoTracking().OrderBy(x => x.Type).ToListAsync();
+        var operations = await harness.Context.Operations.OrderBy(x => x.Type).ToListAsync();
         Assert.Equal(2, operations.Count);
         Assert.Contains(operations, x => x.Type == OperationType.Deposit && x.Price == 1000m);
         Assert.Contains(operations, x => x.Type == OperationType.Buy && x.InstrumentId == instrumentId);
@@ -104,7 +104,6 @@ public class ImportBrokerReportCommandHandlerTests
         Assert.True(result.IsSuccess, result.Error);
 
         var importedBuy = await harness.Context.Operations
-            .AsNoTracking()
             .SingleAsync(x => x.Type == OperationType.Buy);
 
         Assert.Equal(instrumentId, importedBuy.InstrumentId);
@@ -128,7 +127,7 @@ public class ImportBrokerReportCommandHandlerTests
         Assert.True(second.IsSuccess, second.Error);
         Assert.Equal(0, second.Value!.ImportedOperations);
         Assert.Equal(2, second.Value.SkippedOperations);
-        Assert.Equal(2, await harness.Context.Operations.AsNoTracking().CountAsync());
+        Assert.Equal(2, await harness.Context.Operations.CountAsync());
     }
 
     [Fact]
@@ -197,7 +196,7 @@ public class ImportBrokerReportCommandHandlerTests
         Assert.Equal(0, result.Value!.ImportedOperations);
         Assert.Equal(0, result.Value.SkippedOperations);
 
-        var operations = await harness.Context.Operations.AsNoTracking().ToListAsync();
+        var operations = await harness.Context.Operations.ToListAsync();
         Assert.Single(operations);
         Assert.Equal(manualOperationId, operations[0].Id);
         Assert.NotNull(operations[0].BrokerOperationKey);

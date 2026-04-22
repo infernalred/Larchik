@@ -12,14 +12,12 @@ public static class InstrumentWriteGuard
         CancellationToken cancellationToken)
     {
         if (!await context.Currencies
-                .AsNoTracking()
                 .AnyAsync(x => x.Id == input.CurrencyId, cancellationToken))
         {
             return "Selected currency was not found.";
         }
 
         if (!await context.Categories
-                .AsNoTracking()
                 .AnyAsync(x => x.Id == input.CategoryId, cancellationToken))
         {
             return "Selected category was not found.";
@@ -28,7 +26,6 @@ public static class InstrumentWriteGuard
         if (!string.IsNullOrWhiteSpace(input.Isin))
         {
             var isinExists = await context.Instruments
-                .AsNoTracking()
                 .AnyAsync(
                     x => x.Id != excludeInstrumentId &&
                          x.Isin != null &&
@@ -44,7 +41,6 @@ public static class InstrumentWriteGuard
         if (!string.IsNullOrWhiteSpace(input.Figi))
         {
             var figiExists = await context.Instruments
-                .AsNoTracking()
                 .AnyAsync(
                     x => x.Id != excludeInstrumentId &&
                          x.Figi != null &&

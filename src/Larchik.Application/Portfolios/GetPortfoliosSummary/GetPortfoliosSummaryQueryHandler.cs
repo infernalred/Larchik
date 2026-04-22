@@ -21,7 +21,6 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
         var userId = userAccessor.GetUserId();
         var portfolios = await context.Portfolios
             .Include(x => x.Broker)
-            .AsNoTracking()
             .Where(x => x.UserId == userId)
             .ToListAsync(cancellationToken);
 
@@ -41,7 +40,6 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
         var portfolioIds = portfolios.Select(x => x.Id).ToArray();
 
         var operations = await context.Operations
-            .AsNoTracking()
             .Where(x => portfolioIds.Contains(x.PortfolioId) && x.TradeDate <= asOfDateTime)
             .OrderBy(x => x.PortfolioId)
             .ThenBy(x => x.TradeDate)
@@ -55,13 +53,11 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
             .ToArray();
 
         var instruments = await context.Instruments
-            .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
         var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
 
         var prices = await context.Prices
-            .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.InstrumentId) && x.Date <= asOfDateTime)
             .ToListAsync(cancellationToken);
 

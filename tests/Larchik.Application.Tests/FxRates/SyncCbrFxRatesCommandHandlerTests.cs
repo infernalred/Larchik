@@ -45,7 +45,7 @@ public sealed class SyncCbrFxRatesCommandHandlerTests
         var result = await handler.Handle(new SyncCbrFxRatesCommand(new DateOnly(2026, 4, 20)), CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
-        var rates = await harness.Context.FxRates.AsNoTracking().ToListAsync();
+        var rates = await harness.Context.FxRates.ToListAsync();
         Assert.Single(rates);
         Assert.Equal("USD", rates[0].BaseCurrencyId);
         Assert.Equal("RUB", rates[0].QuoteCurrencyId);
@@ -84,7 +84,7 @@ public sealed class SyncCbrFxRatesCommandHandlerTests
         var result = await handler.Handle(new SyncCbrFxRatesCommand(new DateOnly(2026, 4, 20)), CancellationToken.None);
 
         Assert.True(result.IsSuccess, result.Error);
-        var rates = await harness.Context.FxRates.AsNoTracking().ToListAsync();
+        var rates = await harness.Context.FxRates.ToListAsync();
         Assert.Single(rates);
         Assert.Equal(81.25m, rates[0].Rate);
     }

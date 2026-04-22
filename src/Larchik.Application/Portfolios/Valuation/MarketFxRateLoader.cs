@@ -29,7 +29,6 @@ public static class MarketFxRateLoader
         }
 
         var fxRates = await context.FxRates
-            .AsNoTracking()
             .Where(x => currencies.Contains(x.BaseCurrencyId) && currencies.Contains(x.QuoteCurrencyId))
             .ToListAsync(cancellationToken);
 
@@ -92,7 +91,6 @@ public static class MarketFxRateLoader
             .ToArray();
 
         var instruments = await context.Instruments
-            .AsNoTracking()
             .Where(x => x.Type == InstrumentType.Currency)
             .Where(x => codes.Contains(x.Ticker.ToUpper()) || (x.Isin != null && codes.Contains(x.Isin.ToUpper())))
             .Select(x => new { x.Id, x.Ticker, x.Isin })
@@ -119,7 +117,6 @@ public static class MarketFxRateLoader
 
         var instrumentIds = definitionsByInstrument.Keys.ToArray();
         var prices = await context.Prices
-            .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.InstrumentId) && x.Value > 0)
             .ToListAsync(cancellationToken);
 

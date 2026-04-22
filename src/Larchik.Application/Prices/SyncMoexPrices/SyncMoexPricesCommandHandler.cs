@@ -89,7 +89,6 @@ public class SyncMoexPricesCommandHandler(
             .Select(x => x.Id)
             .ToArray();
         var aliasCodes = await context.InstrumentAliases
-            .AsNoTracking()
             .Where(x => instrumentIds.Contains(x.InstrumentId))
             .Select(x => new InstrumentAliasCandidate(x.InstrumentId, x.NormalizedAliasCode))
             .ToListAsync(cancellationToken);
@@ -181,7 +180,6 @@ public class SyncMoexPricesCommandHandler(
     private async Task<MoexInstrumentLoadResult> LoadEligibleInstrumentsAsync(CancellationToken cancellationToken)
     {
         var candidates = await context.Instruments
-            .AsNoTracking()
             .Where(x =>
                 (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf || x.Type == InstrumentType.Currency) &&
                 x.IsTrading &&

@@ -76,7 +76,6 @@ public class BackgroundJobSchedulerService(
             foreach (var spec in specs)
             {
                 var exists = await context.JobRuns
-                    .AsNoTracking()
                     .AnyAsync(x => x.DedupKey == spec.DedupKey, cancellationToken);
 
                 if (exists) continue;
@@ -279,7 +278,6 @@ public class BackgroundJobSchedulerService(
     private async Task LogDefinitionScheduleState(LarchikContext context, CancellationToken cancellationToken)
     {
         var definitions = await context.JobDefinitions
-            .AsNoTracking()
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 

@@ -19,7 +19,6 @@ public class RecalculatePortfolioCommandHandler(
     {
         var userId = userAccessor.GetUserId();
         var portfolioExists = await context.Portfolios
-            .AsNoTracking()
             .AnyAsync(x => x.Id == request.Id && x.UserId == userId, cancellationToken);
 
         if (!portfolioExists)
@@ -28,7 +27,6 @@ public class RecalculatePortfolioCommandHandler(
         }
 
         var operationDates = await context.Operations
-            .AsNoTracking()
             .Where(x => x.PortfolioId == request.Id)
             .OrderBy(x => x.TradeDate)
             .Select(x => x.TradeDate)

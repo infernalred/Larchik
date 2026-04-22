@@ -58,7 +58,6 @@ public static class InstrumentCorporateActionWriteHelper
         CancellationToken cancellationToken)
     {
         return await context.InstrumentCorporateActions
-            .AsNoTracking()
             .AnyAsync(x =>
                     x.Id != excludeId &&
                     x.InstrumentId == instrumentId &&
@@ -75,7 +74,6 @@ public static class InstrumentCorporateActionWriteHelper
         CancellationToken cancellationToken)
     {
         var portfolioIds = await context.Operations
-            .AsNoTracking()
             .Where(x => x.InstrumentId == instrumentId)
             .Select(x => x.PortfolioId)
             .Distinct()

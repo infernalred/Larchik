@@ -42,7 +42,6 @@ internal static class BrokerOperationIdentityHelper
         var provisionalKeyPrefix = $"{ProvisionalManualPrefix}{baseHash}:";
 
         var existingKeys = await context.Operations
-            .AsNoTracking()
             .Where(x =>
                 x.PortfolioId == portfolioId &&
                 x.BrokerOperationKey != null &&
