@@ -16,7 +16,7 @@
 
 ## Sync And Import Rules
 - `price_source` is nullable and only meaningful for tradable instruments. `MOEX` sync must process only instruments assigned to `MOEX`; `TBANK` sync must process only instruments assigned to `TBANK`.
-- `TbankPricesDaily` is not a source for Russian equities, bonds, ETFs, or FX pairs; those should be assigned to MOEX.
+- Russian instruments may use either `MOEX` or `TBANK` when explicitly assigned; sync eligibility is driven by `price_source`, not by country.
 - Price and FX sync code paths must persist UTC `DateTime` values only.
 - `scripts/import_reference_data.sql` and reset scripts are expected to stay aligned with the current persistence model, including the removal of `instruments.price`, `lots`, and `cash_balances`.
 

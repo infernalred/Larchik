@@ -16,6 +16,7 @@ import {
   PortfolioPerformance,
   PortfoliosSummary,
   PortfolioSummary,
+  ReferenceItem,
   RecalculatePortfolioResult,
   User,
 } from './types';
@@ -171,6 +172,14 @@ export const api = {
 
   async listCategories(): Promise<Category[]> {
     return request<Category[]>('/categories');
+  },
+
+  async listCountries(): Promise<ReferenceItem[]> {
+    return request<ReferenceItem[]>('/referencedata/countries');
+  },
+
+  async listExchanges(): Promise<ReferenceItem[]> {
+    return request<ReferenceItem[]>('/referencedata/exchanges');
   },
 
   async searchInstruments(query: string, limit = 20): Promise<InstrumentLookup[]> {

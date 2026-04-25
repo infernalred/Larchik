@@ -270,8 +270,8 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
             Type = x.Type,
             CurrencyId = x.CurrencyId,
             CategoryId = x.CategoryId,
-            Exchange = x.Exchange,
-            Country = x.Country,
+            ExchangeId = NormalizeExchange(x.Exchange),
+            CountryId = x.Country,
             IsTrading = x.IsTrading,
             CreatedBy = UserId,
             UpdatedBy = UserId,
@@ -332,6 +332,19 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
         });
 
         _context.SaveChanges();
+    }
+
+    private static string? NormalizeExchange(string? exchange)
+    {
+        if (string.IsNullOrWhiteSpace(exchange))
+        {
+            return null;
+        }
+
+        var normalized = exchange.Trim().ToUpperInvariant();
+        return normalized is "TQBR" or "TQTF" or "TQIF" or "TQCB" or "TQOB" or "CETS" or "MTQR" or "CNGD"
+            ? "MOEX"
+            : normalized;
     }
 
     public ValueTask DisposeAsync()

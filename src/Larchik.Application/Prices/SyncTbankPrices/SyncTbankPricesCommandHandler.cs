@@ -137,11 +137,11 @@ public class SyncTbankPricesCommandHandler(
 
         if (excludedCountries.Count > 0)
         {
-            instrumentsQuery = instrumentsQuery.Where(x => x.Country == null || !excludedCountries.Contains(x.Country.ToUpper()));
+            instrumentsQuery = instrumentsQuery.Where(x => x.CountryId == null || !excludedCountries.Contains(x.CountryId.ToUpper()));
         }
 
         var instrumentStates = await instrumentsQuery
-            .Select(x => new InstrumentState(x.Id, x.Figi!, x.CurrencyId.ToUpperInvariant(), x.Ticker, x.Isin, x.Exchange))
+            .Select(x => new InstrumentState(x.Id, x.Figi!, x.CurrencyId.ToUpperInvariant(), x.Ticker, x.Isin, x.ExchangeId))
             .ToListAsync(cancellationToken);
 
         var listingHistories = await InstrumentListingHistoryResolver.LoadAsync(

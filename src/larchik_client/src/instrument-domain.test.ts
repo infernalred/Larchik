@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   createInstrumentEditorInitialModel,
-  isTbankPriceSourceForbidden,
   normalizeInstrumentEditorModel,
   requiresInstrumentIsin,
 } from './instrument-domain';
@@ -45,7 +44,7 @@ describe('instrument-domain', () => {
       type: 'Bond',
       currencyId: ' rub ',
       categoryId: 14,
-      exchange: ' tqcb ',
+      exchange: ' moex ',
       country: ' ru ',
       isTrading: false,
       priceSource: 'MOEX',
@@ -59,14 +58,14 @@ describe('instrument-domain', () => {
       type: 'Bond',
       currencyId: 'RUB',
       categoryId: 14,
-      exchange: 'tqcb',
-      country: 'ru',
+      exchange: 'MOEX',
+      country: 'RU',
       isTrading: false,
       priceSource: null,
     });
   });
 
-  it('forbids TBANK price source for Russian market instruments', () => {
+  it('keeps TBANK price source for Russian instruments', () => {
     const input: InstrumentModel = {
       name: 'Sber',
       ticker: 'SBER',
@@ -81,7 +80,6 @@ describe('instrument-domain', () => {
       priceSource: 'TBANK',
     };
 
-    expect(isTbankPriceSourceForbidden(input)).toBe(true);
-    expect(normalizeInstrumentEditorModel(input).priceSource).toBe('MOEX');
+    expect(normalizeInstrumentEditorModel(input).priceSource).toBe('TBANK');
   });
 });

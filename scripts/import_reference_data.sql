@@ -10697,6 +10697,32 @@ VALUES
     ('EUR')
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO countries (id, name)
+VALUES
+    ('RU', 'Russia'),
+    ('US', 'United States'),
+    ('NL', 'Netherlands'),
+    ('GB', 'United Kingdom'),
+    ('DE', 'Germany'),
+    ('CN', 'China'),
+    ('HK', 'Hong Kong'),
+    ('KZ', 'Kazakhstan'),
+    ('CH', 'Switzerland'),
+    ('IE', 'Ireland')
+ON CONFLICT (id) DO UPDATE
+SET name = EXCLUDED.name;
+
+INSERT INTO exchanges (id, name)
+VALUES
+    ('MOEX', 'Moscow Exchange'),
+    ('SPBX', 'SPB Exchange'),
+    ('NYSE', 'New York Stock Exchange'),
+    ('NASDAQ', 'Nasdaq'),
+    ('LSE', 'London Stock Exchange'),
+    ('HKEX', 'Hong Kong Exchange')
+ON CONFLICT (id) DO UPDATE
+SET name = EXCLUDED.name;
+
 INSERT INTO categories (id, name)
 VALUES
     (1, 'Валюта'),
@@ -11371,7 +11397,7 @@ WITH src (name, ticker, isin, figi, type, currency_id, category_id, exchange, co
         ('Yandex clA', 'NBIS', 'NL0009805522', NULL::text, 1, 'RUB', 25, NULL::text, 'NL', NULL::numeric(18,4)),
         ('АйДи Коллект обб04', 'RU000A107C34', 'RU000A107C34', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),
         ('КОНТРОЛ лизинг оббП01', 'RU000A106T85', 'RU000A106T85', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),
-        ('Хайтэк-Интеграция БО-01', 'RU000A104TM1', 'RU000A104TM1', NULL::text, 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4))
+        ('Хайтэк-Интеграция БО-01', 'RU000A104TM1', 'RU000A104TM1', NULL::text, 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4))
 ),
 actor AS (
     SELECT '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid AS user_id
@@ -11453,7 +11479,7 @@ SET name = 'Т-Технологии МКПАО ао',
     ticker = 'T',
     country = 'RU',
     currency_id = 'RUB',
-    exchange = 'TQBR',
+    exchange = 'MOEX',
     is_trading = true,
     updated_at = now(),
     updated_by = '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid
@@ -11537,7 +11563,7 @@ BEGIN
         'TCSG',
         'BBG00QPYJ5H0',
         'RUB',
-        'TQBR',
+        'MOEX',
         timestamptz '1900-01-01 00:00:00+00',
         timestamptz '2024-11-27 00:00:00+00',
         now(),
@@ -11568,7 +11594,7 @@ BEGIN
         'T',
         COALESCE((SELECT nullif(i.figi, '') FROM instruments i WHERE i.id = t_technologies_id), 'BBG00QPYJ5H0'),
         'RUB',
-        'TQBR',
+        'MOEX',
         timestamptz '2024-11-28 00:00:00+00',
         NULL,
         now(),
@@ -11587,7 +11613,7 @@ WITH src (name, ticker, isin, figi, type, currency_id, category_id, exchange, co
         ('МОНОПОЛИЯ оббП03', 'RU000A10ARS4', 'RU000A10ARS4', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),
         ('ТГК-14 оббП05', 'RU000A10AS02', 'RU000A10AS02', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),
         ('ВИС ФИНАНС оббП07', 'RU000A10AV15', 'RU000A10AV15', NULL::text, 2, 'RUB', 14, NULL::text, 'RU', NULL::numeric(18,4)),
-        ('Озон Фармацевтика', 'OZPH', 'RU000A109B25', NULL::text, 1, 'RUB', 21, 'TQBR', 'RU', NULL::numeric(18,4))
+        ('Озон Фармацевтика', 'OZPH', 'RU000A109B25', NULL::text, 1, 'RUB', 21, 'MOEX', 'RU', NULL::numeric(18,4))
 ),
 actor AS (
     SELECT '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid AS user_id
@@ -11673,89 +11699,89 @@ WHERE upper(ticker) = 'BSPB'
 
 WITH src (ticker, isin, name, type, currency_id, category_id, exchange, country, price) AS (
     VALUES
-        ('UGLD', 'RU000A0JPP37', 'ЮГК', 1, 'RUB', 14, 'TQBR', 'RU', NULL::numeric(18,4)),
-        ('RU000A0JXE06', 'RU000A0JXE06', 'ГосТранспортЛизингКомп 001P-03', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('SVCB', 'RU000A0ZZAC4', 'Совкомбанк ао', 1, 'RUB', 14, 'TQBR', 'RU', NULL::numeric(18,4)),
-        ('DOMRF', 'RU000A0ZZFU5', 'ПАО ДОМ.РФ', 1, 'RUB', 14, 'TQBR', 'RU', NULL::numeric(18,4)),
-        ('EUTR', 'RU000A1002V2', 'ЕвроТранс ао', 1, 'RUB', 14, 'TQBR', 'RU', NULL::numeric(18,4)),
-        ('RU000A1006C3', 'RU000A1006C3', 'Пионер-Лизинг БО-П02', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A100N12', 'RU000A100N12', 'АФК Система БО 001P-11', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
+        ('UGLD', 'RU000A0JPP37', 'ЮГК', 1, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A0JXE06', 'RU000A0JXE06', 'ГосТранспортЛизингКомп 001P-03', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('SVCB', 'RU000A0ZZAC4', 'Совкомбанк ао', 1, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('DOMRF', 'RU000A0ZZFU5', 'ПАО ДОМ.РФ', 1, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('EUTR', 'RU000A1002V2', 'ЕвроТранс ао', 1, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A1006C3', 'RU000A1006C3', 'Пионер-Лизинг БО-П02', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A100N12', 'RU000A100N12', 'АФК Система БО 001P-11', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
         ('RU000A100YD8', 'RU000A100YD8', 'Нафтатранс плюс ООО БО-02', 2, 'RUB', 14, 'TQIR', 'RU', NULL::numeric(18,4)),
-        ('LQDT', 'RU000A1014L8', 'БПИФ Ликвидность УК ВИМ', 3, 'RUB', 22, 'TQTF', 'RU', NULL::numeric(18,4)),
-        ('MBNK', 'RU000A0JRH43', 'МБЭКС Банк ао', 1, 'RUB', 14, 'TQBR', 'RU', NULL::numeric(18,4)),
-        ('SU26233RMFS5', 'RU000A101F94', 'ОФЗ-ПД 26233 18/07/2035', 2, 'RUB', 14, 'TQOB', 'RU', NULL::numeric(18,4)),
-        ('TGLD', 'RU000A101X50', 'БПИФ Т-Капитал ЗОЛОТО', 3, 'RUB', 22, 'TQTF', 'RU', NULL::numeric(18,4)),
-        ('TMOS', 'RU000A101X76', 'Т-Капитал Индекс МосБиржи', 3, 'RUB', 22, 'TQTF', 'RU', NULL::numeric(18,4)),
-        ('SU26240RMFS0', 'RU000A103BR0', 'ОФЗ-ПД 26240 30/07/2036', 2, 'RUB', 14, 'TQOB', 'RU', NULL::numeric(18,4)),
-        ('RU000A104DZ7', 'RU000A104DZ7', 'Сибнефтехимтрейд БО-02', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A104ZK2', 'RU000A104ZK2', 'МВ ФИНАНС 001Р-03', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A1055Y4', 'RU000A1055Y4', 'Почта России БО-002P-04', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A105DS9', 'RU000A105DS9', 'АПРИ БО-002Р-01', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A105P07', 'RU000A105P07', 'Солид-Лизинг ООО БО-001-07', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
+        ('LQDT', 'RU000A1014L8', 'БПИФ Ликвидность УК ВИМ', 3, 'RUB', 22, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('MBNK', 'RU000A0JRH43', 'МБЭКС Банк ао', 1, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('SU26233RMFS5', 'RU000A101F94', 'ОФЗ-ПД 26233 18/07/2035', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('TGLD', 'RU000A101X50', 'БПИФ Т-Капитал ЗОЛОТО', 3, 'RUB', 22, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('TMOS', 'RU000A101X76', 'Т-Капитал Индекс МосБиржи', 3, 'RUB', 22, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('SU26240RMFS0', 'RU000A103BR0', 'ОФЗ-ПД 26240 30/07/2036', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A104DZ7', 'RU000A104DZ7', 'Сибнефтехимтрейд БО-02', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A104ZK2', 'RU000A104ZK2', 'МВ ФИНАНС 001Р-03', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A1055Y4', 'RU000A1055Y4', 'Почта России БО-002P-04', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A105DS9', 'RU000A105DS9', 'АПРИ БО-002Р-01', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A105P07', 'RU000A105P07', 'Солид-Лизинг ООО БО-001-07', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
         ('RU000A105RU5', 'RU000A105RU5', 'Мосрегионлифт БО-01', 2, 'RUB', 14, 'TQRD', 'RU', NULL::numeric(18,4)),
-        ('RU000A105YF2', 'RU000A105YF2', 'Страна Девелопмент 02', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A105YQ9', 'RU000A105YQ9', 'БИЗНЕС АЛЬЯНС 001P-01', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A106151', 'RU000A106151', 'Хайтэк-Интеграция 001P-01', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A106540', 'RU000A106540', 'МВ ФИНАНС 001Р-04', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A1068R1', 'RU000A1068R1', 'Россельхозбанк БO-02-002P', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A106987', 'RU000A106987', 'Лизинг-Трейд 001P-08', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('TMON', 'RU000A106DL2', 'T-КАПИТАЛ ДЕНЕЖНЫЙ РЫНОК', 3, 'RUB', 22, 'TQTF', 'RU', NULL::numeric(18,4)),
-        ('RU000A106EM8', 'RU000A106EM8', 'Балтийский лизинг ООО БО-П08', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A106EZ0', 'RU000A106EZ0', 'ВИС ФИНАНС БО-П04', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
+        ('RU000A105YF2', 'RU000A105YF2', 'Страна Девелопмент 02', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A105YQ9', 'RU000A105YQ9', 'БИЗНЕС АЛЬЯНС 001P-01', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A106151', 'RU000A106151', 'Хайтэк-Интеграция 001P-01', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A106540', 'RU000A106540', 'МВ ФИНАНС 001Р-04', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A1068R1', 'RU000A1068R1', 'Россельхозбанк БO-02-002P', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A106987', 'RU000A106987', 'Лизинг-Трейд 001P-08', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('TMON', 'RU000A106DL2', 'T-КАПИТАЛ ДЕНЕЖНЫЙ РЫНОК', 3, 'RUB', 22, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A106EM8', 'RU000A106EM8', 'Балтийский лизинг ООО БО-П08', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A106EZ0', 'RU000A106EZ0', 'ВИС ФИНАНС БО-П04', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
         ('RU000A106LS0', 'RU000A106LS0', 'Глобал Факторинг БО-03-001P', 2, 'RUB', 14, 'TQRD', 'RU', NULL::numeric(18,4)),
-        ('RU000A106ZL5', 'RU000A106ZL5', 'РЖД БО 001P-28R', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A1074E7', 'RU000A1074E7', 'РУССОЙЛ БО-01', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
+        ('RU000A106ZL5', 'RU000A106ZL5', 'РЖД БО 001P-28R', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A1074E7', 'RU000A1074E7', 'РУССОЙЛ БО-01', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
         ('RU000A1075D6', 'RU000A1075D6', 'ГазТрансСнаб 001Р-01', 2, 'RUB', 14, 'TQRD', 'RU', NULL::numeric(18,4)),
-        ('HEAD', 'RU000A107662', 'МКПАО Хэдхантер', 1, 'RUB', 14, 'TQBR', 'RU', NULL::numeric(18,4)),
-        ('RU000A1077X0', 'RU000A1077X0', 'Интерлизинг 001Р-07', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A107CG2', 'RU000A107CG2', 'Россети ПАО БО 001P-11R', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A107FN1', 'RU000A107FN1', 'ТЕХНО Лизинг 001Р-06', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A107GT6', 'RU000A107GT6', 'СЕЛЛ-Сервис БО-01', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A107HG1', 'RU000A107HG1', 'Газпром нефть БО 003P-08R', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A107HR8', 'RU000A107HR8', 'АО Авто Финанс Банк БО-001Р-11', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('ZAYM', 'RU000A107RM8', 'Займер ао', 1, 'RUB', 14, 'TQBR', 'RU', NULL::numeric(18,4)),
-        ('YDEX', 'RU000A107T19', 'МКПАО ЯНДЕКС', 1, 'RUB', 14, 'TQBR', 'RU', NULL::numeric(18,4)),
+        ('HEAD', 'RU000A107662', 'МКПАО Хэдхантер', 1, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A1077X0', 'RU000A1077X0', 'Интерлизинг 001Р-07', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A107CG2', 'RU000A107CG2', 'Россети ПАО БО 001P-11R', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A107FN1', 'RU000A107FN1', 'ТЕХНО Лизинг 001Р-06', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A107GT6', 'RU000A107GT6', 'СЕЛЛ-Сервис БО-01', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A107HG1', 'RU000A107HG1', 'Газпром нефть БО 003P-08R', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A107HR8', 'RU000A107HR8', 'АО Авто Финанс Банк БО-001Р-11', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('ZAYM', 'RU000A107RM8', 'Займер ао', 1, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('YDEX', 'RU000A107T19', 'МКПАО ЯНДЕКС', 1, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
         ('RU000A107TR3', 'RU000A107TR3', 'ФПК Гарант-Инвест БО 002Р-08', 2, 'RUB', 14, 'TQRD', 'RU', NULL::numeric(18,4)),
-        ('RU000A1089J4', 'RU000A1089J4', 'Селектел 001P-04R', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A108AL4', 'RU000A108AL4', 'Интерлизинг 001Р-08', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A108EE1', 'RU000A108EE1', 'ОФЗ-ПД 26246', 2, 'RUB', 14, 'TQOB', 'RU', NULL::numeric(18,4)),
-        ('SU26247RMFS5', 'RU000A108EF8', 'ОФЗ-ПД 26247 11/05/39', 2, 'RUB', 14, 'TQOB', 'RU', NULL::numeric(18,4)),
-        ('SU26248RMFS3', 'RU000A108EH4', 'ОФЗ-ПД 26248 16/05/40', 2, 'RUB', 14, 'TQOB', 'RU', NULL::numeric(18,4)),
-        ('TPAY', 'RU000A108WX3', 'Т-Капитал Пассивный Доход', 3, 'RUB', 22, 'TQTF', 'RU', NULL::numeric(18,4)),
-        ('X5', 'RU000A108X38', 'Корпоративный центр ИКС 5', 1, 'RUB', 14, 'TQBR', 'RU', NULL::numeric(18,4)),
-        ('RU000A109L49', 'RU000A109L49', 'АЛРОСА 001Р-01', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10A7S0', 'RU000A10A7S0', 'Селектел 001P-05R', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10ATT8', 'RU000A10ATT8', 'Россети ПАО БО 001P-16R', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10B008', 'RU000A10B008', 'Южуралзолото 001P-04', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10B2J9', 'RU000A10B2J9', 'О''КЕЙ ООО БО 001Р-07', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10B4A4', 'RU000A10B4A4', 'Интерлизинг 001Р-11', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10B4K3', 'RU000A10B4K3', 'ГМК Нор.никель БО-001Р-08', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10BVH7', 'RU000A10BVH7', 'ОФЗ-ПД 26250', 2, 'RUB', 14, 'TQOB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10B933', 'RU000A10B933', 'Селигдар 001Р-03', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10BGU1', 'RU000A10BGU1', 'Первое кол.бюро НАО 001Р-07', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10BQV8', 'RU000A10BQV8', 'Инвест КЦ 001P-01', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10BU07', 'RU000A10BU07', 'Полипласт АО П02-БО-06', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10ECX8', 'RU000A10ECX8', 'Полипласт АО П02-БО-14', 2, 'USD', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10BYZ3', 'RU000A10BYZ3', 'Медскан 001Р-01', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10CMQ5', 'RU000A10CMQ5', 'Новые технологии 001Р-08', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10CRC4', 'RU000A10CRC4', 'ГМК Нор.никель БО-001Р-14', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10CU55', 'RU000A10CU55', 'АФК Система БО 002Р-05', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10CZA1', 'RU000A10CZA1', 'ГК Самолет БО-П20', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10CZC7', 'RU000A10CZC7', 'Аэрофьюэлз002Р-06', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10D1W2', 'RU000A10D1W2', 'МегаФон ПАО БО-002Р-10', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10D4V8', 'RU000A10D4V8', 'АйДи Коллект 001P-06', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10D806', 'RU000A10D806', 'ЕвразХолдинг Финанс 003P-05', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10DA41', 'RU000A10DA41', 'ВИС ФИНАНС БО-П10', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10DBA0', 'RU000A10DBA0', 'СФО ГПБ-СПК А2', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10D517', 'RU000A10D517', 'ОФЗ-ПД 26253', 2, 'RUB', 14, 'TQOB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10D533', 'RU000A10D533', 'ОФЗ-ПД 26254', 2, 'RUB', 14, 'TQOB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10DQL5', 'RU000A10DQL5', 'МЕТАЛЛОИНВЕСТ 002P-03', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10DTA2', 'RU000A10DTA2', 'Селигдар 001Р-9', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10DTF1', 'RU000A10DTF1', 'Селигдар 001Р-08', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10E7W8', 'RU000A10E7W8', 'МЕТАЛЛОИНВЕСТ 002P-04', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10EA08', 'RU000A10EA08', 'Софтлайн 002Р-02', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10EA40', 'RU000A10EA40', 'ГК Азот 001Р-02', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4)),
-        ('RU000A10ECK5', 'RU000A10ECK5', 'СИБУР Холдинг 001Р-09', 2, 'RUB', 14, 'TQCB', 'RU', NULL::numeric(18,4))
+        ('RU000A1089J4', 'RU000A1089J4', 'Селектел 001P-04R', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A108AL4', 'RU000A108AL4', 'Интерлизинг 001Р-08', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A108EE1', 'RU000A108EE1', 'ОФЗ-ПД 26246', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('SU26247RMFS5', 'RU000A108EF8', 'ОФЗ-ПД 26247 11/05/39', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('SU26248RMFS3', 'RU000A108EH4', 'ОФЗ-ПД 26248 16/05/40', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('TPAY', 'RU000A108WX3', 'Т-Капитал Пассивный Доход', 3, 'RUB', 22, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('X5', 'RU000A108X38', 'Корпоративный центр ИКС 5', 1, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A109L49', 'RU000A109L49', 'АЛРОСА 001Р-01', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10A7S0', 'RU000A10A7S0', 'Селектел 001P-05R', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10ATT8', 'RU000A10ATT8', 'Россети ПАО БО 001P-16R', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10B008', 'RU000A10B008', 'Южуралзолото 001P-04', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10B2J9', 'RU000A10B2J9', 'О''КЕЙ ООО БО 001Р-07', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10B4A4', 'RU000A10B4A4', 'Интерлизинг 001Р-11', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10B4K3', 'RU000A10B4K3', 'ГМК Нор.никель БО-001Р-08', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10BVH7', 'RU000A10BVH7', 'ОФЗ-ПД 26250', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10B933', 'RU000A10B933', 'Селигдар 001Р-03', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10BGU1', 'RU000A10BGU1', 'Первое кол.бюро НАО 001Р-07', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10BQV8', 'RU000A10BQV8', 'Инвест КЦ 001P-01', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10BU07', 'RU000A10BU07', 'Полипласт АО П02-БО-06', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10ECX8', 'RU000A10ECX8', 'Полипласт АО П02-БО-14', 2, 'USD', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10BYZ3', 'RU000A10BYZ3', 'Медскан 001Р-01', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10CMQ5', 'RU000A10CMQ5', 'Новые технологии 001Р-08', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10CRC4', 'RU000A10CRC4', 'ГМК Нор.никель БО-001Р-14', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10CU55', 'RU000A10CU55', 'АФК Система БО 002Р-05', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10CZA1', 'RU000A10CZA1', 'ГК Самолет БО-П20', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10CZC7', 'RU000A10CZC7', 'Аэрофьюэлз002Р-06', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10D1W2', 'RU000A10D1W2', 'МегаФон ПАО БО-002Р-10', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10D4V8', 'RU000A10D4V8', 'АйДи Коллект 001P-06', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10D806', 'RU000A10D806', 'ЕвразХолдинг Финанс 003P-05', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10DA41', 'RU000A10DA41', 'ВИС ФИНАНС БО-П10', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10DBA0', 'RU000A10DBA0', 'СФО ГПБ-СПК А2', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10D517', 'RU000A10D517', 'ОФЗ-ПД 26253', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10D533', 'RU000A10D533', 'ОФЗ-ПД 26254', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10DQL5', 'RU000A10DQL5', 'МЕТАЛЛОИНВЕСТ 002P-03', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10DTA2', 'RU000A10DTA2', 'Селигдар 001Р-9', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10DTF1', 'RU000A10DTF1', 'Селигдар 001Р-08', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10E7W8', 'RU000A10E7W8', 'МЕТАЛЛОИНВЕСТ 002P-04', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10EA08', 'RU000A10EA08', 'Софтлайн 002Р-02', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10EA40', 'RU000A10EA40', 'ГК Азот 001Р-02', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4)),
+        ('RU000A10ECK5', 'RU000A10ECK5', 'СИБУР Холдинг 001Р-09', 2, 'RUB', 14, 'MOEX', 'RU', NULL::numeric(18,4))
 ),
 actor AS (
     SELECT '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid AS user_id
@@ -11819,7 +11845,7 @@ SET
     type = 2,
     currency_id = 'USD',
     category_id = 14,
-    exchange = 'TQCB',
+    exchange = 'MOEX',
     country = 'RU',
     is_trading = true,
     updated_at = now(),
@@ -11873,7 +11899,7 @@ SET
         ELSE category_id
     END,
     exchange = CASE
-        WHEN isin = 'RU000A1014L8' THEN 'TQTF'
+        WHEN isin = 'RU000A1014L8' THEN 'MOEX'
         ELSE exchange
     END
 WHERE isin IN (
@@ -11891,7 +11917,7 @@ SET
     type = 1,
     currency_id = 'RUB',
     country = 'RU',
-    exchange = 'TQBR',
+    exchange = 'MOEX',
     updated_at = now()
 WHERE ticker = 'RU000A0JPP37';
 
@@ -11901,7 +11927,7 @@ SET
     type = 1,
     currency_id = 'RUB',
     country = 'RU',
-    exchange = 'TQBR',
+    exchange = 'MOEX',
     updated_at = now()
 WHERE ticker = 'RU000A0ZZFU5';
 
@@ -11911,7 +11937,7 @@ SET
     type = 3,
     currency_id = 'RUB',
     country = 'RU',
-    exchange = 'TQTF',
+    exchange = 'MOEX',
     updated_at = now()
 WHERE ticker = 'RU000A101X50';
 
@@ -11921,7 +11947,7 @@ SET
     type = 2,
     currency_id = 'RUB',
     country = 'RU',
-    exchange = 'TQOB',
+    exchange = 'MOEX',
     updated_at = now()
 WHERE ticker = 'RU000A1025A7';
 
@@ -11931,7 +11957,7 @@ SET
     type = 2,
     currency_id = 'RUB',
     country = 'RU',
-    exchange = 'TQOB',
+    exchange = 'MOEX',
     updated_at = now()
 WHERE ticker = 'RU000A108EE1';
 
@@ -11941,7 +11967,7 @@ SET
     type = 2,
     currency_id = 'RUB',
     country = 'RU',
-    exchange = 'TQOB',
+    exchange = 'MOEX',
     updated_at = now()
 WHERE ticker = 'RU000A10BVH7';
 
@@ -11951,7 +11977,7 @@ SET
     type = 2,
     currency_id = 'RUB',
     country = 'RU',
-    exchange = 'TQOB',
+    exchange = 'MOEX',
     updated_at = now()
 WHERE ticker = 'RU000A10D517';
 
@@ -11961,7 +11987,7 @@ SET
     type = 2,
     currency_id = 'RUB',
     country = 'RU',
-    exchange = 'TQOB',
+    exchange = 'MOEX',
     updated_at = now()
 WHERE ticker = 'RU000A10D533';
 
@@ -12021,7 +12047,7 @@ WITH updated_instrument AS (
         type = 2,
         currency_id = 'RUB',
         category_id = 14,
-        exchange = 'TQCB',
+        exchange = 'MOEX',
         country = 'RU',
         updated_at = now(),
         updated_by = '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid,
@@ -12058,7 +12084,7 @@ inserted_instrument AS (
         2,
         'RUB',
         14,
-        'TQCB',
+        'MOEX',
         'RU',
         now(),
         '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid,
@@ -12223,7 +12249,7 @@ SET price_source = CASE
          AND (
              upper(coalesce(country, '')) = 'RU'
              OR upper(coalesce(isin, '')) LIKE 'RU%'
-             OR upper(coalesce(exchange, '')) IN ('TQBR', 'TQTF', 'TQIF', 'TQCB', 'TQOB', 'CETS', 'MTQR', 'CNGD')
+             OR upper(coalesce(exchange, '')) = 'MOEX'
          ) THEN 'MOEX'
     WHEN type IN (1, 2, 3, 4)
          AND coalesce(figi, '') <> '' THEN 'TBANK'

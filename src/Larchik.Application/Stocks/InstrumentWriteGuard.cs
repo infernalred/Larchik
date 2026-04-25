@@ -23,6 +23,18 @@ public static class InstrumentWriteGuard
             return "Selected category was not found.";
         }
 
+        if (!string.IsNullOrWhiteSpace(input.Exchange) &&
+            !await context.Exchanges.AnyAsync(x => x.Id == input.Exchange, cancellationToken))
+        {
+            return "Selected exchange was not found.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(input.Country) &&
+            !await context.Countries.AnyAsync(x => x.Id == input.Country, cancellationToken))
+        {
+            return "Selected country was not found.";
+        }
+
         if (!string.IsNullOrWhiteSpace(input.Isin))
         {
             var isinExists = await context.Instruments

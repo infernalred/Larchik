@@ -10,7 +10,7 @@ public static class InstrumentListingHistoryWriter
         !string.Equals(instrument.Ticker, input.Ticker, StringComparison.OrdinalIgnoreCase) ||
         !string.Equals(instrument.Figi, input.Figi, StringComparison.OrdinalIgnoreCase) ||
         !string.Equals(instrument.CurrencyId, input.CurrencyId, StringComparison.OrdinalIgnoreCase) ||
-        !string.Equals(instrument.Exchange, input.Exchange, StringComparison.OrdinalIgnoreCase);
+        !string.Equals(instrument.ExchangeId, input.Exchange, StringComparison.OrdinalIgnoreCase);
 
     public static InstrumentListingHistory CreateCurrent(Instrument instrument, DateTime now) =>
         new()
@@ -20,7 +20,7 @@ public static class InstrumentListingHistoryWriter
             Ticker = instrument.Ticker,
             Figi = instrument.Figi,
             CurrencyId = instrument.CurrencyId,
-            Exchange = instrument.Exchange,
+            ExchangeId = instrument.ExchangeId,
             EffectiveFrom = now.Date,
             CreatedAt = now,
             UpdatedAt = now
@@ -62,7 +62,7 @@ public static class InstrumentListingHistoryWriter
         listing.Ticker = instrument.Ticker;
         listing.Figi = instrument.Figi;
         listing.CurrencyId = instrument.CurrencyId;
-        listing.Exchange = instrument.Exchange;
+        listing.ExchangeId = instrument.ExchangeId;
         listing.UpdatedAt = now;
     }
 }

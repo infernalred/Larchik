@@ -11,7 +11,9 @@ public class InstrumentListingHistoryModelConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.Ticker).IsRequired().HasMaxLength(16);
         builder.Property(x => x.Figi).HasMaxLength(32);
         builder.HasCurrencyCode(x => x.CurrencyId, required: true);
-        builder.Property(x => x.Exchange).HasMaxLength(50);
+        builder.Property(x => x.ExchangeId)
+            .HasColumnName("exchange")
+            .HasMaxLength(16);
         builder.HasCreatedAt(x => x.CreatedAt, generatedOnAdd: true);
         builder.HasUpdatedAt(x => x.UpdatedAt);
 
@@ -26,6 +28,11 @@ public class InstrumentListingHistoryModelConfiguration : IEntityTypeConfigurati
         builder.HasOne(x => x.Currency)
             .WithMany()
             .HasForeignKey(x => x.CurrencyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.Exchange)
+            .WithMany()
+            .HasForeignKey(x => x.ExchangeId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

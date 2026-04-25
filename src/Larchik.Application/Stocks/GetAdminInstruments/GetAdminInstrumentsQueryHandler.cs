@@ -24,7 +24,7 @@ public class GetAdminInstrumentsQueryHandler(LarchikContext context)
         if (!string.IsNullOrWhiteSpace(country))
         {
             var countryPattern = $"%{country}%";
-            query = query.Where(x => x.Country != null && EF.Functions.ILike(x.Country, countryPattern));
+            query = query.Where(x => x.CountryId != null && EF.Functions.ILike(x.CountryId, countryPattern));
         }
 
         if (request.IsTrading is { } isTrading)

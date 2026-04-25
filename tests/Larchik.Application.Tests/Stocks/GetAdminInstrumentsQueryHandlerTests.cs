@@ -60,8 +60,8 @@ public sealed class GetAdminInstrumentsQueryHandlerTests
             Type = InstrumentType.Equity,
             CurrencyId = "USD",
             CategoryId = 4,
-            Exchange = "TEST",
-            Country = "US",
+            ExchangeId = "TEST",
+            CountryId = "US",
             IsTrading = isTrading,
             CreatedBy = Guid.NewGuid(),
             UpdatedBy = Guid.NewGuid()

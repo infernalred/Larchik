@@ -12,8 +12,8 @@ public class Instrument
     public InstrumentType Type { get; set; }
     public string CurrencyId { get; set; } = null!;
     public int CategoryId { get; set; }
-    public string? Exchange { get; set; }
-    public string? Country { get; set; }
+    public string? ExchangeId { get; set; }
+    public string? CountryId { get; set; }
     public bool IsTrading { get; set; } = true;
     public PriceSource? PriceSource { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -23,5 +23,7 @@ public class Instrument
 
     public Currency? Currency { get; set; }
     public Category? Category { get; set; }
+    public Exchange? Exchange { get; set; }
+    public Country? Country { get; set; }
     public ICollection<InstrumentListingHistory> ListingHistory { get; set; } = [];
 }

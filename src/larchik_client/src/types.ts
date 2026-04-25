@@ -34,6 +34,11 @@ export interface Currency {
   name: string;
 }
 
+export interface ReferenceItem {
+  id: string;
+  name: string;
+}
+
 export interface Portfolio {
   id: string;
   name: string;

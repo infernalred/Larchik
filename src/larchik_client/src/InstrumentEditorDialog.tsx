@@ -18,28 +18,36 @@ import {
   INSTRUMENT_TYPE_OPTIONS,
   normalizeInstrumentEditorModel,
   PRICE_SOURCE_OPTIONS,
-  isTbankPriceSourceForbidden,
   requiresInstrumentIsin,
 } from './instrument-domain';
-import { Category, Currency, Instrument, InstrumentModel, InstrumentType, PriceSource } from './types';
+import { Category, Currency, Instrument, InstrumentModel, InstrumentType, PriceSource, ReferenceItem } from './types';
 
 interface Props {
   open: boolean;
   initial?: Instrument | null;
   categories: Category[];
   currencies: Currency[];
+  countries: ReferenceItem[];
+  exchanges: ReferenceItem[];
   submitting?: boolean;
   onClose: () => void;
   onSubmit: (model: InstrumentModel) => Promise<void>;
 }
 
-export function InstrumentEditorDialog({ open, initial, categories, currencies, submitting = false, onClose, onSubmit }: Props) {
+export function InstrumentEditorDialog({
+  open,
+  initial,
+  categories,
+  currencies,
+  countries,
+  exchanges,
+  submitting = false,
+  onClose,
+  onSubmit,
+}: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [form, setForm] = useState<InstrumentModel>(() => createInstrumentEditorInitialModel(initial, categories, currencies));
-  const priceSourceError = isTbankPriceSourceForbidden(form)
-    ? 'Для российских инструментов используйте MOEX.'
-    : '';
 
   const isValid = useMemo(() => {
     return (
@@ -47,8 +55,7 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
       form.ticker.trim().length > 0 &&
       (!requiresInstrumentIsin(form.type) || (form.isin?.trim().length ?? 0) > 0) &&
       form.currencyId.trim().length > 0 &&
-      form.categoryId > 0 &&
-      !isTbankPriceSourceForbidden(form)
+      form.categoryId > 0
     );
   }, [form]);
 
@@ -141,17 +148,33 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
           </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
+              select
               label="Биржа"
               value={form.exchange ?? ''}
               onChange={(e) => update('exchange', e.target.value)}
               fullWidth
-            />
+            >
+              <MenuItem value="">Не выбрана</MenuItem>
+              {exchanges.map((exchange) => (
+                <MenuItem key={exchange.id} value={exchange.id}>
+                  {exchange.id} - {exchange.name}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
+              select
               label="Страна"
               value={form.country ?? ''}
               onChange={(e) => update('country', e.target.value)}
               fullWidth
-            />
+            >
+              <MenuItem value="">Не выбрана</MenuItem>
+              {countries.map((country) => (
+                <MenuItem key={country.id} value={country.id}>
+                  {country.id} - {country.name}
+                </MenuItem>
+              ))}
+            </TextField>
           </Stack>
           <TextField
             select
@@ -159,8 +182,6 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
             value={form.priceSource ?? ''}
             onChange={(e) => update('priceSource', e.target.value ? (e.target.value as PriceSource) : null)}
             disabled={!form.isTrading}
-            error={Boolean(priceSourceError)}
-            helperText={priceSourceError || undefined}
             fullWidth
           >
             <MenuItem value="">Не синхронизировать</MenuItem>

@@ -17,8 +17,8 @@ public static class InstrumentQueryHelper
         Type = x.Type,
         CurrencyId = x.CurrencyId,
         CategoryId = x.CategoryId,
-        Exchange = x.Exchange,
-        Country = x.Country,
+        Exchange = x.ExchangeId,
+        Country = x.CountryId,
         IsTrading = x.IsTrading,
         PriceSource = x.PriceSource
     };
@@ -53,8 +53,8 @@ public static class InstrumentQueryHelper
             EF.Functions.ILike(x.Name, pattern) ||
             (x.Isin != null && EF.Functions.ILike(x.Isin, pattern)) ||
             (x.Figi != null && EF.Functions.ILike(x.Figi, pattern)) ||
-            (x.Exchange != null && EF.Functions.ILike(x.Exchange, pattern)) ||
-            (x.Country != null && EF.Functions.ILike(x.Country, pattern)));
+            (x.ExchangeId != null && EF.Functions.ILike(x.ExchangeId, pattern)) ||
+            (x.CountryId != null && EF.Functions.ILike(x.CountryId, pattern)));
     }
 
     public static IQueryable<Instrument> ApplyLookupCandidateSearch(IQueryable<Instrument> query, string input)

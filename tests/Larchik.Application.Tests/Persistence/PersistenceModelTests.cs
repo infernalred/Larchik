@@ -43,6 +43,27 @@ public sealed class PersistenceModelTests : IDisposable
     }
 
     [Fact]
+    public void Instrument_ReferenceCodes_HaveBoundedLengths_AndForeignKeys()
+    {
+        var entityType = context.Model.FindEntityType(typeof(Instrument));
+        Assert.NotNull(entityType);
+        var currencyId = entityType!.FindProperty(nameof(Instrument.CurrencyId));
+        var countryId = entityType.FindProperty(nameof(Instrument.CountryId));
+        var exchangeId = entityType.FindProperty(nameof(Instrument.ExchangeId));
+        Assert.NotNull(currencyId);
+        Assert.NotNull(countryId);
+        Assert.NotNull(exchangeId);
+
+        Assert.False(currencyId!.IsNullable);
+        Assert.Equal(3, currencyId.GetMaxLength());
+        Assert.Equal(2, countryId!.GetMaxLength());
+        Assert.Equal(16, exchangeId!.GetMaxLength());
+        Assert.Contains(entityType.GetForeignKeys(), x => x.Properties.Single().Name == nameof(Instrument.CurrencyId));
+        Assert.Contains(entityType.GetForeignKeys(), x => x.Properties.Single().Name == nameof(Instrument.CountryId));
+        Assert.Contains(entityType.GetForeignKeys(), x => x.Properties.Single().Name == nameof(Instrument.ExchangeId));
+    }
+
+    [Fact]
     public void Portfolio_ReportingCurrencyId_UsesThreeLetterCode_AndCreatedAt_IsGeneratedOnAdd()
     {
         var entityType = context.Model.FindEntityType(typeof(Portfolio));

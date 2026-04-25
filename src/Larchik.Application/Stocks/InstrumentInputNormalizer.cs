@@ -14,8 +14,8 @@ public static class InstrumentInputNormalizer
             model.Type,
             NormalizeRequiredCode(model.CurrencyId),
             model.CategoryId,
-            NormalizeOptionalText(model.Exchange),
-            NormalizeOptionalText(model.Country),
+            NormalizeOptionalCode(model.Exchange),
+            NormalizeOptionalCode(model.Country),
             model.IsTrading,
             model.PriceSource);
 
@@ -28,8 +28,8 @@ public static class InstrumentInputNormalizer
         instrument.Type = input.Type;
         instrument.CurrencyId = input.CurrencyId;
         instrument.CategoryId = input.CategoryId;
-        instrument.Exchange = input.Exchange;
-        instrument.Country = input.Country;
+        instrument.ExchangeId = input.Exchange;
+        instrument.CountryId = input.Country;
         instrument.IsTrading = input.IsTrading;
         instrument.PriceSource = input.PriceSource;
     }
@@ -41,8 +41,6 @@ public static class InstrumentInputNormalizer
     private static string? NormalizeOptionalCode(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToUpperInvariant();
 
-    private static string? NormalizeOptionalText(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
 public sealed record NormalizedInstrumentInput(

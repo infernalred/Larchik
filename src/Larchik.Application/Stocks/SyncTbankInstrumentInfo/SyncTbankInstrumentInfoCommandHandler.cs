@@ -47,11 +47,11 @@ public class SyncTbankInstrumentInfoCommandHandler(
 
         if (excludedCountries.Count > 0)
         {
-            candidatesQuery = candidatesQuery.Where(x => x.Country == null || !excludedCountries.Contains(x.Country.ToUpper()));
+            candidatesQuery = candidatesQuery.Where(x => x.CountryId == null || !excludedCountries.Contains(x.CountryId.ToUpper()));
         }
 
         var instrumentStates = await candidatesQuery
-            .Select(x => new InstrumentState(x.Id, x.Figi!, x.Ticker, x.Isin, x.Exchange, x.CurrencyId))
+            .Select(x => new InstrumentState(x.Id, x.Figi!, x.Ticker, x.Isin, x.ExchangeId, x.CurrencyId))
             .ToListAsync(cancellationToken);
         var listingHistories = await InstrumentListingHistoryResolver.LoadAsync(
             context,

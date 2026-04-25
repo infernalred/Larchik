@@ -45,7 +45,7 @@ public static class InstrumentListingHistoryResolver
             instrument.Id,
             instrument.Ticker,
             instrument.Figi,
-            instrument.Exchange,
+            instrument.ExchangeId,
             instrument.CurrencyId,
             histories,
             asOfDate);
@@ -66,7 +66,7 @@ public static class InstrumentListingHistoryResolver
             : new InstrumentListingSnapshot(
                 activeListing.Ticker,
                 activeListing.Figi,
-                activeListing.Exchange,
+                activeListing.ExchangeId,
                 activeListing.CurrencyId);
     }
 

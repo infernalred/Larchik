@@ -2,6 +2,8 @@ using Larchik.Application.Brokers.GetBrokers;
 using Larchik.Application.Categories.GetCategories;
 using Larchik.Application.Currencies.GetCurrencies;
 using Larchik.Application.Operations.ImportBroker;
+using Larchik.Application.ReferenceData.GetCountries;
+using Larchik.Application.ReferenceData.GetExchanges;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Larchik.Application.Tests.TestInfrastructure;
@@ -72,6 +74,35 @@ public sealed class ReferenceDataQueryHandlersTests
         Assert.True(result.IsSuccess, result.Error);
         var currencies = result.Value!;
         Assert.Equal(currencies.OrderBy(x => x.Id, StringComparer.Ordinal).Select(x => x.Id), currencies.Select(x => x.Id));
+    }
+
+    [Fact]
+    public async Task GetCountries_ReturnsNameSortedList()
+    {
+        await using var harness = new ReferenceDataHarness();
+        var handler = new GetCountriesQueryHandler(harness.Context);
+
+        var result = await handler.Handle(new GetCountriesQuery(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        var countries = result.Value!;
+        Assert.Contains(countries, x => x.Id == "RU");
+        Assert.Equal(countries.OrderBy(x => x.Name, StringComparer.Ordinal).Select(x => x.Id), countries.Select(x => x.Id));
+    }
+
+    [Fact]
+    public async Task GetExchanges_ReturnsNameSortedList()
+    {
+        await using var harness = new ReferenceDataHarness();
+        var handler = new GetExchangesQueryHandler(harness.Context);
+
+        var result = await handler.Handle(new GetExchangesQuery(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        var exchanges = result.Value!;
+        Assert.Contains(exchanges, x => x.Id == "MOEX");
+        Assert.DoesNotContain(exchanges, x => x.Id == "TQCB");
+        Assert.Equal(exchanges.OrderBy(x => x.Name, StringComparer.Ordinal).Select(x => x.Id), exchanges.Select(x => x.Id));
     }
 
     private sealed class ReferenceDataHarness : IAsyncDisposable

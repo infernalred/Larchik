@@ -11,6 +11,8 @@ public class LarchikContext(DbContextOptions<LarchikContext> options)
 {
     public DbSet<Currency> Currencies { get; set; } = null!;
     public DbSet<Category> Categories { get; set; } = null!;
+    public DbSet<Country> Countries { get; set; } = null!;
+    public DbSet<Exchange> Exchanges { get; set; } = null!;
     public DbSet<Instrument> Instruments { get; set; } = null!;
     public DbSet<InstrumentAlias> InstrumentAliases { get; set; } = null!;
     public DbSet<InstrumentCorporateAction> InstrumentCorporateActions { get; set; } = null!;

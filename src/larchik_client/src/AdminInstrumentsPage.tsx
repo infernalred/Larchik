@@ -8,6 +8,7 @@ import {
   CircularProgress,
   FormControlLabel,
   IconButton,
+  MenuItem,
   Pagination,
   Paper,
   Snackbar,
@@ -33,7 +34,7 @@ import { getApiErrorMessage } from './error-utils';
 import { INSTRUMENT_TYPE_LABELS, PRICE_SOURCE_LABELS } from './instrument-domain';
 import { InstrumentCorporateActionsDialog } from './InstrumentCorporateActionsDialog';
 import { InstrumentEditorDialog } from './InstrumentEditorDialog';
-import { Category, Currency, Instrument, InstrumentCorporateAction, InstrumentCorporateActionModel, InstrumentModel } from './types';
+import { Category, Currency, Instrument, InstrumentCorporateAction, InstrumentCorporateActionModel, InstrumentModel, ReferenceItem } from './types';
 
 interface ToastState {
   open: boolean;
@@ -48,6 +49,10 @@ export function AdminInstrumentsPage() {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [currenciesLoading, setCurrenciesLoading] = useState(false);
+  const [countries, setCountries] = useState<ReferenceItem[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(false);
+  const [exchanges, setExchanges] = useState<ReferenceItem[]>([]);
+  const [exchangesLoading, setExchangesLoading] = useState(false);
   const [items, setItems] = useState<Instrument[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -77,6 +82,9 @@ export function AdminInstrumentsPage() {
     return new Map(categories.map((category) => [category.id, category.name]));
   }, [categories]);
 
+  const countryMap = useMemo(() => new Map(countries.map((item) => [item.id, item.name])), [countries]);
+  const exchangeMap = useMemo(() => new Map(exchanges.map((item) => [item.id, item.name])), [exchanges]);
+
   const totalPages = useMemo(() => {
     return pageSize > 0 ? Math.ceil(totalCount / pageSize) : 0;
   }, [pageSize, totalCount]);
@@ -102,6 +110,30 @@ export function AdminInstrumentsPage() {
       showToast('error', getApiErrorMessage(error, 'Не удалось загрузить валюты.'));
     } finally {
       setCurrenciesLoading(false);
+    }
+  }, [showToast]);
+
+  const loadCountries = useCallback(async () => {
+    setCountriesLoading(true);
+    try {
+      const data = await api.listCountries();
+      setCountries(data);
+    } catch (error) {
+      showToast('error', getApiErrorMessage(error, 'Не удалось загрузить страны.'));
+    } finally {
+      setCountriesLoading(false);
+    }
+  }, [showToast]);
+
+  const loadExchanges = useCallback(async () => {
+    setExchangesLoading(true);
+    try {
+      const data = await api.listExchanges();
+      setExchanges(data);
+    } catch (error) {
+      showToast('error', getApiErrorMessage(error, 'Не удалось загрузить биржи.'));
+    } finally {
+      setExchangesLoading(false);
     }
   }, [showToast]);
 
@@ -133,6 +165,14 @@ export function AdminInstrumentsPage() {
   useEffect(() => {
     void loadCurrencies();
   }, [loadCurrencies]);
+
+  useEffect(() => {
+    void loadCountries();
+  }, [loadCountries]);
+
+  useEffect(() => {
+    void loadExchanges();
+  }, [loadExchanges]);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -290,8 +330,8 @@ export function AdminInstrumentsPage() {
               <Button
                 variant="outlined"
                 startIcon={<RefreshIcon />}
-                onClick={() => void Promise.all([loadCategories(), loadCurrencies(), loadInstruments()])}
-                disabled={loading || categoriesLoading || currenciesLoading || loadingEditor || saving}
+                onClick={() => void Promise.all([loadCategories(), loadCurrencies(), loadCountries(), loadExchanges(), loadInstruments()])}
+                disabled={loading || categoriesLoading || currenciesLoading || countriesLoading || exchangesLoading || loadingEditor || saving}
                 sx={{ textTransform: 'none' }}
               >
                 Обновить
@@ -300,7 +340,16 @@ export function AdminInstrumentsPage() {
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={openCreateDialog}
-                disabled={categories.length === 0 || currencies.length === 0 || categoriesLoading || currenciesLoading || loadingEditor || saving}
+                disabled={
+                  categories.length === 0 ||
+                  currencies.length === 0 ||
+                  categoriesLoading ||
+                  currenciesLoading ||
+                  countriesLoading ||
+                  exchangesLoading ||
+                  loadingEditor ||
+                  saving
+                }
                 sx={{ textTransform: 'none' }}
               >
                 Новый инструмент
@@ -316,12 +365,20 @@ export function AdminInstrumentsPage() {
               fullWidth
             />
             <TextField
+              select
               label="Фильтр по стране"
               value={countryInput}
               onChange={(e) => setCountryInput(e.target.value)}
               fullWidth
               sx={{ maxWidth: { md: 280 } }}
-            />
+            >
+              <MenuItem value="">Все страны</MenuItem>
+              {countries.map((country) => (
+                <MenuItem key={country.id} value={country.id}>
+                  {country.id} - {country.name}
+                </MenuItem>
+              ))}
+            </TextField>
           </Stack>
 
           <FormControlLabel
@@ -337,7 +394,7 @@ export function AdminInstrumentsPage() {
             label="Только торгуемые"
           />
 
-          {loading || categoriesLoading || currenciesLoading || loadingEditor ? (
+          {loading || categoriesLoading || currenciesLoading || countriesLoading || exchangesLoading || loadingEditor ? (
             <Stack sx={{ py: 4, alignItems: 'center' }}>
               <CircularProgress />
             </Stack>
@@ -375,7 +432,7 @@ export function AdminInstrumentsPage() {
                       Категория: {categoryMap.get(item.categoryId) ?? `#${item.categoryId}`}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Биржа: {item.exchange ?? '—'} | Страна: {item.country ?? '—'}
+                      Биржа: {item.exchange ? (exchangeMap.get(item.exchange) ?? item.exchange) : '—'} | Страна: {item.country ? (countryMap.get(item.country) ?? item.country) : '—'}
                     </Typography>
                   </Stack>
                 </Paper>
@@ -413,8 +470,8 @@ export function AdminInstrumentsPage() {
                       <TableCell>{INSTRUMENT_TYPE_LABELS[item.type]}</TableCell>
                       <TableCell>{item.currencyId}</TableCell>
                       <TableCell>{categoryMap.get(item.categoryId) ?? `#${item.categoryId}`}</TableCell>
-                      <TableCell>{item.exchange ?? '—'}</TableCell>
-                      <TableCell>{item.country ?? '—'}</TableCell>
+                      <TableCell>{item.exchange ? (exchangeMap.get(item.exchange) ?? item.exchange) : '—'}</TableCell>
+                      <TableCell>{item.country ? (countryMap.get(item.country) ?? item.country) : '—'}</TableCell>
                       <TableCell>{item.priceSource ? PRICE_SOURCE_LABELS[item.priceSource] : '—'}</TableCell>
                       <TableCell>
                         <Chip
@@ -496,11 +553,13 @@ export function AdminInstrumentsPage() {
       </Paper>
 
       <InstrumentEditorDialog
-        key={`${editing?.id ?? 'new'}:${categories.map((category) => category.id).join(',')}:${currencies.map((currency) => currency.id).join(',')}`}
+        key={`${editing?.id ?? 'new'}:${categories.map((category) => category.id).join(',')}:${currencies.map((currency) => currency.id).join(',')}:${countries.map((item) => item.id).join(',')}:${exchanges.map((item) => item.id).join(',')}`}
         open={dialogOpen}
         initial={editing}
         categories={categories}
         currencies={currencies}
+        countries={countries}
+        exchanges={exchanges}
         submitting={saving}
         onClose={() => {
           if (saving) {

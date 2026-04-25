@@ -28,7 +28,7 @@ public sealed class InstrumentWriteHandlersTests
             CurrencyId: " rub ",
             CategoryId: 2,
             Exchange: "  moex  ",
-            Country: "  Russia  ",
+            Country: "  ru  ",
             IsTrading: true,
             PriceSource: PriceSource.MOEX));
 
@@ -43,21 +43,21 @@ public sealed class InstrumentWriteHandlersTests
         Assert.Equal("RU0009029540", instrument.Isin);
         Assert.Equal("BBG004730N88", instrument.Figi);
         Assert.Equal("RUB", instrument.CurrencyId);
-        Assert.Equal("moex", instrument.Exchange);
-        Assert.Equal("Russia", instrument.Country);
+        Assert.Equal("MOEX", instrument.ExchangeId);
+        Assert.Equal("RU", instrument.CountryId);
 
         Assert.Equal(instrument.Id, listing.InstrumentId);
         Assert.Equal("SBER", listing.Ticker);
         Assert.Equal("BBG004730N88", listing.Figi);
         Assert.Equal("RUB", listing.CurrencyId);
-        Assert.Equal("moex", listing.Exchange);
+        Assert.Equal("MOEX", listing.ExchangeId);
     }
 
     [Fact]
     public async Task Create_ReturnsFailure_ForDuplicateNormalizedIsin()
     {
         await using var harness = new InstrumentHarness();
-        harness.AddInstrument("SBER", "RU0009029540", "BBG004730N88", "RUB", "moex");
+        harness.AddInstrument("SBER", "RU0009029540", "BBG004730N88", "RUB", "MOEX");
         await harness.Context.SaveChangesAsync();
 
         var result = await harness.CreateAsync(new InstrumentModel(
@@ -69,7 +69,7 @@ public sealed class InstrumentWriteHandlersTests
             CurrencyId: "rub",
             CategoryId: 2,
             Exchange: "moex",
-            Country: "Russia",
+            Country: "RU",
             IsTrading: true,
             PriceSource: PriceSource.MOEX));
 
@@ -82,8 +82,8 @@ public sealed class InstrumentWriteHandlersTests
     public async Task Edit_DoesNotCreateNewListing_WhenListingFieldsAreEquivalentAfterNormalization()
     {
         await using var harness = new InstrumentHarness();
-        var instrumentId = harness.AddInstrument("SBER", "RU0009029540", "BBG004730N88", "RUB", "moex");
-        harness.AddListing(instrumentId, "SBER", "BBG004730N88", "RUB", "moex", new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc));
+        var instrumentId = harness.AddInstrument("SBER", "RU0009029540", "BBG004730N88", "RUB", "MOEX");
+        harness.AddListing(instrumentId, "SBER", "BBG004730N88", "RUB", "MOEX", new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc));
         await harness.Context.SaveChangesAsync();
 
         var result = await harness.EditAsync(
@@ -97,7 +97,7 @@ public sealed class InstrumentWriteHandlersTests
                 CurrencyId: " rub ",
                 CategoryId: 2,
                 Exchange: "  moex ",
-                Country: "  Russia ",
+                Country: "  RU ",
                 IsTrading: true,
                 PriceSource: PriceSource.MOEX));
 
@@ -114,9 +114,9 @@ public sealed class InstrumentWriteHandlersTests
         Assert.Equal("SBER", instrument.Ticker);
         Assert.Equal("BBG004730N88", instrument.Figi);
         Assert.Equal("RUB", instrument.CurrencyId);
-        Assert.Equal("moex", instrument.Exchange);
+        Assert.Equal("MOEX", instrument.ExchangeId);
         Assert.Equal("Sberbank PJSC", instrument.Name);
-        Assert.Equal("Russia", instrument.Country);
+        Assert.Equal("RU", instrument.CountryId);
     }
 
     private sealed class InstrumentHarness : IAsyncDisposable
@@ -154,8 +154,8 @@ public sealed class InstrumentWriteHandlersTests
                 Type = InstrumentType.Equity,
                 CurrencyId = currencyId,
                 CategoryId = 2,
-                Exchange = exchange,
-                Country = "Russia",
+                ExchangeId = exchange,
+                CountryId = "RU",
                 IsTrading = true,
                 PriceSource = PriceSource.MOEX,
                 CreatedBy = UserId,
@@ -176,7 +176,7 @@ public sealed class InstrumentWriteHandlersTests
                 Ticker = ticker,
                 Figi = figi,
                 CurrencyId = currencyId,
-                Exchange = exchange,
+                ExchangeId = exchange,
                 EffectiveFrom = effectiveFrom,
                 CreatedAt = effectiveFrom,
                 UpdatedAt = effectiveFrom

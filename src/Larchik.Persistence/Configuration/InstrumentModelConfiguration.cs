@@ -23,11 +23,30 @@ public class InstrumentModelConfiguration : IEntityTypeConfiguration<Instrument>
 
         builder.Property(x => x.Figi).HasMaxLength(32);
 
-        builder.Property(x => x.Exchange).HasMaxLength(50);
+        builder.Property(x => x.ExchangeId)
+            .HasColumnName("exchange")
+            .HasMaxLength(16);
 
-        builder.Property(x => x.Country).HasMaxLength(100);
+        builder.Property(x => x.CountryId)
+            .HasColumnName("country")
+            .HasMaxLength(2);
+
+        builder.HasOne(x => x.Exchange)
+            .WithMany()
+            .HasForeignKey(x => x.ExchangeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.Country)
+            .WithMany()
+            .HasForeignKey(x => x.CountryId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasCurrencyCode(x => x.CurrencyId, required: true);
+
+        builder.HasOne(x => x.Currency)
+            .WithMany()
+            .HasForeignKey(x => x.CurrencyId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.Property(x => x.IsTrading).HasDefaultValue(true);
 

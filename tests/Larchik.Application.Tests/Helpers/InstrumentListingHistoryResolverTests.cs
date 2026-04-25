@@ -15,7 +15,7 @@ public sealed class InstrumentListingHistoryResolverTests
             Id = instrumentId,
             Ticker = "AAPL",
             Figi = "FIGI_CURRENT",
-            Exchange = "NASDAQ",
+            ExchangeId = "NASDAQ",
             CurrencyId = "USD",
             Name = "Apple",
             Type = InstrumentType.Equity
@@ -31,7 +31,7 @@ public sealed class InstrumentListingHistoryResolverTests
                         InstrumentId = instrumentId,
                         Ticker = "AAPL-RM",
                         Figi = "FIGI_OLD",
-                        Exchange = "MOEX",
+                        ExchangeId = "MOEX",
                         CurrencyId = "RUB",
                         EffectiveFrom = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                         EffectiveTo = new DateTime(2026, 3, 31, 0, 0, 0, DateTimeKind.Utc)
@@ -41,7 +41,7 @@ public sealed class InstrumentListingHistoryResolverTests
                         InstrumentId = instrumentId,
                         Ticker = "AAPL",
                         Figi = "FIGI_NEW",
-                        Exchange = "SPBX",
+                        ExchangeId = "SPBX",
                         CurrencyId = "USD",
                         EffectiveFrom = new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc)
                     }
@@ -70,7 +70,7 @@ public sealed class InstrumentListingHistoryResolverTests
                         InstrumentId = instrumentId,
                         Ticker = "OLD",
                         Figi = "OLDFIGI",
-                        Exchange = "MOEX",
+                        ExchangeId = "MOEX",
                         CurrencyId = "RUB",
                         EffectiveFrom = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                         EffectiveTo = new DateTime(2025, 12, 31, 0, 0, 0, DateTimeKind.Utc)

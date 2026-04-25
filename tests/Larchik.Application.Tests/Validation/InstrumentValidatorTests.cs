@@ -28,7 +28,7 @@ public class InstrumentValidatorTests
     }
 
     [Fact]
-    public void Validate_RejectsTbankSource_ForRussianMarketInstrument()
+    public void Validate_AllowsTbankSource_ForRussianMarketInstrument()
     {
         var result = validator.Validate(CreateModel(
             InstrumentType.Equity,
@@ -38,7 +38,7 @@ public class InstrumentValidatorTests
             isTrading: true,
             priceSource: PriceSource.TBANK));
 
-        Assert.Contains(result.Errors, x => x.PropertyName == nameof(InstrumentModel.PriceSource));
+        Assert.DoesNotContain(result.Errors, x => x.PropertyName == nameof(InstrumentModel.PriceSource));
     }
 
     private static InstrumentModel CreateModel(
