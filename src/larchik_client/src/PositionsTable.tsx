@@ -1,4 +1,6 @@
 import {
+  Box,
+  Chip,
   Grid,
   Paper,
   Stack,
@@ -12,6 +14,10 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
+import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
+import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
+import { getPurchaseMove, PurchaseMove } from './position-return-domain';
 import { PositionHolding } from './types';
 
 interface Props {
@@ -23,6 +29,88 @@ const fmt = (v: number | null | undefined) =>
 
 const fmtPct = (v: number | null | undefined) =>
   v == null ? '—' : `${v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+
+const fmtSigned = (v: number | null | undefined) => {
+  if (v == null) return '—';
+  const sign = v > 0 ? '+' : '';
+  return `${sign}${fmt(v)}`;
+};
+
+const fmtSignedPct = (v: number | null | undefined) => {
+  if (v == null) return '—';
+  const sign = v > 0 ? '+' : '';
+  return `${sign}${fmtPct(v)}`;
+};
+
+const getMoveTone = (move: PurchaseMove) => {
+  if (move.direction === 'gain') {
+    return {
+      color: 'success.main',
+      background: 'rgba(34, 197, 94, 0.12)',
+      borderColor: 'rgba(34, 197, 94, 0.34)',
+      label: 'Плюс',
+      icon: <ArrowUpwardRoundedIcon fontSize="inherit" />,
+    };
+  }
+
+  if (move.direction === 'loss') {
+    return {
+      color: 'error.main',
+      background: 'rgba(239, 68, 68, 0.12)',
+      borderColor: 'rgba(239, 68, 68, 0.34)',
+      label: 'Минус',
+      icon: <ArrowDownwardRoundedIcon fontSize="inherit" />,
+    };
+  }
+
+  return {
+    color: 'text.secondary',
+    background: 'rgba(148, 163, 184, 0.1)',
+    borderColor: 'rgba(148, 163, 184, 0.24)',
+    label: move.direction === 'flat' ? 'В ноль' : 'Нет данных',
+    icon: <RemoveRoundedIcon fontSize="inherit" />,
+  };
+};
+
+function PurchaseMoveBadge({ move, dense = false }: { move: PurchaseMove; dense?: boolean }) {
+  const tone = getMoveTone(move);
+  const diffLabel = move.absolute == null || move.currencyId == null ? 'цены в разных валютах' : `${fmtSigned(move.absolute)} ${move.currencyId}`;
+
+  if (move.direction === 'unknown') {
+    return (
+      <Typography variant={dense ? 'caption' : 'body2'} color="text.secondary">
+        —
+      </Typography>
+    );
+  }
+
+  return (
+    <Stack spacing={0.35} sx={{ alignItems: { xs: 'flex-start', sm: 'flex-end' } }}>
+      <Chip
+        size="small"
+        icon={tone.icon}
+        label={fmtSignedPct(move.percent)}
+        sx={{
+          minWidth: dense ? 76 : 84,
+          justifyContent: 'center',
+          color: tone.color,
+          bgcolor: tone.background,
+          border: '1px solid',
+          borderColor: tone.borderColor,
+          fontWeight: 800,
+          '& .MuiChip-icon': {
+            color: tone.color,
+            ml: 0.75,
+            mr: -0.25,
+          },
+        }}
+      />
+      <Typography variant="caption" color={tone.color} sx={{ fontWeight: 700, lineHeight: 1.15 }}>
+        {tone.label} {diffLabel}
+      </Typography>
+    </Stack>
+  );
+}
 
 function buildCurrencyTotals(positions: PositionHolding[]) {
   const totals = new Map<string, number>();
@@ -45,13 +133,13 @@ function buildCurrencyTotals(positions: PositionHolding[]) {
 
 export function PositionsTable({ positions }: Props) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const useCardLayout = useMediaQuery(theme.breakpoints.down('xl'));
   const totalBase = positions.reduce((sum, p) => sum + p.marketValueBase, 0);
   const totalByCurrency = buildCurrencyTotals(positions);
 
-  if (isMobile) {
+  if (useCardLayout) {
     return (
-      <Stack spacing={1.5}>
+      <Grid container spacing={1.5}>
         {positions.map((p) => {
           const priceCurrency = p.priceCurrencyId ?? p.currencyId;
           const averageCurrency = p.averageCostCurrencyId ?? p.currencyId;
@@ -59,85 +147,113 @@ export function PositionsTable({ positions }: Props) {
           const sharePct = totalBase > 0 ? (p.marketValueBase / totalBase) * 100 : null;
           const priceLabel = p.isCash ? '—' : p.lastPrice != null ? `${fmt(p.lastPrice)} ${priceCurrency}` : '—';
           const averageLabel = p.isCash ? '—' : `${fmt(p.averageCost)} ${averageCurrency}`;
+          const purchaseMove = getPurchaseMove(p);
+          const tone = getMoveTone(purchaseMove);
 
           return (
-            <Paper key={p.instrumentId} variant="outlined" sx={{ p: 1.5, backgroundImage: 'none' }}>
-              <Stack spacing={1.25}>
-                <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Stack spacing={0.25}>
-                    <Typography sx={{ fontWeight: 700 }}>{p.instrumentName || '—'}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {p.currencyId || '—'}
-                    </Typography>
+            <Grid key={p.instrumentId} size={{ xs: 12, md: 6, lg: 12 }}>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 1.5,
+                  height: '100%',
+                  overflow: 'hidden',
+                  backgroundImage: 'none',
+                  borderColor: purchaseMove.direction === 'unknown' ? 'rgba(148, 163, 184, 0.22)' : tone.borderColor,
+                }}
+              >
+                <Stack spacing={1.25}>
+                  <Stack direction="row" spacing={1.25} sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography sx={{ fontWeight: 800, lineHeight: 1.25, overflowWrap: 'anywhere' }}>{p.instrumentName || '—'}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {p.currencyId || '—'} · {fmt(p.quantity)} шт.
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flexShrink: 0 }}>
+                      <PurchaseMoveBadge move={purchaseMove} dense />
+                    </Box>
                   </Stack>
-                  <Typography variant="body2" color="text.secondary">
-                    {fmt(p.quantity)}
-                  </Typography>
+
+                  <Grid container spacing={1}>
+                    <Grid size={6}>
+                      <Typography variant="caption" color="text.secondary">
+                        Цена
+                      </Typography>
+                      <Typography variant="body2">{priceLabel}</Typography>
+                    </Grid>
+                    <Grid size={6}>
+                      <Typography variant="caption" color="text.secondary">
+                        Средняя
+                      </Typography>
+                      <Typography variant="body2">{averageLabel}</Typography>
+                    </Grid>
+                    <Grid size={6}>
+                      <Typography variant="caption" color="text.secondary">
+                        Сумма
+                      </Typography>
+                      <Typography variant="body2">{localAmount != null ? `${fmt(localAmount)} ${priceCurrency}` : '—'}</Typography>
+                    </Grid>
+                    <Grid size={6}>
+                      <Typography variant="caption" color="text.secondary">
+                        Доля
+                      </Typography>
+                      <Typography variant="body2">{fmtPct(sharePct)}</Typography>
+                    </Grid>
+                  </Grid>
+
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 1,
+                      pt: 1,
+                      borderTop: '1px solid rgba(148, 163, 184, 0.16)',
+                    }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Стоимость
+                    </Typography>
+                    <Typography sx={{ fontWeight: 800 }}>{fmt(p.marketValueBase)}</Typography>
+                  </Box>
                 </Stack>
-                <Grid container spacing={1.25}>
-                  <Grid size={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Цена
-                    </Typography>
-                    <Typography variant="body2">{priceLabel}</Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Сумма
-                    </Typography>
-                    <Typography variant="body2">{localAmount != null ? `${fmt(localAmount)} ${priceCurrency}` : '—'}</Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Доля, %
-                    </Typography>
-                    <Typography variant="body2">{fmtPct(sharePct)}</Typography>
-                  </Grid>
-                  <Grid size={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Средняя
-                    </Typography>
-                    <Typography variant="body2">{averageLabel}</Typography>
-                  </Grid>
-                  <Grid size={12}>
-                    <Typography variant="caption" color="text.secondary">
-                      Стоимость (base)
-                    </Typography>
-                    <Typography sx={{ fontWeight: 700 }}>{fmt(p.marketValueBase)}</Typography>
-                  </Grid>
-                </Grid>
-              </Stack>
-            </Paper>
+              </Paper>
+            </Grid>
           );
         })}
         {!!positions.length && (
-          <Paper variant="outlined" sx={{ p: 1.5, backgroundImage: 'none' }}>
-            <Stack spacing={1}>
-              <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography sx={{ fontWeight: 700 }}>Итого</Typography>
-                <Typography sx={{ fontWeight: 700 }}>{fmt(totalBase)}</Typography>
-              </Stack>
-              {!!totalByCurrency.length && (
-                <Stack spacing={0.25}>
-                  <Typography variant="caption" color="text.secondary">
-                    Сумма
-                  </Typography>
-                  {totalByCurrency.map((item) => (
-                    <Typography key={item.currencyId} variant="body2">
-                      {fmt(item.amount)} {item.currencyId}
-                    </Typography>
-                  ))}
+          <Grid size={12}>
+            <Paper variant="outlined" sx={{ p: 1.5, backgroundImage: 'none' }}>
+              <Stack spacing={1}>
+                <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography sx={{ fontWeight: 700 }}>Итого</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{fmt(totalBase)}</Typography>
                 </Stack>
-              )}
-            </Stack>
-          </Paper>
+                {!!totalByCurrency.length && (
+                  <Stack spacing={0.25}>
+                    <Typography variant="caption" color="text.secondary">
+                      Сумма
+                    </Typography>
+                    {totalByCurrency.map((item) => (
+                      <Typography key={item.currencyId} variant="body2">
+                        {fmt(item.amount)} {item.currencyId}
+                      </Typography>
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
+            </Paper>
+          </Grid>
         )}
         {!positions.length && (
-          <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', backgroundImage: 'none' }}>
-            <Typography color="text.secondary">Нет позиций</Typography>
-          </Paper>
+          <Grid size={12}>
+            <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', backgroundImage: 'none' }}>
+              <Typography color="text.secondary">Нет позиций</Typography>
+            </Paper>
+          </Grid>
         )}
-      </Stack>
+      </Grid>
     );
   }
 
@@ -152,6 +268,7 @@ export function PositionsTable({ positions }: Props) {
             <TableCell align="right">Сумма</TableCell>
             <TableCell align="right">Доля, %</TableCell>
             <TableCell align="right">Средняя</TableCell>
+            <TableCell align="right">От покупки</TableCell>
             <TableCell align="right">Стоимость (base)</TableCell>
           </TableRow>
         </TableHead>
@@ -163,6 +280,7 @@ export function PositionsTable({ positions }: Props) {
             const sharePct = totalBase > 0 ? (p.marketValueBase / totalBase) * 100 : null;
             const priceLabel = p.isCash ? '—' : p.lastPrice != null ? `${fmt(p.lastPrice)} ${priceCurrency}` : '—';
             const averageLabel = p.isCash ? '—' : `${fmt(p.averageCost)} ${averageCurrency}`;
+            const purchaseMove = getPurchaseMove(p);
 
             return (
               <TableRow key={p.instrumentId} hover>
@@ -177,6 +295,9 @@ export function PositionsTable({ positions }: Props) {
                 <TableCell align="right">{localAmount != null ? `${fmt(localAmount)} ${priceCurrency}` : '—'}</TableCell>
                 <TableCell align="right">{fmtPct(sharePct)}</TableCell>
                 <TableCell align="right">{averageLabel}</TableCell>
+                <TableCell align="right">
+                  <PurchaseMoveBadge move={purchaseMove} />
+                </TableCell>
                 <TableCell align="right">{fmt(p.marketValueBase)}</TableCell>
               </TableRow>
             );
@@ -191,6 +312,7 @@ export function PositionsTable({ positions }: Props) {
               <TableCell align="right">—</TableCell>
               <TableCell align="right">{fmtPct(totalBase > 0 ? 100 : null)}</TableCell>
               <TableCell align="right">—</TableCell>
+              <TableCell align="right">—</TableCell>
               <TableCell align="right">
                 <Typography sx={{ fontWeight: 700 }}>{fmt(totalBase)}</Typography>
               </TableCell>
@@ -198,7 +320,7 @@ export function PositionsTable({ positions }: Props) {
           )}
           {!positions.length && (
             <TableRow>
-              <TableCell colSpan={7} align="center">
+              <TableCell colSpan={8} align="center">
                 <Typography color="text.secondary">Нет позиций</Typography>
               </TableCell>
             </TableRow>
