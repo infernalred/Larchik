@@ -27,16 +27,36 @@ public class InstrumentValidatorTests
         Assert.DoesNotContain(result.Errors, x => x.PropertyName == nameof(InstrumentModel.Isin));
     }
 
-    private static InstrumentModel CreateModel(InstrumentType type, string? isin) => new(
+    [Fact]
+    public void Validate_RejectsTbankSource_ForRussianMarketInstrument()
+    {
+        var result = validator.Validate(CreateModel(
+            InstrumentType.Equity,
+            "RU0009029540",
+            figi: "BBG004730N88",
+            country: "ru",
+            isTrading: true,
+            priceSource: PriceSource.TBANK));
+
+        Assert.Contains(result.Errors, x => x.PropertyName == nameof(InstrumentModel.PriceSource));
+    }
+
+    private static InstrumentModel CreateModel(
+        InstrumentType type,
+        string? isin,
+        string? figi = null,
+        string? country = null,
+        bool isTrading = false,
+        PriceSource? priceSource = null) => new(
         Name: "Test instrument",
         Ticker: "TEST",
         Isin: isin,
-        Figi: null,
+        Figi: figi,
         Type: type,
         CurrencyId: "USD",
         CategoryId: 1,
         Exchange: null,
-        Country: null,
-        IsTrading: false,
-        PriceSource: null);
+        Country: country,
+        IsTrading: isTrading,
+        PriceSource: priceSource);
 }

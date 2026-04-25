@@ -57,6 +57,7 @@ public abstract class LotValuationStrategyBase : IValuationStrategy
         {
             if (!lotsByInstrument.TryGetValue(instrumentId, out var lots) || lots.Count == 0)
             {
+                position.RollingCost = 0m;
                 continue;
             }
 
@@ -163,7 +164,7 @@ public abstract class LotValuationStrategyBase : IValuationStrategy
         var realized = proceeds - costOut;
 
         position.Quantity -= operation.Quantity;
-        position.RollingCost += costOut - operation.Fee;
+        position.RollingCost += costOut;
         AddRealized(result, operation.InstrumentId, realized);
     }
 

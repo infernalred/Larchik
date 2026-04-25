@@ -78,6 +78,29 @@ public sealed class ValuationHelpersTests
     }
 
     [Fact]
+    public void HistoricalDataLookup_DoesNotUseFutureFxRates()
+    {
+        var rateDate = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
+        var asOfDate = rateDate.AddDays(-1);
+        FxRate[] fxRates =
+        [
+            new FxRate
+            {
+                BaseCurrencyId = "USD",
+                QuoteCurrencyId = "RUB",
+                Date = rateDate,
+                Rate = 80m,
+                Source = "CBR",
+                CreatedAt = rateDate
+            }
+        ];
+
+        var lookup = new HistoricalDataLookup([], fxRates);
+
+        Assert.Null(lookup.GetRate("USD", "RUB", asOfDate));
+    }
+
+    [Fact]
     public void InstrumentAccountingCurrencyHelper_UsesBaseCurrency_ForMixedOperationCurrencies()
     {
         var instrumentId = Guid.NewGuid();
@@ -205,6 +228,46 @@ public sealed class ValuationHelpersTests
         Assert.Equal(50m, lifo.RealizedByInstrument[instrumentId]);
         Assert.Equal(1700m / 15m, fifo.Positions[instrumentId].AverageCost);
         Assert.Equal(1600m / 15m, lifo.Positions[instrumentId].AverageCost);
+    }
+
+    [Theory]
+    [InlineData("fifo")]
+    [InlineData("lifo")]
+    public void LotValuation_ClearsCostAfterFullLiquidationBeforeTransferIn(string method)
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                1m,
+                100m,
+                1m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.Sell,
+                1m,
+                110m,
+                2m,
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.TransferIn,
+                1m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 22, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 22, 0, 0, 0, DateTimeKind.Utc))
+        ];
+
+        var result = new ValuationService().Evaluate(operations, method, assumeSorted: true);
+
+        Assert.Equal(1m, result.Positions[instrumentId].Quantity);
+        Assert.Equal(0m, result.Positions[instrumentId].AverageCost);
     }
 
     [Fact]

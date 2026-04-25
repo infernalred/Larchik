@@ -86,9 +86,7 @@ public class HistoricalDataLookup
     private static decimal? FindRate(IReadOnlyList<FxRate> list, DateTime asOfDate)
     {
         var match = list.FirstOrDefault(r => r.Date.Date <= asOfDate.Date);
-        if (match != null) return match.Rate;
-
-        return list.Count > 0 ? list[^1].Rate : null;
+        return match?.Rate;
     }
 
     private static int GetProviderPriority(string? provider)

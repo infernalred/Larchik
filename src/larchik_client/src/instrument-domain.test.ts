@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createInstrumentEditorInitialModel, normalizeInstrumentEditorModel, requiresInstrumentIsin } from './instrument-domain';
+import {
+  createInstrumentEditorInitialModel,
+  isTbankPriceSourceForbidden,
+  normalizeInstrumentEditorModel,
+  requiresInstrumentIsin,
+} from './instrument-domain';
 import { Category, Currency, InstrumentModel } from './types';
 
 describe('instrument-domain', () => {
@@ -59,5 +64,24 @@ describe('instrument-domain', () => {
       isTrading: false,
       priceSource: null,
     });
+  });
+
+  it('forbids TBANK price source for Russian market instruments', () => {
+    const input: InstrumentModel = {
+      name: 'Sber',
+      ticker: 'SBER',
+      isin: 'RU0009029540',
+      figi: 'BBG004730N88',
+      type: 'Equity',
+      currencyId: 'RUB',
+      categoryId: 1,
+      exchange: 'MOEX',
+      country: 'ru',
+      isTrading: true,
+      priceSource: 'TBANK',
+    };
+
+    expect(isTbankPriceSourceForbidden(input)).toBe(true);
+    expect(normalizeInstrumentEditorModel(input).priceSource).toBe('MOEX');
   });
 });

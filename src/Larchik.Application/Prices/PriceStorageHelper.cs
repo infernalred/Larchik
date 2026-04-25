@@ -24,6 +24,8 @@ internal static class PriceStorageHelper
                 input.CurrencyId.Trim().ToUpperInvariant(),
                 string.IsNullOrWhiteSpace(input.SourceCurrencyId) ? null : input.SourceCurrencyId.Trim().ToUpperInvariant(),
                 input.Provider.Trim().ToUpperInvariant()))
+            .GroupBy(x => new PriceKey(x.InstrumentId, x.Date, x.Provider))
+            .Select(x => x.Last())
             .ToList();
 
         var keys = normalizedInputs

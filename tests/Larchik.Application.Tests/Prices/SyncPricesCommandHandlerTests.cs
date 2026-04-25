@@ -57,6 +57,29 @@ public sealed class SyncPricesCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_DeduplicatesNewInputs_ForSameInstrumentDateAndProvider()
+    {
+        await using var harness = new PriceSyncTestHarness();
+        var instrumentId = harness.AddInstrument("SBER", currencyId: "RUB");
+        var date = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
+        await harness.Context.SaveChangesAsync();
+
+        var handler = new SyncPricesCommandHandler(harness.Context);
+        var result = await handler.Handle(
+            new SyncPricesCommand(
+                [
+                    new PriceModel(instrumentId, date, 100m, "RUB", "MOEX"),
+                    new PriceModel(instrumentId, date, 120m, "RUB", "moex")
+                ]),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        var price = await harness.Context.Prices.SingleAsync();
+        Assert.Equal(120m, price.Value);
+        Assert.Equal("MOEX", price.Provider);
+    }
+
+    [Fact]
     public async Task Handle_NormalizesStoredDate_ToUtcDateBoundary()
     {
         await using var harness = new PriceSyncTestHarness();

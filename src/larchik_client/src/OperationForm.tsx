@@ -15,6 +15,12 @@ import {
   useTheme,
 } from '@mui/material';
 import { toDateInputValue, toUtcIso } from './date-input';
+import {
+  forbidsOperationInstrument,
+  normalizeOperationFormModel,
+  requiresOperationInstrument,
+  validateOperationFormModel,
+} from './operation-form-domain';
 import { InstrumentLookup, OperationModel, OperationType } from './types';
 
 const TYPE_OPTIONS: { value: OperationType; label: string }[] = [
@@ -30,14 +36,6 @@ const TYPE_OPTIONS: { value: OperationType; label: string }[] = [
   { value: 'BondMaturity', label: 'Полное погашение облигации' },
   { value: 'CashAdjustment', label: 'Движение денег' },
 ];
-
-const INSTRUMENT_OPERATION_TYPES = new Set<OperationType>([
-  'Buy',
-  'Sell',
-  'Dividend',
-  'BondPartialRedemption',
-  'BondMaturity',
-]);
 
 interface Props {
   open: boolean;
@@ -88,6 +86,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
   const [instrumentSearch, setInstrumentSearch] = useState('');
   const [instrumentLoading, setInstrumentLoading] = useState(false);
   const [instrumentError, setInstrumentError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const suppressNextInstrumentSearchRef = useRef(false);
 
   useEffect(() => {
@@ -98,6 +97,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
     setInstrumentSearch(presetInstrument?.ticker ?? '');
     setInstrumentOptions(presetInstrument ? [presetInstrument] : []);
     setInstrumentError(null);
+    setSubmitError(null);
   }, [open, initial]);
 
   useEffect(() => {
@@ -145,8 +145,9 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
     };
   }, [instrumentSearch, open, searchInstruments]);
 
-  const isInstrumentType = INSTRUMENT_OPERATION_TYPES.has(form.type);
+  const isInstrumentType = requiresOperationInstrument(form.type);
   const quantityHelperText = isInstrumentType ? undefined : 'Для денежных операций можно оставить 0';
+  const validationError = validateOperationFormModel(form);
 
   const selectedInstrumentValue = useMemo(() => {
     if (!form.instrumentId) return null;
@@ -157,22 +158,48 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
 
   const update = (key: keyof OperationModel, value: string | number | undefined) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setSubmitError(null);
+  };
+
+  const handleTypeChange = (type: OperationType) => {
+    setForm((prev) => {
+      if (!forbidsOperationInstrument(type)) {
+        return { ...prev, type };
+      }
+
+      return { ...prev, type, instrumentId: undefined };
+    });
+    if (forbidsOperationInstrument(type)) {
+      setSelectedInstrument(null);
+      setInstrumentSearch('');
+      setInstrumentOptions([]);
+    }
+    setInstrumentError(null);
+    setSubmitError(null);
   };
 
   const handleSubmit = async () => {
+    if (validationError) {
+      setSubmitError(validationError);
+      return;
+    }
+
     setSaving(true);
+    setSubmitError(null);
     try {
       const tradeDate = toUtcIso(form.tradeDate);
       const settlementDate = toUtcIso(form.settlementDate);
 
-      await onSubmit({
+      await onSubmit(normalizeOperationFormModel({
         ...form,
         instrumentId: form.instrumentId || undefined,
         tradeDate: tradeDate ?? form.tradeDate,
         settlementDate,
         note: form.note || undefined,
-      });
+      }));
       onClose();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Не удалось сохранить операцию.');
     } finally {
       setSaving(false);
     }
@@ -187,7 +214,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
             select
             label="Тип"
             value={form.type}
-            onChange={(e) => update('type', e.target.value as OperationType)}
+            onChange={(e) => handleTypeChange(e.target.value as OperationType)}
           >
             {TYPE_OPTIONS.map((t) => (
               <MenuItem key={t.value} value={t.value}>
@@ -257,6 +284,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
           />
 
           {instrumentError && <Alert severity="warning">{instrumentError}</Alert>}
+          {submitError && <Alert severity="error">{submitError}</Alert>}
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
@@ -329,7 +357,7 @@ export function OperationForm({ open, initial, onClose, onSubmit, searchInstrume
         <Button onClick={onClose} fullWidth={isMobile}>
           Отмена
         </Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={saving} fullWidth={isMobile}>
+        <Button onClick={handleSubmit} variant="contained" disabled={saving || Boolean(validationError)} fullWidth={isMobile}>
           {saving ? 'Сохраняем…' : 'Сохранить'}
         </Button>
       </DialogActions>

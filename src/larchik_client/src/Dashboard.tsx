@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -136,6 +136,11 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const summaryRequestRef = useRef(0);
+  const performanceRequestRef = useRef(0);
+  const aggregateSummaryRequestRef = useRef(0);
+  const aggregatePerformanceRequestRef = useRef(0);
+  const operationsRequestRef = useRef(0);
   const portfolioPage = route;
   const activePortfolio = portfolios.find((x) => x.id === selectedPortfolio) ?? null;
   const displayPositions = summary ? buildDisplayPositions(summary) : [];
@@ -185,42 +190,56 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   }, []);
 
   const loadAggregateSummary = useCallback(async (method: string) => {
+    const requestId = ++aggregateSummaryRequestRef.current;
     setLoadingAggregateSummary(true);
     setAggregateError('');
     try {
       const data = await api.getAggregatePortfolioSummary(method, activePortfolio?.reportingCurrencyId);
+      if (aggregateSummaryRequestRef.current !== requestId) return;
       setAggregateSummary(data);
     } catch (error) {
+      if (aggregateSummaryRequestRef.current !== requestId) return;
       setAggregateSummary(null);
       setAggregateError(getApiErrorMessage(error, 'Не удалось получить общий итог по всем счетам.'));
     } finally {
-      setLoadingAggregateSummary(false);
+      if (aggregateSummaryRequestRef.current === requestId) {
+        setLoadingAggregateSummary(false);
+      }
     }
   }, [activePortfolio?.reportingCurrencyId]);
 
   const loadAggregatePerformance = useCallback(async (method: string) => {
+    const requestId = ++aggregatePerformanceRequestRef.current;
     setLoadingAggregatePerformance(true);
     try {
       const data = await api.getAggregatePerformance(method, activePortfolio?.reportingCurrencyId);
+      if (aggregatePerformanceRequestRef.current !== requestId) return;
       setAggregatePerformance(data);
     } catch (error) {
+      if (aggregatePerformanceRequestRef.current !== requestId) return;
       console.error(error);
       setAggregatePerformance([]);
     } finally {
-      setLoadingAggregatePerformance(false);
+      if (aggregatePerformanceRequestRef.current === requestId) {
+        setLoadingAggregatePerformance(false);
+      }
     }
   }, [activePortfolio?.reportingCurrencyId]);
 
   const loadOperations = useCallback(async (id: string, page: number, pageSize: number) => {
+    const requestId = ++operationsRequestRef.current;
     setLoadingOps(true);
     try {
       const data = await api.listOperations(id, { page, pageSize });
+      if (operationsRequestRef.current !== requestId) return;
       setOperations(data.items);
       setOperationsTotalCount(data.totalCount);
       if (data.page !== page) setOperationsPage(data.page);
       if (data.pageSize !== pageSize) setOperationsPageSize(data.pageSize);
     } finally {
-      setLoadingOps(false);
+      if (operationsRequestRef.current === requestId) {
+        setLoadingOps(false);
+      }
     }
   }, []);
 
@@ -266,28 +285,38 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   }, [selectedPortfolio, viewMode, portfolioPage, operationsPage, operationsPageSize, loadOperations]);
 
   async function loadSummary(id: string, method: string) {
+    const requestId = ++summaryRequestRef.current;
     setLoadingSummary(true);
     try {
       const data = await api.getPortfolioSummary(id, method);
+      if (summaryRequestRef.current !== requestId) return;
       setSummary(data);
     } catch (error) {
+      if (summaryRequestRef.current !== requestId) return;
       console.error(error);
       setSummary(null);
     } finally {
-      setLoadingSummary(false);
+      if (summaryRequestRef.current === requestId) {
+        setLoadingSummary(false);
+      }
     }
   }
 
   async function loadPerformance(id: string, method: string) {
+    const requestId = ++performanceRequestRef.current;
     setLoadingPerformance(true);
     try {
       const data = await api.getPerformance(id, method);
+      if (performanceRequestRef.current !== requestId) return;
       setPerformance(data);
     } catch (error) {
+      if (performanceRequestRef.current !== requestId) return;
       console.error(error);
       setPerformance([]);
     } finally {
-      setLoadingPerformance(false);
+      if (performanceRequestRef.current === requestId) {
+        setLoadingPerformance(false);
+      }
     }
   }
 
@@ -439,8 +468,15 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   }, []);
 
   function handleSelectPortfolio(id: string) {
+    summaryRequestRef.current++;
+    performanceRequestRef.current++;
+    operationsRequestRef.current++;
     setViewMode('portfolio');
     setSelectedPortfolio(id);
+    setSummary(null);
+    setPerformance([]);
+    setOperations([]);
+    setOperationsTotalCount(0);
     setAggregateError('');
     setOperationsPage(1);
     setSidebarOpen(false);

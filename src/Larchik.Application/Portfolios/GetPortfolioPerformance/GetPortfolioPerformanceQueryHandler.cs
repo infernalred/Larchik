@@ -37,7 +37,7 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             return Result<IReadOnlyCollection<PortfolioPerformanceDto>>.Success([]);
         }
 
-        var maxPriceDate = (request.To?.Date ?? DateTime.UtcNow.Date).AddDays(1).AddTicks(-1);
+        var maxPriceDate = PortfolioAnalyticsQueryHelper.NormalizeMaxPriceDateUtc(request.To);
         var analytics = await PortfolioAnalyticsQueryHelper.LoadAsync(
             context,
             operations,

@@ -65,6 +65,19 @@ internal static class PortfolioAnalyticsQueryHelper
         return new PortfolioAnalyticsContext(mergedOperations, instruments, data);
     }
 
+    internal static DateTime NormalizeMaxPriceDateUtc(DateTime? to)
+    {
+        var date = to?.Date ?? DateTime.UtcNow.Date;
+        var utcDate = date.Kind switch
+        {
+            DateTimeKind.Utc => date,
+            DateTimeKind.Local => date.ToUniversalTime().Date,
+            _ => DateTime.SpecifyKind(date, DateTimeKind.Utc)
+        };
+
+        return DateTime.SpecifyKind(utcDate.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+    }
+
     internal sealed record PortfolioAnalyticsContext(
         IReadOnlyList<Operation> Operations,
         IReadOnlyDictionary<Guid, Instrument> Instruments,

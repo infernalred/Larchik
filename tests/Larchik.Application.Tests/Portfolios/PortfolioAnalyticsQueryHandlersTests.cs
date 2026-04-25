@@ -1,3 +1,4 @@
+using Larchik.Application.Portfolios;
 using Larchik.Application.Portfolios.GetAggregatePortfolioPerformance;
 using Larchik.Application.Portfolios.GetAggregatePortfolioSummary;
 using Larchik.Application.Portfolios.GetPortfolioPerformance;
@@ -7,6 +8,17 @@ namespace Larchik.Application.Tests.Portfolios;
 
 public sealed class PortfolioAnalyticsQueryHandlersTests
 {
+    [Fact]
+    public void NormalizeMaxPriceDateUtc_ReturnsUtcEndOfDay_ForUnspecifiedDate()
+    {
+        var rawDate = new DateTime(2026, 4, 20, 13, 30, 0, DateTimeKind.Unspecified);
+
+        var normalized = PortfolioAnalyticsQueryHelper.NormalizeMaxPriceDateUtc(rawDate);
+
+        Assert.Equal(DateTimeKind.Utc, normalized.Kind);
+        Assert.Equal(new DateTime(2026, 4, 20, 23, 59, 59, 999, DateTimeKind.Utc).AddTicks(9999), normalized);
+    }
+
     [Fact]
     public async Task AggregateSummary_AggregatesSinglePortfolioSummaries()
     {

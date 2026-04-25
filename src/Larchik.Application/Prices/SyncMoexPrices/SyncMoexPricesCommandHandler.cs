@@ -141,6 +141,13 @@ public class SyncMoexPricesCommandHandler(
                     x.Point.Value,
                     provider))));
         var data = new HistoricalDataLookup([], fxRates);
+        var missingBondFx = GetMissingBondFxErrors(matches, data);
+        if (missingBondFx.Length > 0)
+        {
+            return Result<int>.Failure(
+                $"FX rate is missing for MOEX bond price normalization: {string.Join("; ", missingBondFx)}");
+        }
+
         var upsertInputs = BuildUpsertInputs(matches, listingHistories, data, provider);
         var upsertResult = await PriceStorageHelper.ApplyAsync(context, upsertInputs, cancellationToken);
 
@@ -326,6 +333,37 @@ public class SyncMoexPricesCommandHandler(
                     provider);
             })
             .ToList();
+
+    private static string[] GetMissingBondFxErrors(
+        IReadOnlyCollection<MatchedPricePoint> matches,
+        HistoricalDataLookup data) =>
+        matches
+            .Where(x => x.Instrument.Type == InstrumentType.Bond && x.Point.FaceValue is > 0)
+            .SelectMany(x => GetMissingBondFxErrors(x, data))
+            .Take(5)
+            .ToArray();
+
+    private static IEnumerable<string> GetMissingBondFxErrors(MatchedPricePoint match, HistoricalDataLookup data)
+    {
+        var instrument = match.Instrument;
+        var point = match.Point;
+        var asOfDate = ToUtcDateTime(point.Date);
+        var faceCurrency = point.FaceCurrencyId ?? instrument.CurrencyId;
+        var tradeCurrency = point.CurrencyId ?? instrument.CurrencyId;
+
+        if (!string.Equals(faceCurrency, instrument.CurrencyId, StringComparison.OrdinalIgnoreCase) &&
+            data.GetRate(faceCurrency, instrument.CurrencyId, asOfDate) is null)
+        {
+            yield return $"{instrument.Ticker} {point.Date:yyyy-MM-dd}: {faceCurrency}->{instrument.CurrencyId}";
+        }
+
+        if (point.AccruedInterest is > 0 &&
+            !string.Equals(tradeCurrency, instrument.CurrencyId, StringComparison.OrdinalIgnoreCase) &&
+            data.GetRate(tradeCurrency, instrument.CurrencyId, asOfDate) is null)
+        {
+            yield return $"{instrument.Ticker} {point.Date:yyyy-MM-dd}: {tradeCurrency}->{instrument.CurrencyId}";
+        }
+    }
 
     private async Task<Result<MoexBoardPrices>> LoadBoardPrices(
         DateOnly date,

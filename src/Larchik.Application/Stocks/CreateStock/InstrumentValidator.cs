@@ -1,5 +1,6 @@
 using FluentValidation;
 using Larchik.Application.Models;
+using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Stocks.CreateStock;
 
@@ -24,5 +25,21 @@ public class InstrumentValidator : AbstractValidator<InstrumentModel>
             .NotEmpty()
             .When(x => x.IsTrading && x.PriceSource == Persistence.Entities.PriceSource.TBANK)
             .WithMessage("FIGI is required for TBANK price source.");
+        RuleFor(x => x.PriceSource)
+            .Must((model, _) => !UsesForbiddenTbankSource(model))
+            .WithMessage("Russian equities, bonds, ETFs, and FX instruments must use MOEX price source.");
+    }
+
+    private static bool UsesForbiddenTbankSource(InstrumentModel model)
+    {
+        if (!model.IsTrading || model.PriceSource != Persistence.Entities.PriceSource.TBANK)
+        {
+            return false;
+        }
+
+        var country = model.Country?.Trim().ToUpperInvariant();
+        var isRussianMarketType = model.Type is InstrumentType.Equity or InstrumentType.Bond or InstrumentType.Etf or InstrumentType.Currency;
+
+        return country == "RU" && isRussianMarketType;
     }
 }

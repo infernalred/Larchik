@@ -18,6 +18,7 @@ import {
   INSTRUMENT_TYPE_OPTIONS,
   normalizeInstrumentEditorModel,
   PRICE_SOURCE_OPTIONS,
+  isTbankPriceSourceForbidden,
   requiresInstrumentIsin,
 } from './instrument-domain';
 import { Category, Currency, Instrument, InstrumentModel, InstrumentType, PriceSource } from './types';
@@ -36,6 +37,9 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [form, setForm] = useState<InstrumentModel>(() => createInstrumentEditorInitialModel(initial, categories, currencies));
+  const priceSourceError = isTbankPriceSourceForbidden(form)
+    ? 'Для российских инструментов используйте MOEX.'
+    : '';
 
   const isValid = useMemo(() => {
     return (
@@ -43,7 +47,8 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
       form.ticker.trim().length > 0 &&
       (!requiresInstrumentIsin(form.type) || (form.isin?.trim().length ?? 0) > 0) &&
       form.currencyId.trim().length > 0 &&
-      form.categoryId > 0
+      form.categoryId > 0 &&
+      !isTbankPriceSourceForbidden(form)
     );
   }, [form]);
 
@@ -154,6 +159,8 @@ export function InstrumentEditorDialog({ open, initial, categories, currencies, 
             value={form.priceSource ?? ''}
             onChange={(e) => update('priceSource', e.target.value ? (e.target.value as PriceSource) : null)}
             disabled={!form.isTrading}
+            error={Boolean(priceSourceError)}
+            helperText={priceSourceError || undefined}
             fullWidth
           >
             <MenuItem value="">Не синхронизировать</MenuItem>

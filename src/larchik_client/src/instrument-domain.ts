@@ -26,6 +26,13 @@ export function requiresInstrumentIsin(type: InstrumentType): boolean {
   return type === 'Equity' || type === 'Bond' || type === 'Etf';
 }
 
+export function isTbankPriceSourceForbidden(form: Pick<InstrumentModel, 'country' | 'isTrading' | 'priceSource' | 'type'>): boolean {
+  const country = form.country?.trim().toUpperCase();
+  const isRussianMarketType = form.type === 'Equity' || form.type === 'Bond' || form.type === 'Etf' || form.type === 'Currency';
+
+  return form.isTrading && form.priceSource === 'TBANK' && country === 'RU' && isRussianMarketType;
+}
+
 export function createInstrumentEditorInitialModel(
   initial?: Instrument | null,
   categories: Category[] = [],
@@ -47,7 +54,7 @@ export function createInstrumentEditorInitialModel(
 }
 
 export function normalizeInstrumentEditorModel(form: InstrumentModel): InstrumentModel {
-  return {
+  const normalized: InstrumentModel = {
     name: form.name.trim(),
     ticker: form.ticker.trim().toUpperCase(),
     isin: form.isin?.trim() ? form.isin.trim().toUpperCase() : undefined,
@@ -59,5 +66,13 @@ export function normalizeInstrumentEditorModel(form: InstrumentModel): Instrumen
     country: form.country?.trim() || undefined,
     isTrading: form.isTrading,
     priceSource: form.isTrading ? form.priceSource ?? null : null,
+  };
+
+  if (isTbankPriceSourceForbidden(normalized)) {
+    return { ...normalized, priceSource: 'MOEX' };
+  }
+
+  return {
+    ...normalized,
   };
 }

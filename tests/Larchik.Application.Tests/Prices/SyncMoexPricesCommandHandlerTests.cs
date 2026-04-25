@@ -210,4 +210,66 @@ public sealed class SyncMoexPricesCommandHandlerTests
         Assert.Equal(instrumentId, price.InstrumentId);
         Assert.Equal(101.25m, price.Value);
     }
+
+    [Fact]
+    public async Task Handle_FailsForBond_WhenRequiredFxRateIsMissing()
+    {
+        await using var harness = new PriceSyncTestHarness();
+        harness.AddInstrument(
+            "RU000A",
+            currencyId: "RUB",
+            type: Larchik.Persistence.Entities.InstrumentType.Bond,
+            priceSource: Larchik.Persistence.Entities.PriceSource.MOEX);
+        await harness.Context.SaveChangesAsync();
+
+        var factory = new FakeHttpClientFactory((request, _) =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("/history/engines/stock/markets/shares/boards/TQCB/securities.json", StringComparison.Ordinal) ||
+                url.Contains("/history/engines/stock/markets/bonds/boards/TQCB/securities.json", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""
+                    {
+                      "history": {
+                        "columns": ["SECID","TRADEDATE","LEGALCLOSEPRICE","MARKETPRICE2","CLOSE","WAPRICE","LCLOSEPRICE","LAST","CURRENCYID","FACEVALUE","FACEUNIT","ACCINT"],
+                        "data": [["RU000A","2026-04-20",50,null,null,null,null,null,"USD",1000,"USD",5]]
+                      }
+                    }
+                    """, Encoding.UTF8, "application/json")
+                });
+            }
+
+            if (url.Contains("/securities/RU000A.json", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""
+                    {
+                      "boards": {
+                        "columns": ["BOARDID","IS_TRADED"],
+                        "data": [["TQCB",1]]
+                      }
+                    }
+                    """, Encoding.UTF8, "application/json")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
+        var handler = new SyncMoexPricesCommandHandler(
+            harness.Context,
+            factory,
+            NullLogger<SyncMoexPricesCommandHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SyncMoexPricesCommand(new DateOnly(2026, 4, 20), Boards: ["TQCB"], BaseUrl: "https://moex.test"),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("FX rate is missing for MOEX bond price normalization", result.Error);
+        Assert.Empty(await harness.Context.Prices.ToListAsync());
+    }
 }

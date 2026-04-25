@@ -48,7 +48,7 @@ public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context
 
         var method = request.Method ?? "adjustingAvg";
         var calculator = new PortfolioAnalyticsCalculator();
-        var maxPriceDate = (request.To?.Date ?? DateTime.UtcNow.Date).AddDays(1).AddTicks(-1);
+        var maxPriceDate = PortfolioAnalyticsQueryHelper.NormalizeMaxPriceDateUtc(request.To);
         var analytics = await PortfolioAnalyticsQueryHelper.LoadAsync(
             context,
             operations,

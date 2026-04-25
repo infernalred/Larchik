@@ -213,64 +213,127 @@ public class BackgroundJobExecutorService(
             }
         }
 
-        run.Attempt += 1;
-        run.LockedBy = null;
-        run.LockedUntilAt = null;
-        run.UpdatedAt = now;
+        var nextAttempt = run.Attempt + 1;
+        var finalizeResult = BuildFinalization(result, run, nextAttempt, now);
+
+        var finalized = await TryFinalizeClaimedRun(run.Id, finalizeResult, cancellationToken);
+        if (!finalized)
+        {
+            logger.LogWarning(
+                "Run {RunId} for job {JobName} ({JobType}) finished but is no longer locked by this worker; skipping final state update",
+                run.Id,
+                run.JobDefinition?.Name ?? "unknown",
+                run.JobDefinition?.JobType ?? "unknown");
+            return;
+        }
 
         if (result.IsSuccess)
         {
-            run.Status = JobRunStatus.Succeeded;
-            run.CompletedAt = now;
-            run.LastError = null;
-
             logger.LogInformation(
                 "Run {RunId} for job {JobName} ({JobType}) succeeded on attempt {Attempt}",
                 run.Id,
                 run.JobDefinition?.Name ?? "unknown",
                 run.JobDefinition?.JobType ?? "unknown",
-                run.Attempt);
+                nextAttempt);
         }
         else
         {
-            run.LastError = TrimError(result.Error);
-            if (run.Attempt >= run.MaxAttempts)
+            if (finalizeResult.Status == JobRunStatus.Failed)
             {
-                run.Status = JobRunStatus.Failed;
-                run.CompletedAt = now;
-
                 logger.LogError(
                     "Run {RunId} for job {JobName} ({JobType}) failed permanently after {Attempt} attempts. Error: {Error}",
                     run.Id,
                     run.JobDefinition?.Name ?? "unknown",
                     run.JobDefinition?.JobType ?? "unknown",
-                    run.Attempt,
-                    run.LastError);
+                    nextAttempt,
+                    finalizeResult.LastError);
             }
             else
             {
-                var retryDelay = Math.Max(1, run.JobDefinition?.RetryDelayMinutes ?? 5);
-                run.Status = JobRunStatus.RetryScheduled;
-                run.AvailableAt = now.AddMinutes(retryDelay);
-
                 logger.LogError(
                     "Run {RunId} for job {JobName} ({JobType}) failed on attempt {Attempt}. Retry at {RetryAtUtc:O} UTC. Error: {Error}",
                     run.Id,
                     run.JobDefinition?.Name ?? "unknown",
                     run.JobDefinition?.JobType ?? "unknown",
-                    run.Attempt,
-                    run.AvailableAt,
-                    run.LastError);
+                    nextAttempt,
+                    finalizeResult.AvailableAt,
+                    finalizeResult.LastError);
             }
         }
 
         if (run.JobDefinition is not null)
         {
-            run.JobDefinition.LastRunAt = now;
-            run.JobDefinition.UpdatedAt = now;
+            await context.JobDefinitions
+                .Where(x => x.Id == run.JobDefinition.Id)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(x => x.LastRunAt, now)
+                    .SetProperty(x => x.UpdatedAt, now), cancellationToken);
+        }
+    }
+
+    private async Task<bool> TryFinalizeClaimedRun(
+        Guid runId,
+        JobRunFinalization finalization,
+        CancellationToken cancellationToken)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<LarchikContext>();
+
+        var affected = await context.JobRuns
+            .Where(x =>
+                x.Id == runId &&
+                x.Status == JobRunStatus.Running &&
+                x.LockedBy == _workerId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.Status, finalization.Status)
+                .SetProperty(x => x.Attempt, finalization.Attempt)
+                .SetProperty(x => x.LockedBy, (string?)null)
+                .SetProperty(x => x.LockedUntilAt, (DateTime?)null)
+                .SetProperty(x => x.UpdatedAt, finalization.UpdatedAt)
+                .SetProperty(x => x.CompletedAt, finalization.CompletedAt)
+                .SetProperty(x => x.AvailableAt, finalization.AvailableAt)
+                .SetProperty(x => x.LastError, finalization.LastError), cancellationToken);
+
+        return affected == 1;
+    }
+
+    private static JobRunFinalization BuildFinalization(
+        JobExecutionResult result,
+        JobRun run,
+        int nextAttempt,
+        DateTime now)
+    {
+        if (result.IsSuccess)
+        {
+            return new JobRunFinalization(
+                JobRunStatus.Succeeded,
+                nextAttempt,
+                run.AvailableAt,
+                now,
+                null,
+                now);
         }
 
-        await context.SaveChangesAsync(cancellationToken);
+        var lastError = TrimError(result.Error);
+        if (nextAttempt >= run.MaxAttempts)
+        {
+            return new JobRunFinalization(
+                JobRunStatus.Failed,
+                nextAttempt,
+                run.AvailableAt,
+                now,
+                lastError,
+                now);
+        }
+
+        var retryDelay = Math.Max(1, run.JobDefinition?.RetryDelayMinutes ?? 5);
+        return new JobRunFinalization(
+            JobRunStatus.RetryScheduled,
+            nextAttempt,
+            now.AddMinutes(retryDelay),
+            null,
+            lastError,
+            now);
     }
 
     private static string? TrimError(string? error)
@@ -278,4 +341,12 @@ public class BackgroundJobExecutorService(
         if (string.IsNullOrWhiteSpace(error)) return null;
         return error.Length <= 4000 ? error : error[..4000];
     }
+
+    private sealed record JobRunFinalization(
+        JobRunStatus Status,
+        int Attempt,
+        DateTime AvailableAt,
+        DateTime? CompletedAt,
+        string? LastError,
+        DateTime UpdatedAt);
 }
