@@ -10,7 +10,7 @@ public class InstrumentListingHistoryModelConfiguration : IEntityTypeConfigurati
     {
         builder.Property(x => x.Ticker).IsRequired().HasMaxLength(16);
         builder.Property(x => x.Figi).HasMaxLength(32);
-        builder.HasCurrencyCode(x => x.CurrencyId, required: true);
+        builder.Property(x => x.CurrencyId).IsRequired().HasMaxLength(3);
         builder.Property(x => x.ExchangeId)
             .HasColumnName("exchange")
             .HasMaxLength(16);

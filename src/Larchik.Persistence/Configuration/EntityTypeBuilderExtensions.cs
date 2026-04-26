@@ -5,27 +5,10 @@ namespace Larchik.Persistence.Configuration;
 
 internal static class EntityTypeBuilderExtensions
 {
-    private const int CurrencyCodeLength = 3;
     private const int MoneyPrecision = 18;
     private const int MoneyScale = 4;
     private const int QuantityPrecision = 18;
     private const int QuantityScale = 6;
-
-    public static PropertyBuilder<string> HasCurrencyCode<TEntity>(
-        this EntityTypeBuilder<TEntity> builder,
-        Expression<Func<TEntity, string>> propertyExpression,
-        bool required = false)
-        where TEntity : class
-    {
-        var property = builder.Property(propertyExpression).HasMaxLength(CurrencyCodeLength);
-        return required ? property.IsRequired() : property;
-    }
-
-    public static PropertyBuilder<string?> HasCurrencyCode<TEntity>(
-        this EntityTypeBuilder<TEntity> builder,
-        Expression<Func<TEntity, string?>> propertyExpression)
-        where TEntity : class =>
-        builder.Property(propertyExpression).HasMaxLength(CurrencyCodeLength);
 
     public static PropertyBuilder<DateTime> HasCreatedAt<TEntity>(
         this EntityTypeBuilder<TEntity> builder,

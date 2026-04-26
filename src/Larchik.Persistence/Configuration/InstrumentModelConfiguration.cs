@@ -41,7 +41,7 @@ public class InstrumentModelConfiguration : IEntityTypeConfiguration<Instrument>
             .HasForeignKey(x => x.CountryId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasCurrencyCode(x => x.CurrencyId, required: true);
+        builder.Property(x => x.CurrencyId).IsRequired().HasMaxLength(3);
 
         builder.HasOne(x => x.Currency)
             .WithMany()

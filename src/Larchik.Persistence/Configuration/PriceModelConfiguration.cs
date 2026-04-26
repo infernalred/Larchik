@@ -8,8 +8,8 @@ public class PriceModelConfiguration : IEntityTypeConfiguration<Price>
 {
     public void Configure(EntityTypeBuilder<Price> builder)
     {
-        builder.HasCurrencyCode(x => x.CurrencyId, required: true);
-        builder.HasCurrencyCode(x => x.SourceCurrencyId);
+        builder.Property(x => x.CurrencyId).IsRequired().HasMaxLength(3);
+        builder.Property(x => x.SourceCurrencyId).HasMaxLength(3);
         builder.Property(x => x.Provider).IsRequired().HasMaxLength(50);
         builder.HasMoneyPrecision(x => x.Value);
         builder.HasCreatedAt(x => x.CreatedAt, generatedOnAdd: true);

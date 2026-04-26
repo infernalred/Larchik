@@ -9,7 +9,7 @@ public class OperationModelConfiguration : IEntityTypeConfiguration<Operation>
     public void Configure(EntityTypeBuilder<Operation> builder)
     {
         builder.Property(x => x.BrokerOperationKey).HasMaxLength(48);
-        builder.HasCurrencyCode(x => x.CurrencyId, required: true);
+        builder.Property(x => x.CurrencyId).IsRequired().HasMaxLength(3);
         builder.HasQuantityPrecision(x => x.Price);
         builder.HasQuantityPrecision(x => x.Quantity);
         builder.HasMoneyPrecision(x => x.Fee);
