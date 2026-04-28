@@ -369,3 +369,4 @@ yarn-error.log*
 docker-compose_prod.yml
 .env
 AGENTS.md
+.cursorignore
