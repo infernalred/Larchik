@@ -14,6 +14,15 @@
 - Historical prices are canonical in `prices`. The old `instruments.price` column is removed from the active model and must not be referenced by scripts or application code.
 - Legacy persisted `lots` and `cash_balances` are no longer part of the active EF model. Cost basis and cash are derived from operations, valuation strategies, and snapshots.
 
+## Portfolio Valuation Contract
+- Supported valuation methods are `adjustingAvg`, `staticAvg`, `fifo`, and `lifo`.
+- Security transfers (`TransferIn`/`TransferOut` with non-null `InstrumentId`) are quantity-only portfolio movements. They must not create realized P&L by themselves.
+- The current business contract treats transferred quantity as zero-cost quantity in the receiving/remaining position unless an explicit cost transfer field is introduced in the operation model.
+- For `fifo`/`lifo`, `TransferOut` must consume lots in the same ordering as a sell would consume them (FIFO oldest first, LIFO newest first). Cost basis is not realized on transfer-out and stays inside the remaining position, so the removed quantity cost is redistributed to remaining lots of the same instrument.
+- Redistribution rule is mandatory for both partial-lot and full-lot transfer-out. If consumed lots are fully removed (no surviving fragment), retained cost must still stay in position by reallocating it across the remaining lots. If transfer-out closes the whole position, remaining quantity and cost are both zero.
+- Cash transfers (`TransferIn`/`TransferOut` with null `InstrumentId`) are external flows and must affect net inflow/outflow metrics and money-weighted return input cashflows.
+- API consumers must use these rules consistently for both imported broker events and manual input so that average cost, unrealized P&L, and return series stay comparable across all valuation methods.
+
 ## Sync And Import Rules
 - `price_source` is nullable and only meaningful for tradable instruments. `MOEX` sync must process only instruments assigned to `MOEX`; `TBANK` sync must process only instruments assigned to `TBANK`.
 - Russian instruments may use either `MOEX` or `TBANK` when explicitly assigned; sync eligibility is driven by `price_source`, not by country.

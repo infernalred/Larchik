@@ -306,4 +306,219 @@ public sealed class ValuationHelpersTests
         Assert.Equal(-270m, lifo.Positions[instrumentId].RollingCost);
         Assert.Equal(45m, lifo.Positions[instrumentId].AverageCost);
     }
+
+    [Theory]
+    [InlineData("adjustingAvg")]
+    [InlineData("staticAvg")]
+    [InlineData("fifo")]
+    [InlineData("lifo")]
+    public void ValuationService_TreatsSecurityTransferIn_AsZeroCostQuantity_WithoutRealizedPnl(string method)
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                10m,
+                100m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.TransferIn,
+                10m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc))
+        ];
+
+        var result = new ValuationService().Evaluate(operations, method, assumeSorted: true);
+
+        Assert.Equal(20m, result.Positions[instrumentId].Quantity);
+        Assert.Equal(-1000m, result.Positions[instrumentId].RollingCost);
+        Assert.Equal(50m, result.Positions[instrumentId].AverageCost);
+        Assert.False(result.RealizedByInstrument.ContainsKey(instrumentId));
+    }
+
+    [Theory]
+    [InlineData("adjustingAvg")]
+    [InlineData("staticAvg")]
+    [InlineData("fifo")]
+    [InlineData("lifo")]
+    public void ValuationService_TreatsSecurityTransferOut_AsQuantityReduction_WithoutRealizedPnl(string method)
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                10m,
+                100m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.TransferOut,
+                5m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc))
+        ];
+
+        var result = new ValuationService().Evaluate(operations, method, assumeSorted: true);
+
+        Assert.Equal(5m, result.Positions[instrumentId].Quantity);
+        Assert.Equal(-1000m, result.Positions[instrumentId].RollingCost);
+        Assert.Equal(200m, result.Positions[instrumentId].AverageCost);
+        Assert.False(result.RealizedByInstrument.ContainsKey(instrumentId));
+    }
+
+    [Fact]
+    public void ValuationService_Fifo_TransferOut_MultiLot_DefinesLaterSellPnl()
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                10m,
+                100m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.Buy,
+                10m,
+                120m,
+                0m,
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.TransferOut,
+                5m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 22, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 22, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.Sell,
+                5m,
+                130m,
+                0m,
+                new DateTime(2026, 4, 23, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 23, 0, 0, 0, DateTimeKind.Utc))
+        ];
+
+        var result = new ValuationService().Evaluate(operations, "fifo", assumeSorted: true);
+
+        Assert.Equal(10m, result.Positions[instrumentId].Quantity);
+        Assert.Equal(-1200m, result.Positions[instrumentId].RollingCost);
+        Assert.Equal(-350m, result.RealizedByInstrument[instrumentId]);
+    }
+
+    [Fact]
+    public void ValuationService_Lifo_TransferOut_MultiLot_DefinesLaterSellPnl()
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                10m,
+                100m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.Buy,
+                10m,
+                120m,
+                0m,
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.TransferOut,
+                5m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 22, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 22, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.Sell,
+                5m,
+                130m,
+                0m,
+                new DateTime(2026, 4, 23, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 23, 0, 0, 0, DateTimeKind.Utc))
+        ];
+
+        var result = new ValuationService().Evaluate(operations, "lifo", assumeSorted: true);
+
+        Assert.Equal(10m, result.Positions[instrumentId].Quantity);
+        Assert.Equal(-1000m, result.Positions[instrumentId].RollingCost);
+        Assert.Equal(-550m, result.RealizedByInstrument[instrumentId]);
+    }
+
+    [Theory]
+    [InlineData("fifo")]
+    [InlineData("lifo")]
+    public void ValuationService_TransferOut_FullLot_KeepsCostInRemainingLots_ForLaterSell(string method)
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                10m,
+                100m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.Buy,
+                10m,
+                120m,
+                0m,
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.TransferOut,
+                10m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 22, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 22, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.Sell,
+                5m,
+                130m,
+                0m,
+                new DateTime(2026, 4, 23, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 23, 0, 0, 0, DateTimeKind.Utc))
+        ];
+
+        var result = new ValuationService().Evaluate(operations, method, assumeSorted: true);
+
+        Assert.Equal(5m, result.Positions[instrumentId].Quantity);
+        Assert.Equal(-1100m, result.Positions[instrumentId].RollingCost);
+        Assert.Equal(-450m, result.RealizedByInstrument[instrumentId]);
+    }
 }

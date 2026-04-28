@@ -73,6 +73,11 @@ public class PortfoliosController : BaseApiController
         return HandleResult(await Mediator.Send(new RecalculatePortfolioCommand(id), HttpContext.RequestAborted));
     }
 
+    /// <summary>
+    /// Returns portfolio summary with selected valuation method: adjustingAvg (default), staticAvg, fifo, lifo.
+    /// Security transfers (TransferIn/TransferOut with instrumentId) are quantity-only and do not create realized P&amp;L directly.
+    /// TransferIn adds zero-cost quantity. TransferOut reduces quantity without reducing total remaining position cost.
+    /// </summary>
     [HttpGet("{id:guid}/summary")]
     [ProducesResponseType(typeof(PortfolioSummaryDto), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -81,6 +86,11 @@ public class PortfoliosController : BaseApiController
         return HandleResult(await Mediator.Send(new GetPortfolioSummaryQuery(id, method), HttpContext.RequestAborted));
     }
 
+    /// <summary>
+    /// Returns aggregate summary across all portfolios with selected valuation method: adjustingAvg (default), staticAvg, fifo, lifo.
+    /// Security transfers (TransferIn/TransferOut with instrumentId) are quantity-only and do not create realized P&amp;L directly.
+    /// TransferIn adds zero-cost quantity. TransferOut reduces quantity without reducing total remaining position cost.
+    /// </summary>
     [HttpGet("summary")]
     [ProducesResponseType(typeof(PortfoliosSummaryDto), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -91,6 +101,11 @@ public class PortfoliosController : BaseApiController
         return HandleResult(await Mediator.Send(new GetPortfoliosSummaryQuery(method, currency), HttpContext.RequestAborted));
     }
 
+    /// <summary>
+    /// Returns a single combined snapshot across all portfolios with selected valuation method: adjustingAvg (default), staticAvg, fifo, lifo.
+    /// Security transfers (TransferIn/TransferOut with instrumentId) are quantity-only and do not create realized P&amp;L directly.
+    /// TransferIn adds zero-cost quantity. TransferOut reduces quantity without reducing total remaining position cost.
+    /// </summary>
     [HttpGet("aggregate/summary")]
     [ProducesResponseType(typeof(PortfolioSummaryDto), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.BadRequest)]
@@ -101,6 +116,11 @@ public class PortfoliosController : BaseApiController
         return HandleResult(await Mediator.Send(new GetAggregatePortfolioSummaryQuery(method, currency), HttpContext.RequestAborted));
     }
 
+    /// <summary>
+    /// Returns monthly performance series with selected valuation method: adjustingAvg (default), staticAvg, fifo, lifo.
+    /// Security transfers (TransferIn/TransferOut with instrumentId) are quantity-only and do not create realized P&amp;L directly.
+    /// TransferIn adds zero-cost quantity. TransferOut reduces quantity without reducing total remaining position cost.
+    /// </summary>
     [HttpGet("{id:guid}/performance")]
     [ProducesResponseType(typeof(IEnumerable<PortfolioPerformanceDto>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -115,6 +135,11 @@ public class PortfoliosController : BaseApiController
             HttpContext.RequestAborted));
     }
 
+    /// <summary>
+    /// Returns combined monthly performance series with selected valuation method: adjustingAvg (default), staticAvg, fifo, lifo.
+    /// Security transfers (TransferIn/TransferOut with instrumentId) are quantity-only and do not create realized P&amp;L directly.
+    /// TransferIn adds zero-cost quantity. TransferOut reduces quantity without reducing total remaining position cost.
+    /// </summary>
     [HttpGet("aggregate/performance")]
     [ProducesResponseType(typeof(IEnumerable<PortfolioPerformanceDto>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.BadRequest)]
