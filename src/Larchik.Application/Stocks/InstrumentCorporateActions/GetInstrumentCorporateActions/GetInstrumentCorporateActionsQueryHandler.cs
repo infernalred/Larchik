@@ -1,6 +1,7 @@
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
+using Larchik.Persistence.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +25,7 @@ public class GetInstrumentCorporateActionsQueryHandler(LarchikContext context)
         var items = await context.InstrumentCorporateActions
             .Where(x =>
                 x.InstrumentId == request.InstrumentId &&
-                InstrumentCorporateActionRules.IsSupportedType(x.Type))
+                (x.Type == OperationType.Split || x.Type == OperationType.ReverseSplit))
             .OrderByDescending(x => x.EffectiveDate)
             .ThenByDescending(x => x.Type)
             .Select(x => new InstrumentCorporateActionDto
