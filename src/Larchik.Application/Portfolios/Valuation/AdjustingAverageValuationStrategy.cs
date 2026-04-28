@@ -32,6 +32,7 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
                     break;
                 case OperationType.Sell:
                 case OperationType.BondMaturity:
+                    EnsureAvailableQuantity(position.Quantity, op.Quantity, op.Type, instrumentId);
                     qtyChange = -op.Quantity;
                     var avgBefore = position.Quantity != 0 ? -position.RollingCost / position.Quantity : 0;
                     realized = op.Quantity * op.Price - op.Fee - avgBefore * op.Quantity;
@@ -41,6 +42,7 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
                     qtyChange = op.Quantity;
                     break;
                 case OperationType.TransferOut:
+                    EnsureAvailableQuantity(position.Quantity, op.Quantity, op.Type, instrumentId);
                     qtyChange = -op.Quantity;
                     break;
                 case OperationType.Split:
@@ -68,19 +70,20 @@ public class AdjustingAverageValuationStrategy : IValuationStrategy
                 position.RollingCost = 0;
             }
 
-            if (realized != 0)
-            {
-                if (result.RealizedByInstrument.TryGetValue(instrumentId, out var existing))
-                {
-                    result.RealizedByInstrument[instrumentId] = existing + realized;
-                }
-                else
-                {
-                    result.RealizedByInstrument[instrumentId] = realized;
-                }
-            }
+            RealizedPnlAccumulator.Add(result, instrumentId, realized);
         }
 
         return result;
+    }
+
+    private static void EnsureAvailableQuantity(decimal available, decimal requested, OperationType operationType, Guid instrumentId)
+    {
+        if (requested <= available)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Operation '{operationType}' for instrument '{instrumentId}' exceeds available quantity: requested {requested}, available {available}.");
     }
 }

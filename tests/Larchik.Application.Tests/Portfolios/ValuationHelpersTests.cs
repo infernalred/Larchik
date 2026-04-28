@@ -7,6 +7,8 @@ namespace Larchik.Application.Tests.Portfolios;
 
 public sealed class ValuationHelpersTests
 {
+    private static readonly string[] AllValuationMethods = ["adjustingAvg", "staticAvg", "fifo", "lifo"];
+
     [Fact]
     public void HistoricalDataLookup_PrefersHigherPriorityPriceProvider_OnSameDate()
     {
@@ -521,4 +523,225 @@ public sealed class ValuationHelpersTests
         Assert.Equal(-1100m, result.Positions[instrumentId].RollingCost);
         Assert.Equal(-450m, result.RealizedByInstrument[instrumentId]);
     }
+
+    [Theory]
+    [InlineData("adjustingAvg")]
+    [InlineData("staticAvg")]
+    [InlineData("fifo")]
+    [InlineData("lifo")]
+    public void ValuationService_Throws_WhenDispositionExceedsAvailableQuantity(string method)
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                5m,
+                100m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.Sell,
+                6m,
+                110m,
+                0m,
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc))
+        ];
+
+        Assert.Throws<InvalidOperationException>(() => new ValuationService().Evaluate(operations, method, assumeSorted: true));
+    }
+
+    [Theory]
+    [InlineData("adjustingAvg")]
+    [InlineData("staticAvg")]
+    [InlineData("fifo")]
+    [InlineData("lifo")]
+    public void ValuationService_Throws_WhenTransferOutExceedsAvailableQuantity(string method)
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                5m,
+                100m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.TransferOut,
+                6m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc))
+        ];
+
+        Assert.Throws<InvalidOperationException>(() => new ValuationService().Evaluate(operations, method, assumeSorted: true));
+    }
+
+    [Theory]
+    [InlineData("fifo")]
+    [InlineData("lifo")]
+    public void ValuationService_Throws_WhenTransferOutFromEmptyPosition_ForLotMethods(string method)
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.TransferOut,
+                1m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc))
+        ];
+
+        Assert.Throws<InvalidOperationException>(() => new ValuationService().Evaluate(operations, method, assumeSorted: true));
+    }
+
+    [Fact]
+    public void ValuationService_StaticAvg_ClearsCostAfterFullTransferOut()
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                10m,
+                100m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.TransferOut,
+                10m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.TransferIn,
+                5m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 22, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 22, 0, 0, 0, DateTimeKind.Utc))
+        ];
+
+        var result = new ValuationService().Evaluate(operations, "staticAvg", assumeSorted: true);
+
+        Assert.Equal(5m, result.Positions[instrumentId].Quantity);
+        Assert.Equal(0m, result.Positions[instrumentId].RollingCost);
+        Assert.Equal(0m, result.Positions[instrumentId].AverageCost);
+    }
+
+    public static IEnumerable<object[]> ValuationInvariantCases()
+    {
+        var instrumentId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var d1 = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
+        var d2 = d1.AddDays(1);
+        var d3 = d1.AddDays(2);
+        var d4 = d1.AddDays(3);
+        var d5 = d1.AddDays(4);
+
+        var scenarios = new (string Name, bool ExpectNoRealized, ValuationOperation[] Ops)[]
+        {
+            (
+                "buy_split_reverseSplit_transfer_mix",
+                true,
+                [
+                    Op(instrumentId, OperationType.Buy, 10m, 100m, 1m, d1),
+                    Op(instrumentId, OperationType.Split, 2m, 0m, 0m, d2),
+                    Op(instrumentId, OperationType.ReverseSplit, 0.5m, 0m, 0m, d3),
+                    Op(instrumentId, OperationType.TransferOut, 3m, 0m, 0m, d4),
+                    Op(instrumentId, OperationType.TransferIn, 2m, 0m, 0m, d5)
+                ]
+            ),
+            (
+                "bond_partial_redemption_then_transfer",
+                true,
+                [
+                    Op(instrumentId, OperationType.Buy, 8m, 100m, 0m, d1),
+                    Op(instrumentId, OperationType.BondPartialRedemption, 8m, 5m, 1m, d2),
+                    Op(instrumentId, OperationType.TransferOut, 2m, 0m, 0m, d3),
+                    Op(instrumentId, OperationType.TransferIn, 1m, 0m, 0m, d4)
+                ]
+            ),
+            (
+                "sell_and_transfer_sequence",
+                false,
+                [
+                    Op(instrumentId, OperationType.Buy, 10m, 90m, 0m, d1),
+                    Op(instrumentId, OperationType.Buy, 5m, 120m, 0m, d2),
+                    Op(instrumentId, OperationType.Sell, 4m, 130m, 2m, d3),
+                    Op(instrumentId, OperationType.TransferOut, 3m, 0m, 0m, d4),
+                    Op(instrumentId, OperationType.TransferIn, 2m, 0m, 0m, d5)
+                ]
+            )
+        };
+
+        foreach (var (name, expectNoRealized, ops) in scenarios)
+        {
+            foreach (var method in AllValuationMethods)
+            {
+                yield return [name, method, expectNoRealized, ops];
+            }
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ValuationInvariantCases))]
+    public void ValuationService_PreservesCoreInvariants_InTableDrivenScenarios(
+        string scenarioName,
+        string method,
+        bool expectNoRealized,
+        ValuationOperation[] operations)
+    {
+        var result = new ValuationService().Evaluate(operations, method, assumeSorted: true);
+
+        foreach (var position in result.Positions.Values)
+        {
+            Assert.True(position.Quantity >= 0, $"{scenarioName}:{method} produced negative quantity.");
+            if (position.Quantity == 0)
+            {
+                Assert.Equal(0m, position.RollingCost);
+                Assert.Equal(0m, position.AverageCost);
+                continue;
+            }
+
+            Assert.Equal(position.RollingCost / position.Quantity, -position.AverageCost);
+        }
+
+        if (expectNoRealized)
+        {
+            Assert.Empty(result.RealizedByInstrument);
+        }
+    }
+
+    private static ValuationOperation Op(
+        Guid instrumentId,
+        OperationType type,
+        decimal quantity,
+        decimal price,
+        decimal fee,
+        DateTime date) =>
+        new(
+            instrumentId,
+            type,
+            quantity,
+            price,
+            fee,
+            date,
+            date);
 }

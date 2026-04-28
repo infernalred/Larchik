@@ -30,6 +30,7 @@ public class StaticAverageValuationStrategy : IValuationStrategy
                     break;
                 case OperationType.Sell:
                 case OperationType.BondMaturity:
+                    EnsureAvailableQuantity(position.Quantity, op.Quantity, op.Type, instrumentId);
                     var avg = position.Quantity != 0 ? -position.RollingCost / position.Quantity : 0;
                     realized = op.Quantity * op.Price - op.Fee - avg * op.Quantity;
                     position.Quantity -= op.Quantity;
@@ -39,6 +40,7 @@ public class StaticAverageValuationStrategy : IValuationStrategy
                     position.Quantity += op.Quantity;
                     break;
                 case OperationType.TransferOut:
+                    EnsureAvailableQuantity(position.Quantity, op.Quantity, op.Type, instrumentId);
                     position.Quantity -= op.Quantity;
                     break;
                 case OperationType.Split:
@@ -55,19 +57,25 @@ public class StaticAverageValuationStrategy : IValuationStrategy
                     continue;
             }
 
-            if (realized != 0)
+            if (position.Quantity == 0)
             {
-                if (result.RealizedByInstrument.TryGetValue(instrumentId, out var existing))
-                {
-                    result.RealizedByInstrument[instrumentId] = existing + realized;
-                }
-                else
-                {
-                    result.RealizedByInstrument[instrumentId] = realized;
-                }
+                position.RollingCost = 0;
             }
+
+            RealizedPnlAccumulator.Add(result, instrumentId, realized);
         }
 
         return result;
+    }
+
+    private static void EnsureAvailableQuantity(decimal available, decimal requested, OperationType operationType, Guid instrumentId)
+    {
+        if (requested <= available)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Operation '{operationType}' for instrument '{instrumentId}' exceeds available quantity: requested {requested}, available {available}.");
     }
 }

@@ -11,6 +11,9 @@ public record PortfolioPerformanceDto
     public decimal EndNavBase { get; init; }
     public decimal NetInflowBase { get; init; }
     public decimal PnlBase { get; init; }
+    /// <summary>
+    /// Simple monthly return ratio: <c>PnlBase / StartNavBase</c>. This is not a time-weighted return chain.
+    /// </summary>
     public decimal ReturnPct { get; init; }
     public decimal RealizedBase { get; init; }
     public decimal UnrealizedBase { get; init; }

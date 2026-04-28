@@ -36,11 +36,11 @@ public abstract class LotValuationStrategyBase : IValuationStrategy
                     break;
 
                 case OperationType.TransferIn:
-                    position.Quantity += operation.Quantity;
+                    ApplyTransferIn(position, lots, operation);
                     break;
 
                 case OperationType.TransferOut:
-                    position.Quantity -= operation.Quantity;
+                    ApplyTransferOut(position, lots, operation);
                     break;
 
                 case OperationType.Split:
@@ -110,6 +110,75 @@ public abstract class LotValuationStrategyBase : IValuationStrategy
         position.RollingCost -= totalCost;
     }
 
+    private static void ApplyTransferIn(PositionCost position, ICollection<Lot> lots, ValuationOperation operation)
+    {
+        if (operation.Quantity <= 0)
+        {
+            return;
+        }
+
+        lots.Add(new Lot
+        {
+            Quantity = operation.Quantity,
+            CostPerUnit = 0m
+        });
+        position.Quantity += operation.Quantity;
+    }
+
+    private void ApplyTransferOut(PositionCost position, IList<Lot> lots, ValuationOperation operation)
+    {
+        if (operation.Quantity <= 0)
+        {
+            return;
+        }
+
+        EnsureAvailableQuantity(position.Quantity, operation.Quantity, operation.Type, position.InstrumentId);
+        if (lots.Count == 0)
+        {
+            return;
+        }
+
+        var quantityToTransfer = operation.Quantity;
+        var totalCostBefore = lots.Sum(x => x.Quantity * x.CostPerUnit);
+        var recipientLots = new HashSet<Lot>();
+
+        while (quantityToTransfer > 0 && lots.Count > 0)
+        {
+            var lotIndex = GetConsumptionIndex(lots.Count);
+            var lot = lots[lotIndex];
+            var take = Math.Min(quantityToTransfer, lot.Quantity);
+
+            lot.Quantity -= take;
+            quantityToTransfer -= take;
+
+            if (lot.Quantity == 0)
+            {
+                lots.RemoveAt(lotIndex);
+                continue;
+            }
+
+            recipientLots.Add(lot);
+        }
+
+        if (lots.Count == 0)
+        {
+            position.Quantity = 0m;
+            position.RollingCost = 0m;
+            return;
+        }
+
+        var retainedCost = totalCostBefore;
+        var recipients = recipientLots.Count != 0 ? recipientLots.ToList() : lots.ToList();
+        var recipientSet = recipients.ToHashSet();
+        var nonRecipientCost = lots
+            .Where(x => !recipientSet.Contains(x))
+            .Sum(x => x.Quantity * x.CostPerUnit);
+        var recipientTargetCost = retainedCost - nonRecipientCost;
+        RedistributeCost(recipientTargetCost, recipients);
+        position.Quantity = lots.Sum(x => x.Quantity);
+        position.RollingCost = -retainedCost;
+    }
+
     private void ApplyBondPartialRedemption(PositionCost position, IReadOnlyList<Lot> lots, ValuationOperation operation)
     {
         var remaining = operation.Quantity;
@@ -136,6 +205,8 @@ public abstract class LotValuationStrategyBase : IValuationStrategy
         IList<Lot> lots,
         ValuationOperation operation)
     {
+        EnsureAvailableQuantity(position.Quantity, operation.Quantity, operation.Type, position.InstrumentId);
+
         var remaining = operation.Quantity;
         var costOut = 0m;
 
@@ -157,7 +228,8 @@ public abstract class LotValuationStrategyBase : IValuationStrategy
 
         if (remaining > 0)
         {
-            costOut += remaining * (lots.Count > 0 ? lots[GetConsumptionIndex(lots.Count)].CostPerUnit : 0);
+            throw new InvalidOperationException(
+                $"Operation '{operation.Type}' for instrument '{position.InstrumentId}' exceeds available quantity.");
         }
 
         var proceeds = operation.Quantity * operation.Price - operation.Fee;
@@ -165,7 +237,7 @@ public abstract class LotValuationStrategyBase : IValuationStrategy
 
         position.Quantity -= operation.Quantity;
         position.RollingCost += costOut;
-        AddRealized(result, operation.InstrumentId, realized);
+        RealizedPnlAccumulator.Add(result, operation.InstrumentId, realized);
     }
 
     private static void ApplySplit(PositionCost position, IReadOnlyList<Lot> lots, ValuationOperation operation)
@@ -202,14 +274,40 @@ public abstract class LotValuationStrategyBase : IValuationStrategy
         }
     }
 
-    private static void AddRealized(ValuationResult result, Guid instrumentId, decimal realized)
+    private static void RedistributeCost(decimal targetCost, IReadOnlyList<Lot> lots)
     {
-        if (result.RealizedByInstrument.TryGetValue(instrumentId, out var existing))
+        if (lots.Count == 0)
         {
-            result.RealizedByInstrument[instrumentId] = existing + realized;
             return;
         }
 
-        result.RealizedByInstrument[instrumentId] = realized;
+        var totalQuantity = lots.Sum(x => x.Quantity);
+        if (totalQuantity <= 0)
+        {
+            return;
+        }
+
+        var assignedCost = 0m;
+        for (var i = 0; i < lots.Count; i++)
+        {
+            var lot = lots[i];
+            var allocatedCost = i == lots.Count - 1
+                ? targetCost - assignedCost
+                : targetCost * (lot.Quantity / totalQuantity);
+
+            lot.CostPerUnit = allocatedCost / lot.Quantity;
+            assignedCost += allocatedCost;
+        }
+    }
+
+    private static void EnsureAvailableQuantity(decimal available, decimal requested, OperationType operationType, Guid instrumentId)
+    {
+        if (requested <= available)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Operation '{operationType}' for instrument '{instrumentId}' exceeds available quantity: requested {requested}, available {available}.");
     }
 }
