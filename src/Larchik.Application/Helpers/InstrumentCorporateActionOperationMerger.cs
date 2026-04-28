@@ -7,9 +7,6 @@ namespace Larchik.Application.Helpers;
 
 public static class InstrumentCorporateActionOperationMerger
 {
-    // Corporate actions are merged as synthetic end-of-day operations, after user/imported operations on the same date.
-    private static readonly DateTime CorporateActionCreatedAt = new(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
-
     public static async Task<IReadOnlyList<InstrumentCorporateAction>> LoadAsync(
         LarchikContext context,
         IEnumerable<Guid> instrumentIds,
@@ -101,6 +98,10 @@ public static class InstrumentCorporateActionOperationMerger
             {
                 var instrument = instruments[action.InstrumentId];
                 var effectiveDateUtc = DateTime.SpecifyKind(action.EffectiveDate.Date, DateTimeKind.Utc);
+                var createdAt = action.Type == OperationType.ReverseSplit &&
+                                CorporateActionOperationMetadata.IsLegacyContinuityNote(action.Note)
+                    ? CorporateActionOperationMetadata.LegacySyntheticCreatedAt
+                    : CorporateActionOperationMetadata.SyntheticCreatedAt;
 
                 return new Operation
                 {
@@ -115,8 +116,8 @@ public static class InstrumentCorporateActionOperationMerger
                     TradeDate = effectiveDateUtc,
                     SettlementDate = effectiveDateUtc,
                     Note = action.Note,
-                    CreatedAt = CorporateActionCreatedAt,
-                    UpdatedAt = CorporateActionCreatedAt
+                    CreatedAt = createdAt,
+                    UpdatedAt = createdAt
                 };
             });
 

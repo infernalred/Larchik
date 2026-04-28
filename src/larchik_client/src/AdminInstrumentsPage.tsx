@@ -42,6 +42,8 @@ interface ToastState {
   message: string;
 }
 
+const CORPORATE_ACTION_SUPPORTED_TYPES = new Set(['Equity', 'Etf']);
+
 export function AdminInstrumentsPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -309,6 +311,13 @@ export function AdminInstrumentsPage() {
     }
   };
 
+  const canManageCorporateActions = (instrument: Instrument) => CORPORATE_ACTION_SUPPORTED_TYPES.has(instrument.type);
+
+  const getCorporateActionsTooltip = (instrument: Instrument) =>
+    canManageCorporateActions(instrument)
+      ? 'Управление сплитами'
+      : 'Корпоративные действия доступны только для акций и ETF.';
+
   return (
     <>
       <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, backgroundImage: 'none' }}>
@@ -409,9 +418,18 @@ export function AdminInstrumentsPage() {
                         <Typography variant="body2">{item.name}</Typography>
                       </Stack>
                       <Stack direction="row" spacing={1}>
-                        <Button variant="outlined" size="small" onClick={() => void openCorporateActions(item)}>
-                          Сплиты
-                        </Button>
+                        <Tooltip title={getCorporateActionsTooltip(item)}>
+                          <span>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => void openCorporateActions(item)}
+                              disabled={!canManageCorporateActions(item)}
+                            >
+                              Сплиты
+                            </Button>
+                          </span>
+                        </Tooltip>
                         <Tooltip title="Редактировать">
                           <IconButton size="small" onClick={() => void handleEdit(item.id)}>
                             <EditIcon fontSize="small" />
@@ -482,9 +500,18 @@ export function AdminInstrumentsPage() {
                       </TableCell>
                       <TableCell align="right">
                         <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                          <Button variant="outlined" size="small" onClick={() => void openCorporateActions(item)}>
-                            Сплиты
-                          </Button>
+                          <Tooltip title={getCorporateActionsTooltip(item)}>
+                            <span>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => void openCorporateActions(item)}
+                                disabled={!canManageCorporateActions(item)}
+                              >
+                                Сплиты
+                              </Button>
+                            </span>
+                          </Tooltip>
                           <Tooltip title="Редактировать">
                             <IconButton size="small" onClick={() => void handleEdit(item.id)}>
                               <EditIcon fontSize="small" />

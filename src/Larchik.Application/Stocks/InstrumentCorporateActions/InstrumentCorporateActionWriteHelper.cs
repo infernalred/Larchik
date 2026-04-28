@@ -3,26 +3,32 @@ using Larchik.Application.Models;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Larchik.Application.Stocks.InstrumentCorporateActions;
 
 public static class InstrumentCorporateActionWriteHelper
 {
-    public static string? Validate(InstrumentCorporateActionModel model)
+    private const string CorporateActionUniqueConstraintName = "ix_instrument_corporate_actions_instrument_id_type_effective_d";
+    private const string DuplicateMessage = "A corporate action with the same type and effective date already exists.";
+
+    public static string? Validate(InstrumentCorporateActionModel model, InstrumentType instrumentType)
     {
         if (!InstrumentCorporateActionRules.IsSupportedType(model.Type))
         {
             return "Only split and reverse split are supported as instrument corporate actions.";
         }
 
-        if (model.Factor <= 0)
+        if (!InstrumentCorporateActionRules.IsSupportedInstrumentType(instrumentType))
         {
-            return "Split factor must be greater than 0.";
+            return "Corporate actions are supported only for Equity and Etf instruments.";
         }
 
-        if (model.Factor == 1m)
+        if (!InstrumentCorporateActionRules.IsValidFactor(model.Type, model.Factor))
         {
-            return "Split factor must be different from 1.";
+            return model.Type == OperationType.Split
+                ? "Split factor must be greater than 1."
+                : "Reverse split factor must be greater than 0 and less than 1.";
         }
 
         if (model.EffectiveDate.Offset != TimeSpan.Zero)
@@ -65,6 +71,34 @@ public static class InstrumentCorporateActionWriteHelper
                     x.EffectiveDate == input.EffectiveDate,
                 cancellationToken);
     }
+
+    public static bool IsDuplicateConflict(DbUpdateException exception)
+    {
+        if (exception.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: not null
+            } pg &&
+            (string.Equals(pg.ConstraintName, CorporateActionUniqueConstraintName, StringComparison.OrdinalIgnoreCase) ||
+             pg.ConstraintName.StartsWith("ix_instrument_corporate_actions_instrument_id_type_effective", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        var innerMessage = exception.InnerException?.Message;
+        if (string.IsNullOrWhiteSpace(innerMessage))
+        {
+            return false;
+        }
+
+        var normalized = innerMessage.ToLowerInvariant();
+        return normalized.Contains("unique constraint failed", StringComparison.Ordinal) &&
+               normalized.Contains("instrument", StringComparison.Ordinal) &&
+               normalized.Contains("type", StringComparison.Ordinal) &&
+               normalized.Contains("effective", StringComparison.Ordinal);
+    }
+
+    public static string DuplicateErrorMessage => DuplicateMessage;
 
     public static async Task ScheduleAffectedPortfoliosRebuildAsync(
         LarchikContext context,

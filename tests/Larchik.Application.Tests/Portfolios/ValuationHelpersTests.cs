@@ -1,4 +1,5 @@
 using Larchik.Application.Operations.ImportBroker;
+using Larchik.Application.Helpers;
 using Larchik.Application.Portfolios.Valuation;
 using Larchik.Persistence.Entities;
 using Xunit;
@@ -307,6 +308,80 @@ public sealed class ValuationHelpersTests
         Assert.Equal(6m, lifo.Positions[instrumentId].Quantity);
         Assert.Equal(-270m, lifo.Positions[instrumentId].RollingCost);
         Assert.Equal(45m, lifo.Positions[instrumentId].AverageCost);
+    }
+
+    [Theory]
+    [InlineData("adjustingAvg")]
+    [InlineData("staticAvg")]
+    [InlineData("fifo")]
+    [InlineData("lifo")]
+    public void ValuationService_ReverseSplitPreservesFractionalQuantity_WithoutRounding(string method)
+    {
+        var instrumentId = Guid.NewGuid();
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                1m,
+                100m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.ReverseSplit,
+                0.5m,
+                0m,
+                0m,
+                new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc),
+                CorporateActionOperationMetadata.SyntheticCreatedAt)
+        ];
+
+        var result = new ValuationService().Evaluate(operations, method, assumeSorted: true);
+        var position = result.Positions[instrumentId];
+
+        Assert.Equal(0.5m, position.Quantity);
+        Assert.Equal(-100m, position.RollingCost);
+        Assert.Equal(200m, position.AverageCost);
+        Assert.Empty(result.RealizedByInstrument);
+    }
+
+    [Theory]
+    [InlineData("adjustingAvg")]
+    [InlineData("staticAvg")]
+    [InlineData("fifo")]
+    [InlineData("lifo")]
+    public void ValuationService_LegacyReverseSplitOperation_RoundsForBrokerCompatibility(string method)
+    {
+        var instrumentId = Guid.NewGuid();
+        var legacyCreatedAt = new DateTime(2026, 4, 21, 0, 0, 0, DateTimeKind.Utc);
+        ValuationOperation[] operations =
+        [
+            new(
+                instrumentId,
+                OperationType.Buy,
+                1m,
+                100m,
+                0m,
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc)),
+            new(
+                instrumentId,
+                OperationType.ReverseSplit,
+                0.5m,
+                0m,
+                0m,
+                legacyCreatedAt,
+                legacyCreatedAt)
+        ];
+
+        var result = new ValuationService().Evaluate(operations, method, assumeSorted: true);
+        var position = result.Positions[instrumentId];
+
+        Assert.Equal(1m, position.Quantity);
+        Assert.Equal(-100m, position.RollingCost);
+        Assert.Equal(100m, position.AverageCost);
     }
 
     [Theory]

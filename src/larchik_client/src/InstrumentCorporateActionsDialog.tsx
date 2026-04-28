@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Alert,
   Button,
   Dialog,
   DialogActions,
@@ -22,6 +23,7 @@ const ACTION_TYPES: { value: CorporateActionType; label: string }[] = [
 ];
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
+const CORPORATE_ACTION_SUPPORTED_TYPES = new Set(['Equity', 'Etf']);
 
 function createInitialForm(action?: InstrumentCorporateAction | null): InstrumentCorporateActionModel {
   return {
@@ -30,6 +32,46 @@ function createInitialForm(action?: InstrumentCorporateAction | null): Instrumen
     effectiveDate: action?.effectiveDate?.slice(0, 10) ?? todayIso(),
     note: action?.note ?? '',
   };
+}
+
+function getCorporateActionValidationError(
+  form: InstrumentCorporateActionModel,
+  instrument: Instrument | null,
+): string | null {
+  if (!instrument) {
+    return 'Инструмент не выбран.';
+  }
+
+  if (!CORPORATE_ACTION_SUPPORTED_TYPES.has(instrument.type)) {
+    return 'Корпоративные действия доступны только для акций и ETF.';
+  }
+
+  if (!form.effectiveDate) {
+    return 'Укажите дату вступления в силу.';
+  }
+
+  const note = form.note.trim();
+  if (!note) {
+    return 'Комментарий обязателен.';
+  }
+
+  if (note.length > 500) {
+    return 'Комментарий должен быть не длиннее 500 символов.';
+  }
+
+  if (!Number.isFinite(form.factor)) {
+    return 'Коэффициент должен быть числом.';
+  }
+
+  if (form.type === 'Split') {
+    if (form.factor <= 1) {
+      return 'Для сплита коэффициент должен быть больше 1.';
+    }
+  } else if (form.factor <= 0 || form.factor >= 1) {
+    return 'Для обратного сплита коэффициент должен быть больше 0 и меньше 1.';
+  }
+
+  return null;
 }
 
 interface Props {
@@ -60,9 +102,13 @@ export function InstrumentCorporateActionsDialog({
   const [editing, setEditing] = useState<InstrumentCorporateAction | null>(null);
   const [form, setForm] = useState<InstrumentCorporateActionModel>(() => createInitialForm());
 
-  const isValid = useMemo(() => {
-    return form.factor > 0 && form.factor !== 1 && form.effectiveDate.length > 0 && form.note.trim().length > 0;
-  }, [form]);
+  const validationError = useMemo(() => getCorporateActionValidationError(form, instrument), [form, instrument]);
+  const isValid = !validationError;
+  const noteLength = form.note.trim().length;
+  const noteError = noteLength === 0 || noteLength > 500;
+  const factorError = form.type === 'Split'
+    ? form.factor <= 1 || !Number.isFinite(form.factor)
+    : form.factor <= 0 || form.factor >= 1 || !Number.isFinite(form.factor);
 
   const update = (key: keyof InstrumentCorporateActionModel, value: string | number | CorporateActionType) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -79,6 +125,10 @@ export function InstrumentCorporateActionsDialog({
   };
 
   const handleSubmit = async () => {
+    if (!isValid) {
+      return;
+    }
+
     const model: InstrumentCorporateActionModel = {
       type: form.type,
       factor: form.factor,
@@ -104,6 +154,7 @@ export function InstrumentCorporateActionsDialog({
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Paper variant="outlined" sx={{ p: 2, backgroundImage: 'none' }}>
             <Stack spacing={2}>
+              {validationError ? <Alert severity="warning">{validationError}</Alert> : null}
               <Typography sx={{ fontWeight: 700 }}>
                 {editing ? 'Редактировать действие' : 'Новое действие'}
               </Typography>
@@ -126,7 +177,8 @@ export function InstrumentCorporateActionsDialog({
                   type="number"
                   value={form.factor}
                   onChange={(e) => update('factor', Number(e.target.value))}
-                  helperText="2 = 1:2, 0.1 = 10:1"
+                  error={factorError}
+                  helperText={form.type === 'Split' ? 'Для сплита: коэффициент > 1 (пример: 2 = 1:2)' : 'Для обратного сплита: 0 < коэффициент < 1 (пример: 0.1 = 10:1)'}
                   fullWidth
                 />
                 <TextField
@@ -142,6 +194,8 @@ export function InstrumentCorporateActionsDialog({
                 label="Комментарий"
                 value={form.note}
                 onChange={(e) => update('note', e.target.value)}
+                error={noteError}
+                helperText={`${noteLength}/500`}
                 multiline
                 rows={2}
                 fullWidth

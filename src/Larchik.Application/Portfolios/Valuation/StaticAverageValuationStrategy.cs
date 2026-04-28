@@ -1,3 +1,4 @@
+using Larchik.Application.Helpers;
 using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Portfolios.Valuation;
@@ -48,9 +49,14 @@ public class StaticAverageValuationStrategy : IValuationStrategy
                     if (position.Quantity != 0)
                     {
                         var updated = position.Quantity * op.Quantity;
-                        position.Quantity = op.Type == OperationType.ReverseSplit
-                            ? decimal.Round(updated, 0, MidpointRounding.AwayFromZero)
-                            : updated;
+                        if (op.Type == OperationType.ReverseSplit &&
+                            !CorporateActionOperationMetadata.IsSynthetic(op.CreatedAt))
+                        {
+                            // Legacy imported reverse split operations were historically rounded by brokers.
+                            updated = decimal.Round(updated, 0, MidpointRounding.AwayFromZero);
+                        }
+
+                        position.Quantity = updated;
                     }
                     break;
                 default:

@@ -12,18 +12,18 @@ public class CreateInstrumentCorporateActionCommandHandler(LarchikContext contex
 {
     public async Task<Result<Guid>> Handle(CreateInstrumentCorporateActionCommand request, CancellationToken cancellationToken)
     {
-        var validationError = InstrumentCorporateActionWriteHelper.Validate(request.Model);
-        if (validationError is not null)
-        {
-            return Result<Guid>.Failure(validationError);
-        }
-
         var instrument = await context.Instruments
             .FirstOrDefaultAsync(x => x.Id == request.InstrumentId, cancellationToken);
 
         if (instrument is null)
         {
             return Result<Guid>.Failure("Instrument not found.");
+        }
+
+        var validationError = InstrumentCorporateActionWriteHelper.Validate(request.Model, instrument.Type);
+        if (validationError is not null)
+        {
+            return Result<Guid>.Failure(validationError);
         }
 
         var input = InstrumentCorporateActionWriteHelper.Normalize(request.Model);
@@ -37,7 +37,7 @@ public class CreateInstrumentCorporateActionCommandHandler(LarchikContext contex
 
         if (duplicateExists)
         {
-            return Result<Guid>.Failure("A corporate action with the same type and effective date already exists.");
+            return Result<Guid>.Failure(InstrumentCorporateActionWriteHelper.DuplicateErrorMessage);
         }
 
         var entity = new InstrumentCorporateAction
@@ -51,16 +51,23 @@ public class CreateInstrumentCorporateActionCommandHandler(LarchikContext contex
         };
 
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-        await context.InstrumentCorporateActions.AddAsync(entity, cancellationToken);
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.InstrumentCorporateActions.AddAsync(entity, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
 
-        await InstrumentCorporateActionWriteHelper.ScheduleAffectedPortfoliosRebuildAsync(
-            context,
-            recalc,
-            request.InstrumentId,
-            input.EffectiveDate,
-            cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+            await InstrumentCorporateActionWriteHelper.ScheduleAffectedPortfoliosRebuildAsync(
+                context,
+                recalc,
+                request.InstrumentId,
+                input.EffectiveDate,
+                cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (InstrumentCorporateActionWriteHelper.IsDuplicateConflict(ex))
+        {
+            return Result<Guid>.Failure(InstrumentCorporateActionWriteHelper.DuplicateErrorMessage);
+        }
 
         return Result<Guid>.Success(entity.Id);
     }

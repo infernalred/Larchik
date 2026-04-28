@@ -200,4 +200,57 @@ public sealed class InstrumentCorporateActionOperationMergerTests
         Assert.Single(merged);
         Assert.Equal(OperationType.Buy, merged[0].Type);
     }
+
+    [Fact]
+    public void Merge_MarksContinuityReverseSplit_AsLegacySyntheticOperation()
+    {
+        var portfolioId = Guid.NewGuid();
+        var instrumentId = Guid.NewGuid();
+        var tradeDate = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
+        Operation[] operations =
+        [
+            new()
+            {
+                Id = Guid.NewGuid(),
+                PortfolioId = portfolioId,
+                InstrumentId = instrumentId,
+                Type = OperationType.Buy,
+                Quantity = 100m,
+                Price = 10m,
+                CurrencyId = "USD",
+                TradeDate = tradeDate.AddDays(-1),
+                SettlementDate = tradeDate.AddDays(-1),
+                CreatedAt = tradeDate.AddDays(-1),
+                UpdatedAt = tradeDate.AddDays(-1)
+            }
+        ];
+        InstrumentCorporateAction[] actions =
+        [
+            new()
+            {
+                Id = Guid.NewGuid(),
+                InstrumentId = instrumentId,
+                Type = OperationType.ReverseSplit,
+                Factor = 0.5m,
+                EffectiveDate = tradeDate,
+                Note = "System continuity: migrated legacy reverse split"
+            }
+        ];
+        var instruments = new Dictionary<Guid, Instrument>
+        {
+            [instrumentId] = new()
+            {
+                Id = instrumentId,
+                Ticker = "AAPL",
+                Name = "Apple",
+                Type = InstrumentType.Equity,
+                CurrencyId = "USD"
+            }
+        };
+
+        var merged = InstrumentCorporateActionOperationMerger.Merge(operations, actions, instruments);
+
+        var reverseSplit = Assert.Single(merged, x => x.Type == OperationType.ReverseSplit);
+        Assert.Equal(CorporateActionOperationMetadata.LegacySyntheticCreatedAt, reverseSplit.CreatedAt);
+    }
 }

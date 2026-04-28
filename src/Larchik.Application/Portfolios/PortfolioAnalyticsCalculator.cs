@@ -1,5 +1,6 @@
 using Larchik.Application.Models;
 using Larchik.Application.Portfolios.Valuation;
+using Larchik.Application.Helpers;
 using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Portfolios;
@@ -119,7 +120,7 @@ internal sealed class PortfolioAnalyticsCalculator
                 case OperationType.ReverseSplit when op.InstrumentId != null:
                     if (instrument?.Type != InstrumentType.Currency)
                     {
-                        ApplySplitFactor(op.InstrumentId.Value, op.Quantity, positions);
+                        ApplySplitFactor(op.InstrumentId.Value, op.Quantity, positions, op.Type, op.CreatedAt);
                     }
 
                     break;
@@ -442,7 +443,12 @@ internal sealed class PortfolioAnalyticsCalculator
         }
     }
 
-    private static void ApplySplitFactor(Guid instrumentId, decimal factor, IDictionary<Guid, decimal> positions)
+    private static void ApplySplitFactor(
+        Guid instrumentId,
+        decimal factor,
+        IDictionary<Guid, decimal> positions,
+        OperationType operationType,
+        DateTime createdAt)
     {
         if (factor <= 0 || !positions.TryGetValue(instrumentId, out var existing))
         {
@@ -450,9 +456,14 @@ internal sealed class PortfolioAnalyticsCalculator
         }
 
         var updated = existing * factor;
-        positions[instrumentId] = factor < 1m
-            ? decimal.Round(updated, 0, MidpointRounding.AwayFromZero)
-            : updated;
+        if (operationType == OperationType.ReverseSplit &&
+            !CorporateActionOperationMetadata.IsSynthetic(createdAt))
+        {
+            // Legacy imported reverse split operations were historically rounded by brokers.
+            updated = decimal.Round(updated, 0, MidpointRounding.AwayFromZero);
+        }
+
+        positions[instrumentId] = updated;
     }
 
 }

@@ -1,3 +1,4 @@
+using Larchik.Application.Helpers;
 using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Portfolios.Valuation;
@@ -248,10 +249,15 @@ public abstract class LotValuationStrategyBase : IValuationStrategy
             return;
         }
 
-        var scaledTotal = position.Quantity * factor;
-        var targetTotal = operation.Type == OperationType.ReverseSplit
-            ? decimal.Round(scaledTotal, 0, MidpointRounding.AwayFromZero)
-            : scaledTotal;
+        var totalCostBefore = lots.Sum(x => x.Quantity * x.CostPerUnit);
+        var targetTotal = position.Quantity * factor;
+        if (operation.Type == OperationType.ReverseSplit &&
+            !CorporateActionOperationMetadata.IsSynthetic(operation.CreatedAt))
+        {
+            // Legacy imported reverse split operations were historically rounded by brokers.
+            targetTotal = decimal.Round(targetTotal, 0, MidpointRounding.AwayFromZero);
+        }
+
         position.Quantity = targetTotal;
 
         if (lots.Count == 0)
@@ -271,6 +277,7 @@ public abstract class LotValuationStrategyBase : IValuationStrategy
         if (delta != 0)
         {
             lots[^1].Quantity += delta;
+            RedistributeCost(totalCostBefore, lots);
         }
     }
 

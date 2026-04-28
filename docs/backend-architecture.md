@@ -23,6 +23,15 @@
 - Cash transfers (`TransferIn`/`TransferOut` with null `InstrumentId`) are external flows and must affect net inflow/outflow metrics and money-weighted return input cashflows.
 - API consumers must use these rules consistently for both imported broker events and manual input so that average cost, unrealized P&L, and return series stay comparable across all valuation methods.
 
+## Instrument Corporate Actions Contract
+- Instrument-level corporate actions currently support only `Split` and `ReverseSplit`.
+- Supported instrument types for corporate actions are `Equity` and `Etf` only. `Bond`, `Currency`, `Commodity`, and `Crypto` are rejected until a separate business specification is introduced.
+- Factor constraints are strict: `Split` requires `factor > 1`; `ReverseSplit` requires `0 < factor < 1`.
+- Quantity transformation is purely multiplicative without rounding: `newQuantity = oldQuantity * factor`. Fractional residual positions are allowed and must be stored as decimal quantities.
+- Total cost basis stays unchanged through split/reverse split; average cost per unit changes inversely to the factor.
+- Cash-in-lieu is not part of the corporate action payload (`Type`, `Factor`, `EffectiveDate`, `Note`) and must be recorded as a separate cash operation (for example `CashAdjustment`/`Dividend` or a dedicated future operation type).
+- The unique business key is `(InstrumentId, Type, EffectiveDate)`. Application code should pre-check duplicates and also map database unique violations to a stable business error instead of bubbling a 500 in race conditions.
+
 ## Sync And Import Rules
 - `price_source` is nullable and only meaningful for tradable instruments. `MOEX` sync must process only instruments assigned to `MOEX`; `TBANK` sync must process only instruments assigned to `TBANK`.
 - Russian instruments may use either `MOEX` or `TBANK` when explicitly assigned; sync eligibility is driven by `price_source`, not by country.
