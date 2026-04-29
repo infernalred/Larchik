@@ -108,6 +108,9 @@ export function OperationsPanel({
     try {
       const result = await onImport(file);
       const details = [`Импортировано операций: ${result.importedOperations}`];
+      if (result.warnings.length > 0) {
+        details.push(`Предупреждения: ${result.warnings.join('; ')}`);
+      }
       if (result.errors.length > 0) {
         details.push(`Замечания: ${result.errors.join('; ')}`);
       }

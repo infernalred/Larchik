@@ -9,7 +9,10 @@ internal static class BrokerOperationKeyBuilder
 {
     public static string Build(Operation operation, string? instrumentCode, int occurrence)
     {
-        return $"v2:{BuildBaseHash(operation, instrumentCode)}:{occurrence.ToString("D6", CultureInfo.InvariantCulture)}";
+        // v3 keys are stable across broker note/text changes:
+        // - base hash excludes free-text note
+        // - key version prefix is used to keep backward compatibility with existing v2 data
+        return $"v3:{BuildBaseHash(operation, instrumentCode)}:{occurrence.ToString("D6", CultureInfo.InvariantCulture)}";
     }
 
     public static string BuildBaseHash(Operation operation, string? instrumentCode)
@@ -17,14 +20,16 @@ internal static class BrokerOperationKeyBuilder
         var payload = string.Join('|',
             "v1",
             ((int)operation.Type).ToString(CultureInfo.InvariantCulture),
-            (instrumentCode ?? string.Empty).Trim(),
+            // InstrumentId is stable and is stored in persistence; avoid relying on free-text note.
+            operation.InstrumentId?.ToString() ?? string.Empty,
             operation.Quantity.ToString("0.000000", CultureInfo.InvariantCulture),
             operation.Price.ToString("0.000000", CultureInfo.InvariantCulture),
             operation.Fee.ToString("0.0000", CultureInfo.InvariantCulture),
             operation.CurrencyId,
             FormatDate(operation.TradeDate),
             FormatNullableDate(operation.SettlementDate),
-            NormalizeNote(operation.Note));
+            // Intentionally exclude NormalizeNote(operation.Note) to make v3 stable across broker report text changes.
+            string.Empty);
 
         var hash = MD5.HashData(Encoding.UTF8.GetBytes(payload));
         return Convert.ToHexString(hash).ToLowerInvariant();
@@ -43,6 +48,4 @@ internal static class BrokerOperationKeyBuilder
     }
 
     private static string FormatNullableDate(DateTime? value) => value is null ? string.Empty : FormatDate(value.Value);
-
-    private static string NormalizeNote(string? value) => (value ?? string.Empty).Trim();
 }

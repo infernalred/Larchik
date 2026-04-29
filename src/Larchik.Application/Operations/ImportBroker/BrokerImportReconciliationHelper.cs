@@ -4,6 +4,10 @@ namespace Larchik.Application.Operations.ImportBroker;
 
 internal static class BrokerImportReconciliationHelper
 {
+    private const int QuantityDecimals = 6;
+    private const int PriceDecimals = 6;
+    private const int FeeDecimals = 4;
+
     public static bool SupportsManualReconciliation(string? brokerCode) =>
         string.Equals(brokerCode, "tbank", StringComparison.OrdinalIgnoreCase);
 
@@ -81,27 +85,27 @@ internal static class BrokerImportReconciliationHelper
         {
             OperationType.Buy or OperationType.Sell =>
                 SameTradeDate(imported, manual) &&
-                manual.Quantity == imported.Quantity &&
-                manual.Price == imported.Price,
+                DecimalEquals(manual.Quantity, imported.Quantity, QuantityDecimals) &&
+                DecimalEquals(manual.Price, imported.Price, PriceDecimals),
 
             OperationType.BondPartialRedemption or OperationType.BondMaturity =>
                 SameTradeDate(imported, manual) &&
-                manual.Quantity == imported.Quantity &&
-                manual.Price == imported.Price,
+                DecimalEquals(manual.Quantity, imported.Quantity, QuantityDecimals) &&
+                DecimalEquals(manual.Price, imported.Price, PriceDecimals),
 
             OperationType.Dividend =>
                 IsWithinDateTolerance(imported, manual, 3) &&
-                manual.Price == imported.Price,
+                DecimalEquals(manual.Price, imported.Price, PriceDecimals),
 
             OperationType.Deposit or OperationType.Withdraw or OperationType.Fee or OperationType.CashAdjustment =>
                 IsWithinDateTolerance(imported, manual, 3) &&
-                manual.Price == imported.Price,
+                DecimalEquals(manual.Price, imported.Price, PriceDecimals),
 
             _ =>
                 SameTradeDate(imported, manual) &&
-                manual.Quantity == imported.Quantity &&
-                manual.Price == imported.Price &&
-                manual.Fee == imported.Fee
+                DecimalEquals(manual.Quantity, imported.Quantity, QuantityDecimals) &&
+                DecimalEquals(manual.Price, imported.Price, PriceDecimals) &&
+                DecimalEquals(manual.Fee, imported.Fee, FeeDecimals)
         };
     }
 
@@ -109,4 +113,7 @@ internal static class BrokerImportReconciliationHelper
 
     private static bool IsWithinDateTolerance(Operation left, Operation right, int days) =>
         Math.Abs((left.TradeDate.Date - right.TradeDate.Date).TotalDays) <= days;
+
+    private static bool DecimalEquals(decimal left, decimal right, int decimals) =>
+        decimal.Round(left, decimals) == decimal.Round(right, decimals);
 }

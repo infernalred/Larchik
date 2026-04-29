@@ -22,6 +22,11 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
     private static readonly Regex CorporateActionPerUnitRegex =
         new(@"Выплата на 1 бумагу:\s*(?<amount>[0-9]+(?:[.,][0-9]+)?)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    // Cash amounts are persisted to currency precision to avoid tiny floating/Excel artifacts
+    // (e.g. 16514.759999999998 instead of 16514.76) affecting reconciliation/equality.
+    private static decimal RoundCashAmount(decimal value) =>
+        decimal.Round(value, 2, MidpointRounding.AwayFromZero);
+
     public Task<BrokerReportParseResult> ParseAsync(Stream fileStream, string fileName, CancellationToken cancellationToken)
     {
         var validationError = BrokerReportFileValidator.ValidateXlsx(
@@ -36,11 +41,12 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         }
 
         var errors = new List<string>();
+        var warnings = new List<string>();
         var parsed = new List<ParsedOperation>();
 
         try
         {
-            ParseRows(fileStream, fileName, parsed, errors);
+            ParseRows(fileStream, fileName, parsed, errors, warnings);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
@@ -48,14 +54,15 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             return Task.FromResult(new BrokerReportParseResult([], [InvalidFormatMessage]));
         }
 
-        return Task.FromResult(new BrokerReportParseResult(parsed, errors));
+        return Task.FromResult(new BrokerReportParseResult(parsed, errors, warnings));
     }
 
     private void ParseRows(
         Stream fileStream,
         string fileName,
         ICollection<ParsedOperation> parsed,
-        ICollection<string> errors)
+        ICollection<string> errors,
+        ICollection<string> warnings)
     {
         var loadResult = LoadRows(fileStream);
         var rows = loadResult.Rows;
@@ -77,15 +84,25 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         var tradesCount = parsed.Count - beforeTrades;
 
         var beforeCash = parsed.Count;
-        ParseCash(rows, parsed, errors, reportPeriodEnd);
+        ParseCash(rows, parsed, errors, warnings, reportPeriodEnd);
         var cashCount = parsed.Count - beforeCash;
 
         logger.LogInformation(
-            "TBank import: parsed {TradesCount} trades and {CashCount} cash operations with {ErrorCount} errors for file {FileName}",
+            "TBank import: parsed {TradesCount} trades and {CashCount} cash operations with {ErrorCount} errors and {WarningCount} warnings for file {FileName}",
             tradesCount,
             cashCount,
             errors.Count,
+            warnings.Count,
             fileName);
+
+        if (warnings.Count > 0)
+        {
+            logger.LogWarning(
+                "TBank import: {WarningCount} cash operations were mapped via fallback CashAdjustment for file {FileName}. First warnings: {Warnings}",
+                warnings.Count,
+                fileName,
+                string.Join("; ", warnings.Take(5)));
+        }
     }
 
     private static LoadRowsResult LoadRows(Stream fileStream)
@@ -433,6 +450,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         IReadOnlyList<ReportRow> rows,
         ICollection<ParsedOperation> parsed,
         ICollection<string> errors,
+        ICollection<string> warnings,
         DateTime? reportPeriodEnd)
     {
         var headerRow = rows.FirstOrDefault(r => Normalize(r.GetString(1)) == "дата"
@@ -463,6 +481,10 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             if (cashRow.Error is not null)
             {
                 errors.Add(cashRow.Error);
+            }
+            if (cashRow.Warning is not null)
+            {
+                warnings.Add(cashRow.Warning);
             }
 
             if (cashRow.NextCurrency is not null)
@@ -559,7 +581,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         var rowCurrency = TryGetCashSectionCurrency(row);
         if (rowCurrency is not null)
         {
-            return new CashRowParseResult(null, null, rowCurrency);
+            return new CashRowParseResult(null, null, rowCurrency, null);
         }
 
         var opText = row.GetString(layout.OperationColumn);
@@ -589,6 +611,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             return new CashRowParseResult(
                 null,
                 $"Не удалось распарсить дату денежной операции '{opText}' в строке {row.RowNumber}",
+                null,
                 null);
         }
 
@@ -609,21 +632,41 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         var corporateAction = TryParseCorporateAction(note, signedAmount, currentCurrency, tradeDate.Value, opText);
         if (corporateAction is not null)
         {
-            return new CashRowParseResult(corporateAction, null, null);
+            return new CashRowParseResult(corporateAction, null, null, null);
         }
 
-        var mapped = MapCashOperation(opText, signedAmount);
+        var mapped = MapCashOperation(opText, signedAmount, row.RowNumber);
         if (mapped is null)
         {
             return CashRowParseResult.Skip;
         }
 
+        if (mapped.IsFallback)
+        {
+            return new CashRowParseResult(
+                new ParsedOperation(
+                    CreateOperation(
+                        mapped.Type,
+                        0,
+                        RoundCashAmount(mapped.Amount),
+                        0,
+                        currentCurrency,
+                        tradeDate.Value,
+                        tradeDate.Value,
+                        ComposeNote(opText, note)),
+                    null,
+                    false),
+                null,
+                null,
+                mapped.WarningMessage);
+        }
+
         return new CashRowParseResult(
             new ParsedOperation(
                 CreateOperation(
-                    mapped.Value.Type,
+                    mapped.Type,
                     0,
-                    mapped.Value.Amount,
+                    RoundCashAmount(mapped.Amount),
                     0,
                     currentCurrency,
                     tradeDate.Value,
@@ -631,6 +674,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
                     ComposeNote(opText, note)),
                 null,
                 false),
+            null,
             null,
             null);
     }
@@ -756,7 +800,7 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
                 Id = Guid.NewGuid(),
                 Type = OperationType.Dividend,
                 Quantity = 0,
-                Price = decimal.Abs(signedAmount),
+                Price = RoundCashAmount(decimal.Abs(signedAmount)),
                 Fee = 0,
                 CurrencyId = currency,
                 TradeDate = tradeDate,
@@ -782,6 +826,8 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             Id = Guid.NewGuid(),
             Type = operationType.Value,
             Quantity = quantity.Value,
+            // For bond redemptions the broker cash amount is derived from quantity * unrounded per-unit price.
+            // Rounding derived per-unit price can cause a cents-level drift, so keep the per-unit value as-is.
             Price = price,
             Fee = 0,
             CurrencyId = currency,
@@ -805,40 +851,44 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         };
     }
 
-    private static (OperationType Type, decimal Amount)? MapCashOperation(string value, decimal signedAmount)
+    private static CashMapping? MapCashOperation(string value, decimal signedAmount, int rowNumber)
     {
         var normalized = Normalize(value);
         if (normalized.Contains("пополнение"))
         {
-            return (OperationType.Deposit, decimal.Abs(signedAmount));
+            return new CashMapping(OperationType.Deposit, decimal.Abs(signedAmount), false, string.Empty);
         }
 
         if (normalized.Contains("снятие") || normalized.Contains("вывод"))
         {
-            return (OperationType.Withdraw, decimal.Abs(signedAmount));
+            return new CashMapping(OperationType.Withdraw, decimal.Abs(signedAmount), false, string.Empty);
         }
 
         if (normalized.Contains("комис"))
         {
             return signedAmount >= 0
-                ? (OperationType.CashAdjustment, signedAmount)
-                : (OperationType.Fee, decimal.Abs(signedAmount));
+                ? new CashMapping(OperationType.CashAdjustment, signedAmount, false, string.Empty)
+                : new CashMapping(OperationType.Fee, decimal.Abs(signedAmount), false, string.Empty);
         }
 
         if (normalized.Contains("налог"))
         {
             return signedAmount >= 0
-                ? (OperationType.CashAdjustment, signedAmount)
-                : (OperationType.Fee, decimal.Abs(signedAmount));
+                ? new CashMapping(OperationType.CashAdjustment, signedAmount, false, string.Empty)
+                : new CashMapping(OperationType.Fee, decimal.Abs(signedAmount), false, string.Empty);
         }
 
         if (normalized.Contains("дивиденд") ||
             normalized.Contains("выплата доход"))
         {
-            return (OperationType.Dividend, decimal.Abs(signedAmount));
+            return new CashMapping(OperationType.Dividend, decimal.Abs(signedAmount), false, string.Empty);
         }
 
-        return (OperationType.CashAdjustment, signedAmount);
+        return new CashMapping(
+            OperationType.CashAdjustment,
+            signedAmount,
+            true,
+            $"Cash operation fallback to CashAdjustment at row {rowNumber}: '{value}'.");
     }
 
     private static DateTime? ParseDateTime(string? dateText, string? timeText)
@@ -1128,10 +1178,11 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
         public static TradeRowParseResult Stop { get; } = new(null, null, true);
     }
 
-    private sealed record CashRowParseResult(ParsedOperation? Operation, string? Error, string? NextCurrency)
+    private sealed record CashRowParseResult(ParsedOperation? Operation, string? Error, string? NextCurrency, string? Warning)
     {
-        public static CashRowParseResult Skip { get; } = new(null, null, null);
+        public static CashRowParseResult Skip { get; } = new(null, null, null, null);
     }
 
     private sealed record LoadRowsResult(IReadOnlyList<ReportRow> Rows, string Source);
+    private sealed record CashMapping(OperationType Type, decimal Amount, bool IsFallback, string WarningMessage);
 }

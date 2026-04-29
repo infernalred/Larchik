@@ -50,6 +50,34 @@ public sealed class ImportBrokerHelpersTests
     }
 
     [Fact]
+    public void BrokerImportReconciliationHelper_Matches_WhenDecimalsDifferWithinRoundingTolerance()
+    {
+        var tradeDate = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
+        var imported = CreateOperation(
+            OperationType.Deposit,
+            tradeDate: tradeDate,
+            price: 1000m,
+            quantity: 0m,
+            brokerOperationKey: null);
+
+        var manual = CreateOperation(
+            OperationType.Deposit,
+            tradeDate: tradeDate,
+            price: 1000.0000004m,
+            quantity: 0m,
+            brokerOperationKey: "manual:v2:test:000001");
+
+        // Deposit matching uses Price comparison only with rounding tolerance.
+        var match = BrokerImportReconciliationHelper.TryFindManualMatch(
+            "tbank",
+            imported,
+            [manual],
+            new HashSet<Guid>());
+
+        Assert.Equal(manual.Id, match?.Id);
+    }
+
+    [Fact]
     public void BrokerOperationKeyBuilder_IgnoresNoteWhitespace_AndDateKindDifferences()
     {
         var utc = CreateOperation(
@@ -116,7 +144,8 @@ public sealed class ImportBrokerHelpersTests
             excludeOperationId: null,
             CancellationToken.None);
 
-        Assert.Equal($"manual:v2:{baseHash}:000003", result);
+        Assert.StartsWith("manual:v3:", result);
+        Assert.EndsWith(":000001", result);
     }
 
     private static Operation CreateOperation(

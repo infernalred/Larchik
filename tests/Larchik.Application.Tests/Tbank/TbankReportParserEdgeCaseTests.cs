@@ -189,6 +189,35 @@ public class TbankReportParserEdgeCaseTests
         Assert.Equal("RUB", operation.Operation.CurrencyId);
     }
 
+    [Fact]
+    public async Task Parse_CorporateActionCashNote_BondPartialRedemption_DoesNotLoseCents_WhenPerUnitAmountAbsent()
+    {
+        // Cash = quantity * perUnitPrice must not lose cents due to rounding of derived per-unit.
+        // Example: 10 / 3 should round to 10.00, not 9.99.
+        await using var stream = CreateWorkbook(
+            new WorksheetSpec("Report", "worksheets/sheet1.xml",
+                CreateWorksheet(
+                    Row(1, (1, "дата"), (2, "операция"), (3, "сумма зачисления"), (4, "примечание")),
+                    Row(2,
+                        (1, "15.03.2026"),
+                        (2, "Корпоративное действие"),
+                        (3, "10"),
+                        (4, "Тип КД: Частичное погашение; ISIN: RU000A0JX0J2; Количество: 3 шт")))));
+
+        var result = await Parser.ParseAsync(stream, "broker-report-2026-01-01-2026-03-31.xlsx", CancellationToken.None);
+
+        Assert.Empty(result.Errors);
+        var operation = Assert.Single(result.Operations);
+        Assert.Equal(OperationType.BondPartialRedemption, operation.Operation.Type);
+        Assert.Equal(3m, operation.Operation.Quantity);
+
+        var roundedPerUnit = decimal.Round(operation.Operation.Price, 2, MidpointRounding.AwayFromZero);
+        Assert.NotEqual(roundedPerUnit, operation.Operation.Price); // derived price should not be pre-rounded
+
+        var cashTotalRounded = decimal.Round(operation.Operation.Quantity * operation.Operation.Price, 2, MidpointRounding.AwayFromZero);
+        Assert.Equal(10m, cashTotalRounded);
+    }
+
     private static MemoryStream CreateWorkbook(params WorksheetSpec[] worksheets)
     {
         var stream = new MemoryStream();

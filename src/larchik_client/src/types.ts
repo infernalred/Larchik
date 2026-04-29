@@ -198,6 +198,7 @@ export interface ImportResult {
   importedOperations: number;
   skippedOperations: number;
   errors: string[];
+  warnings: string[];
 }
 
 export interface ClearPortfolioDataResult {

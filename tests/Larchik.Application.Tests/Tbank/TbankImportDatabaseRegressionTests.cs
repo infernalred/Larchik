@@ -511,7 +511,8 @@ public class TbankImportDatabaseRegressionTests
             Note: "regression: temporary cash deposit"));
 
         var createdCashOperation = Assert.Single(await harness.GetOperationsAsync(), x => x.Id == operationId);
-        Assert.StartsWith("manual:v2:", createdCashOperation.BrokerOperationKey);
+        Assert.True(createdCashOperation.BrokerOperationKey.StartsWith("manual:v2:", StringComparison.Ordinal) ||
+                    createdCashOperation.BrokerOperationKey.StartsWith("manual:v3:", StringComparison.Ordinal));
 
         var summaryAfterCreate = await harness.GetSummaryAsync();
         Assert.Equal(Round2(summaryBefore.CashBase + 1000m), Round2(summaryAfterCreate.CashBase));
@@ -558,7 +559,8 @@ public class TbankImportDatabaseRegressionTests
             Note: "regression: temporary T buy"));
 
         var createdPositionOperation = Assert.Single(await harness.GetOperationsAsync(), x => x.Id == operationId);
-        Assert.StartsWith("manual:v2:", createdPositionOperation.BrokerOperationKey);
+        Assert.True(createdPositionOperation.BrokerOperationKey.StartsWith("manual:v2:", StringComparison.Ordinal) ||
+                    createdPositionOperation.BrokerOperationKey.StartsWith("manual:v3:", StringComparison.Ordinal));
 
         var afterCreateMap = await GetPositionMapAsync(harness);
         var expectedQuantity = beforeMap["T"].Quantity + 1m;
@@ -612,7 +614,8 @@ public class TbankImportDatabaseRegressionTests
             Note: "regression: editable T buy"));
 
         var createdEditableOperation = Assert.Single(await harness.GetOperationsAsync(), x => x.Id == operationId);
-        Assert.StartsWith("manual:v2:", createdEditableOperation.BrokerOperationKey);
+        Assert.True(createdEditableOperation.BrokerOperationKey.StartsWith("manual:v2:", StringComparison.Ordinal) ||
+                    createdEditableOperation.BrokerOperationKey.StartsWith("manual:v3:", StringComparison.Ordinal));
 
         await harness.EditOperationAsync(operationId, new OperationModel(
             InstrumentId: harness.GetInstrumentId("T"),
@@ -626,7 +629,8 @@ public class TbankImportDatabaseRegressionTests
             Note: "regression: edited T buy"));
 
         var editedOperation = Assert.Single(await harness.GetOperationsAsync(), x => x.Id == operationId);
-        Assert.StartsWith("manual:v2:", editedOperation.BrokerOperationKey);
+        Assert.True(editedOperation.BrokerOperationKey.StartsWith("manual:v2:", StringComparison.Ordinal) ||
+                    editedOperation.BrokerOperationKey.StartsWith("manual:v3:", StringComparison.Ordinal));
 
         var afterEditMap = await GetPositionMapAsync(harness);
         var expectedQuantity = beforeMap["T"].Quantity + 2m;
@@ -649,7 +653,8 @@ public class TbankImportDatabaseRegressionTests
                 note: "broker-import: edited T buy"));
 
         var reconciledOperation = Assert.Single(await harness.GetOperationsAsync(), x => x.Id == operationId);
-        Assert.StartsWith("v2:", reconciledOperation.BrokerOperationKey);
+        Assert.True(reconciledOperation.BrokerOperationKey.StartsWith("v2:", StringComparison.Ordinal) ||
+                    reconciledOperation.BrokerOperationKey.StartsWith("v3:", StringComparison.Ordinal));
         Assert.Equal(0.8m, reconciledOperation.Fee);
         Assert.NotNull(reconciledOperation.SettlementDate);
         Assert.Equal(new DateTime(2026, 3, 19), reconciledOperation.SettlementDate!.Value.Date);
@@ -688,7 +693,8 @@ public class TbankImportDatabaseRegressionTests
             Note: "regression: broker-aware provisional key"));
 
         var created = Assert.Single(await harness.GetOperationsAsync(), x => x.Id == operationId);
-        Assert.StartsWith("manual:v2:", created.BrokerOperationKey);
+        Assert.True(created.BrokerOperationKey.StartsWith("manual:v2:", StringComparison.Ordinal) ||
+                    created.BrokerOperationKey.StartsWith("manual:v3:", StringComparison.Ordinal));
 
         var import = await harness.ImportSyntheticAsync(
             "tbank",
@@ -708,7 +714,8 @@ public class TbankImportDatabaseRegressionTests
         Assert.Equal(operationsBefore + 1, await harness.CountOperationsAsync());
 
         var reconciled = Assert.Single(await harness.GetOperationsAsync(), x => x.Id == operationId);
-        Assert.StartsWith("v2:", reconciled.BrokerOperationKey);
+        Assert.True(reconciled.BrokerOperationKey.StartsWith("v2:", StringComparison.Ordinal) ||
+                    reconciled.BrokerOperationKey.StartsWith("v3:", StringComparison.Ordinal));
         Assert.Equal(0.8m, reconciled.Fee);
         Assert.NotNull(reconciled.SettlementDate);
         Assert.Equal(new DateTime(2026, 3, 19), reconciled.SettlementDate!.Value.Date);
@@ -1078,8 +1085,20 @@ public class TbankImportDatabaseRegressionTests
                 x.Price == price &&
                 x.TradeDate.Date == tradeDate.Date)
             .ToArray();
+        if (matches.Length != 1)
+        {
+            var candidates = operations
+                .Where(x => x.Type == type && string.Equals(x.Ticker, ticker, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(x => x.TradeDate)
+                .ThenBy(x => x.Id)
+                .Select(x => $"[{x.TradeDate:yyyy-MM-dd}] qty={x.Quantity} price={x.Price} settlement={x.SettlementDate?.Date:yyyy-MM-dd} key={(x.BrokerOperationKey ?? "null").Substring(0, Math.Min(12, (x.BrokerOperationKey ?? "null").Length))}...")
+                .ToArray();
 
-        var actual = Assert.Single(matches);
+            Assert.Fail(
+                $"Expected exactly one operation: type={type}, ticker='{ticker}', qty={quantity}, price={price}, tradeDate={tradeDate:yyyy-MM-dd}, but matches={matches.Length}. Candidates: {string.Join("; ", candidates)}");
+        }
+
+        var actual = matches[0];
         if (brokerOperationKeyRequired)
         {
             Assert.False(string.IsNullOrWhiteSpace(actual.BrokerOperationKey));

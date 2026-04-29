@@ -6,19 +6,23 @@ namespace Larchik.Application.Operations.ImportBroker;
 
 internal static class BrokerOperationIdentityHelper
 {
-    private const string ConfirmedPrefix = "v2:";
-    private const string ProvisionalManualPrefix = "manual:v2:";
+    private const string ConfirmedPrefixV2 = "v2:";
+    private const string ConfirmedPrefixV3 = "v3:";
+    private const string ProvisionalManualPrefixV2 = "manual:v2:";
+    private const string ProvisionalManualPrefixV3 = "manual:v3:";
 
     public static bool SupportsProvisionalManualKeys(string? brokerCode) =>
         string.Equals(brokerCode, "tbank", StringComparison.OrdinalIgnoreCase);
 
     public static bool IsConfirmedImportedKey(string? brokerOperationKey) =>
         !string.IsNullOrWhiteSpace(brokerOperationKey) &&
-        brokerOperationKey.StartsWith(ConfirmedPrefix, StringComparison.Ordinal);
+        (brokerOperationKey.StartsWith(ConfirmedPrefixV2, StringComparison.Ordinal) ||
+         brokerOperationKey.StartsWith(ConfirmedPrefixV3, StringComparison.Ordinal));
 
     public static bool IsProvisionalManualKey(string? brokerOperationKey) =>
         !string.IsNullOrWhiteSpace(brokerOperationKey) &&
-        brokerOperationKey.StartsWith(ProvisionalManualPrefix, StringComparison.Ordinal);
+        (brokerOperationKey.StartsWith(ProvisionalManualPrefixV2, StringComparison.Ordinal) ||
+         brokerOperationKey.StartsWith(ProvisionalManualPrefixV3, StringComparison.Ordinal));
 
     public static bool IsManualCandidateKey(string? brokerOperationKey) =>
         string.IsNullOrWhiteSpace(brokerOperationKey) || IsProvisionalManualKey(brokerOperationKey);
@@ -38,8 +42,8 @@ internal static class BrokerOperationIdentityHelper
         }
 
         var baseHash = BrokerOperationKeyBuilder.BuildBaseHash(operation, canonicalInstrumentCode);
-        var confirmedKeyPrefix = $"{ConfirmedPrefix}{baseHash}:";
-        var provisionalKeyPrefix = $"{ProvisionalManualPrefix}{baseHash}:";
+        var confirmedKeyPrefix = $"{ConfirmedPrefixV3}{baseHash}:";
+        var provisionalKeyPrefix = $"{ProvisionalManualPrefixV3}{baseHash}:";
 
         var existingKeys = await context.Operations
             .Where(x =>
@@ -57,7 +61,7 @@ internal static class BrokerOperationIdentityHelper
             .DefaultIfEmpty(0)
             .Max() + 1;
 
-        return $"{ProvisionalManualPrefix}{baseHash}:{nextOccurrence:D6}";
+        return $"{ProvisionalManualPrefixV3}{baseHash}:{nextOccurrence:D6}";
     }
 
     private static int? TryParseOccurrence(string brokerOperationKey)

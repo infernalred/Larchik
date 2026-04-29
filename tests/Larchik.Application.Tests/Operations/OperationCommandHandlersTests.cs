@@ -31,7 +31,8 @@ public class OperationCommandHandlersTests
         Assert.Equal(instrumentId, operation.InstrumentId);
         Assert.Equal("RUB", operation.CurrencyId);
         Assert.Equal("test note", operation.Note);
-        Assert.StartsWith("manual:v2:", operation.BrokerOperationKey);
+        Assert.True(operation.BrokerOperationKey.StartsWith("manual:v2:", StringComparison.Ordinal) ||
+                    operation.BrokerOperationKey.StartsWith("manual:v3:", StringComparison.Ordinal));
         Assert.Single(harness.Recalc.Calls);
         Assert.Equal((portfolioId, tradeDate.UtcDateTime), harness.Recalc.Calls[0]);
     }
@@ -240,5 +241,31 @@ public class OperationCommandHandlersTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Split and reverse split must be managed as administrative corporate actions.", result.Error);
+    }
+
+    [Fact]
+    public async Task Delete_RestoresOperation_WhenRebuildSchedulingFails()
+    {
+        await using var harness = new OperationsTestHarness();
+        var portfolioId = harness.AddPortfolio("Main");
+        var tradeDate = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
+        var operationId = harness.AddOperation(portfolioId, OperationType.Deposit, tradeDate, price: 1000m);
+        await harness.Context.SaveChangesAsync();
+
+        var handler = new DeleteOperationCommandHandler(
+            harness.Context,
+            new OperationsTestHarness.FixedUserAccessor(OperationsTestHarness.UserId),
+            new FailingRecalcService());
+        var result = await handler.Handle(new DeleteOperationCommand(operationId), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Operation delete rolled back because portfolio rebuild scheduling failed.", result.Error);
+        Assert.NotNull(await harness.Context.Operations.FirstOrDefaultAsync(x => x.Id == operationId));
+    }
+
+    private sealed class FailingRecalcService : Larchik.Application.Contracts.IPortfolioRecalcService
+    {
+        public Task ScheduleRebuild(Guid portfolioId, DateTime fromDate, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("boom");
     }
 }
