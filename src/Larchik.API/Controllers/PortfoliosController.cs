@@ -1,4 +1,5 @@
 using System.Net;
+using Larchik.Application.Common.Paging;
 using Larchik.Application.Models;
 using Larchik.Application.Portfolios.ClearPortfolioData;
 using Larchik.Application.Portfolios.CreatePortfolio;
@@ -12,6 +13,10 @@ using Larchik.Application.Portfolios.GetPortfolios;
 using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Application.Portfolios.GetPortfolioSummary;
 using Larchik.Application.Portfolios.RecalculatePortfolio;
+using Larchik.Application.Portfolios.Reconciliation.GetPortfolioReconciliationAlerts;
+using Larchik.Application.Portfolios.Reconciliation.GetPortfolioReconciliationAlertsSummary;
+using Larchik.Application.Portfolios.Reconciliation.GetLatestPortfolioReconciliationResult;
+using Larchik.Application.Portfolios.Reconciliation.GetPortfolioReconciliationHistory;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -151,6 +156,93 @@ public class PortfoliosController : BaseApiController
     {
         return HandleResult(await Mediator.Send(
             new GetAggregatePortfolioPerformanceQuery(method, currency, from, to),
+            HttpContext.RequestAborted));
+    }
+
+    /// <summary>
+    /// Returns paged reconciliation history.
+    /// Example: /api/portfolios/reconciliation?from=2026-04-01&amp;to=2026-04-30&amp;status=mismatch&amp;severity=critical&amp;alertRequired=true&amp;sortBy=createdAt&amp;sortDirection=desc&amp;page=1&amp;pageSize=50
+    /// sortBy: statementDate (default), createdAt, severity, status, navDelta.
+    /// sortDirection: asc or desc (default).
+    /// </summary>
+    [HttpGet("reconciliation")]
+    [ProducesResponseType(typeof(PagedResult<PortfolioReconciliationResultDto>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+    public async Task<ActionResult<PagedResult<PortfolioReconciliationResultDto>>> GetReconciliationHistory(
+        [FromQuery] Guid? portfolioId = null,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] string? status = null,
+        [FromQuery] string? severity = null,
+        [FromQuery] bool? alertRequired = null,
+        [FromQuery] string? source = null,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] string? sortDirection = null,
+        [FromQuery] PageQuery? paging = null)
+    {
+        return HandleResult(await Mediator.Send(
+            new GetPortfolioReconciliationHistoryQuery(
+                portfolioId,
+                from,
+                to,
+                status,
+                severity,
+                alertRequired,
+                source,
+                sortBy,
+                sortDirection,
+                paging),
+            HttpContext.RequestAborted));
+    }
+
+    /// <summary>
+    /// Returns paged open reconciliation alerts (alertRequired = true).
+    /// Example: /api/portfolios/reconciliation/alerts?severity=critical&amp;from=2026-04-01&amp;to=2026-04-30&amp;page=1&amp;pageSize=50
+    /// </summary>
+    [HttpGet("reconciliation/alerts")]
+    [ProducesResponseType(typeof(PagedResult<PortfolioReconciliationResultDto>), (int)HttpStatusCode.OK)]
+    public async Task<ActionResult<PagedResult<PortfolioReconciliationResultDto>>> GetReconciliationAlerts(
+        [FromQuery] Guid? portfolioId = null,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] string? severity = null,
+        [FromQuery] string? source = null,
+        [FromQuery] PageQuery? paging = null)
+    {
+        return HandleResult(await Mediator.Send(
+            new GetPortfolioReconciliationAlertsQuery(portfolioId, from, to, severity, source, paging),
+            HttpContext.RequestAborted));
+    }
+
+    /// <summary>
+    /// Returns reconciliation alert aggregates and latest critical alert by portfolio.
+    /// Example: /api/portfolios/reconciliation/alerts/summary?from=2026-04-01&amp;to=2026-04-30
+    /// </summary>
+    [HttpGet("reconciliation/alerts/summary")]
+    [ProducesResponseType(typeof(PortfolioReconciliationAlertsSummaryDto), (int)HttpStatusCode.OK)]
+    public async Task<ActionResult<PortfolioReconciliationAlertsSummaryDto>> GetReconciliationAlertsSummary(
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] string? source = null)
+    {
+        return HandleResult(await Mediator.Send(
+            new GetPortfolioReconciliationAlertsSummaryQuery(from, to, source),
+            HttpContext.RequestAborted));
+    }
+
+    /// <summary>
+    /// Returns the latest reconciliation result for a portfolio.
+    /// Example: /api/portfolios/{id}/reconciliation/latest?source=reconciliation.daily
+    /// </summary>
+    [HttpGet("{id:guid}/reconciliation/latest")]
+    [ProducesResponseType(typeof(PortfolioReconciliationResultDto), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+    public async Task<ActionResult<PortfolioReconciliationResultDto>> GetLatestReconciliationResult(
+        Guid id,
+        [FromQuery] string? source = null)
+    {
+        return HandleResult(await Mediator.Send(
+            new GetLatestPortfolioReconciliationResultQuery(id, source),
             HttpContext.RequestAborted));
     }
 }

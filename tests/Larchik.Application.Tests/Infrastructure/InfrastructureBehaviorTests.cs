@@ -137,11 +137,13 @@ public sealed class InfrastructureBehaviorTests
         var fxRuns = new FxCbrDailyRunPlanner().BuildRuns(definition, now).ToArray();
         var moexRuns = new MoexPricesDailyRunPlanner().BuildRuns(definition, now).ToArray();
         var tbankRuns = new TbankPricesDailyRunPlanner().BuildRuns(definition, now).ToArray();
+        var reconciliationRuns = new PortfolioReconciliationDailyRunPlanner().BuildRuns(definition, now).ToArray();
         var instrumentInfoRuns = new TbankInstrumentInfoDailyRunPlanner().BuildRuns(definition, now).ToArray();
 
         Assert.Equal(["fx:cbr:2026-04-20", "fx:cbr:2026-04-19"], fxRuns.Select(x => x.DedupKey));
         Assert.Equal(["prices:moex:2026-04-20", "prices:moex:2026-04-19"], moexRuns.Select(x => x.DedupKey));
         Assert.Equal(["prices:tbank:2026-04-20", "prices:tbank:2026-04-19"], tbankRuns.Select(x => x.DedupKey));
+        Assert.Equal(["reconciliation:2026-04-20", "reconciliation:2026-04-19"], reconciliationRuns.Select(x => x.DedupKey));
         Assert.Single(instrumentInfoRuns);
         Assert.Equal("instrument-info:tbank:2026-04-20", instrumentInfoRuns[0].DedupKey);
     }

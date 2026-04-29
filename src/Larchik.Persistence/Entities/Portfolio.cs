@@ -14,4 +14,5 @@ public class Portfolio
     public ICollection<Operation> Operations { get; set; } = new List<Operation>();
     public ICollection<PositionSnapshot> PositionSnapshots { get; set; } = new List<PositionSnapshot>();
     public ICollection<PortfolioSnapshot> PortfolioSnapshots { get; set; } = new List<PortfolioSnapshot>();
+    public ICollection<PortfolioReconciliationResult> ReconciliationResults { get; set; } = new List<PortfolioReconciliationResult>();
 }

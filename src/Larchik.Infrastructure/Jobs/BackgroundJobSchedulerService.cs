@@ -167,6 +167,20 @@ public class BackgroundJobSchedulerService(
             tbank.RetryDelayMinutes,
             tbank.LockTimeoutMinutes);
 
+        var reconciliation = options.PortfolioReconciliationDaily;
+        await EnsureDefinition(
+            context,
+            now,
+            cancellationToken,
+            BackgroundJobConstants.PortfolioReconciliationDailyDefinitionName,
+            BackgroundJobConstants.PortfolioReconciliationDailyJobType,
+            reconciliation.Enabled,
+            reconciliation.HourUtc,
+            reconciliation.MinuteUtc,
+            reconciliation.MaxAttempts,
+            reconciliation.RetryDelayMinutes,
+            reconciliation.LockTimeoutMinutes);
+
         var tbankInstrumentInfo = options.TbankInstrumentInfoDaily;
         await EnsureDefinition(
             context,

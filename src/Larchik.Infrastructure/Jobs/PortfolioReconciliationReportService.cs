@@ -5,6 +5,8 @@ using Larchik.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PersistedReconciliationResult = Larchik.Persistence.Entities.PortfolioReconciliationResult;
+using ReconciliationOutcome = Larchik.Application.Portfolios.Reconciliation.PortfolioReconciliationResult;
 
 namespace Larchik.Infrastructure.Jobs;
 
@@ -12,6 +14,7 @@ public sealed class PortfolioReconciliationReportService(
     LarchikContext context,
     IOptionsMonitor<BackgroundJobsOptions> optionsMonitor,
     ILogger<PortfolioReconciliationReportService> logger)
+    : IPortfolioReconciliationReportService
 {
     public async Task LogDailyReportAsync(DateOnly runDate, string source, CancellationToken cancellationToken)
     {
@@ -22,10 +25,14 @@ public sealed class PortfolioReconciliationReportService(
         }
 
         var defaultTolerance = options.DeltaToleranceBase < 0 ? 0 : options.DeltaToleranceBase;
+        var warningMultiplier = options.WarningToleranceMultiplier <= 0 ? 1m : options.WarningToleranceMultiplier;
+        var criticalMultiplier = options.CriticalToleranceMultiplier < warningMultiplier
+            ? warningMultiplier
+            : options.CriticalToleranceMultiplier;
         var dayUtc = DateTime.SpecifyKind(runDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
         var asOfDateUtc = dayUtc.AddDays(1).AddTicks(-1);
         var targets = options.Targets
-            .Where(target => ShouldIncludeTarget(target, runDate))
+            .Where(target => ReconciliationTargetDateHelper.ShouldIncludeTarget(target, runDate))
             .ToArray();
         if (targets.Length == 0)
         {
@@ -55,6 +62,7 @@ public sealed class PortfolioReconciliationReportService(
             .GroupBy(x => x.PortfolioId)
             .ToDictionaryAsync(x => x.Key, x => (IReadOnlyList<Operation>)x.ToList(), cancellationToken);
         var calculator = new PortfolioAnalyticsCalculator();
+        var persistedResults = new List<PersistedReconciliationResult>();
 
         foreach (var target in targets)
         {
@@ -69,6 +77,16 @@ public sealed class PortfolioReconciliationReportService(
 
             if (!operationsByPortfolio.TryGetValue(target.PortfolioId, out var operations) || operations.Count == 0)
             {
+                persistedResults.Add(CreatePersistedResult(
+                    target.PortfolioId,
+                    dayUtc,
+                    source,
+                    portfolio.ReportingCurrencyId,
+                    status: "skipped",
+                    severity: "warning",
+                    alertRequired: true,
+                    reasonCode: "no_operations",
+                    tolerance: target.DeltaToleranceBase ?? defaultTolerance));
                 logger.LogWarning(
                     "Reconciliation skipped because no operations were found. Source: {Source}. Portfolio: {PortfolioName} ({PortfolioId}), date: {Date}",
                     source,
@@ -121,6 +139,19 @@ public sealed class PortfolioReconciliationReportService(
             if (!string.Equals(targetCurrency, portfolio.ReportingCurrencyId, StringComparison.OrdinalIgnoreCase) &&
                 analytics.Data.GetRate(targetCurrency, portfolio.ReportingCurrencyId, asOfDateUtc) is null)
             {
+                persistedResults.Add(CreatePersistedResult(
+                    target.PortfolioId,
+                    dayUtc,
+                    source,
+                    portfolio.ReportingCurrencyId,
+                    status: "skipped",
+                    severity: "warning",
+                    alertRequired: true,
+                    reasonCode: "missing_fx_rate",
+                    tolerance: target.DeltaToleranceBase ?? defaultTolerance,
+                    actualNavBase: summary.NavBase,
+                    actualCashBase: summary.CashBase,
+                    actualPositionsValueBase: summary.PositionsValueBase));
                 logger.LogWarning(
                     "Reconciliation skipped because FX rate is missing for target currency conversion. Source: {Source}. " +
                     "Portfolio: {PortfolioName} ({PortfolioId}). Date: {Date}. Target currency: {TargetCurrency}, reporting currency: {ReportingCurrency}",
@@ -140,6 +171,27 @@ public sealed class PortfolioReconciliationReportService(
                 analytics.Data.Convert(target.PositionsValueBase, targetCurrency, portfolio.ReportingCurrencyId, asOfDateUtc));
             var tolerance = target.DeltaToleranceBase ?? defaultTolerance;
             var result = PortfolioReconciliationHelper.Compare(summary, statement, tolerance);
+            var severity = DetermineSeverity(result, tolerance, warningMultiplier, criticalMultiplier);
+            var alertRequired = severity is "warning" or "critical";
+            persistedResults.Add(CreatePersistedResult(
+                target.PortfolioId,
+                dayUtc,
+                source,
+                portfolio.ReportingCurrencyId,
+                status: result.IsWithinTolerance ? "matched" : "mismatch",
+                severity: severity,
+                alertRequired: alertRequired,
+                reasonCode: result.IsWithinTolerance ? "within_tolerance" : "delta_exceeds_tolerance",
+                tolerance: tolerance,
+                actualNavBase: summary.NavBase,
+                actualCashBase: summary.CashBase,
+                actualPositionsValueBase: summary.PositionsValueBase,
+                targetNavBase: statement.NavBase,
+                targetCashBase: statement.CashBase,
+                targetPositionsValueBase: statement.PositionsValueBase,
+                navDelta: result.NavDelta,
+                cashDelta: result.CashDelta,
+                positionsDelta: result.PositionsDelta));
 
             if (result.IsWithinTolerance)
             {
@@ -157,29 +209,107 @@ public sealed class PortfolioReconciliationReportService(
             }
             else
             {
-                logger.LogWarning(
-                    "Portfolio reconciliation mismatch. Source: {Source}. Portfolio: {PortfolioName} ({PortfolioId}). " +
-                    "Date: {Date}, tolerance: {Tolerance}, nav delta: {NavDelta}, cash delta: {CashDelta}, positions delta: {PositionsDelta}",
-                    source,
-                    portfolio.Name,
-                    target.PortfolioId,
-                    runDate.ToString("yyyy-MM-dd"),
-                    tolerance,
-                    result.NavDelta,
-                    result.CashDelta,
-                    result.PositionsDelta);
+                if (severity == "critical")
+                {
+                    logger.LogError(
+                        "Portfolio reconciliation CRITICAL mismatch. Source: {Source}. Portfolio: {PortfolioName} ({PortfolioId}). " +
+                        "Date: {Date}, tolerance: {Tolerance}, nav delta: {NavDelta}, cash delta: {CashDelta}, positions delta: {PositionsDelta}",
+                        source,
+                        portfolio.Name,
+                        target.PortfolioId,
+                        runDate.ToString("yyyy-MM-dd"),
+                        tolerance,
+                        result.NavDelta,
+                        result.CashDelta,
+                        result.PositionsDelta);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Portfolio reconciliation mismatch. Source: {Source}. Portfolio: {PortfolioName} ({PortfolioId}). " +
+                        "Date: {Date}, tolerance: {Tolerance}, nav delta: {NavDelta}, cash delta: {CashDelta}, positions delta: {PositionsDelta}",
+                        source,
+                        portfolio.Name,
+                        target.PortfolioId,
+                        runDate.ToString("yyyy-MM-dd"),
+                        tolerance,
+                        result.NavDelta,
+                        result.CashDelta,
+                        result.PositionsDelta);
+                }
             }
+        }
+
+        if (persistedResults.Count > 0)
+        {
+            await context.PortfolioReconciliationResults.AddRangeAsync(persistedResults, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
         }
     }
 
-    private static bool ShouldIncludeTarget(PortfolioReconciliationTargetOptions target, DateOnly runDate)
-    {
-        if (string.IsNullOrWhiteSpace(target.Date))
+    private static PersistedReconciliationResult CreatePersistedResult(
+        Guid portfolioId,
+        DateTime statementDateUtc,
+        string source,
+        string reportingCurrencyId,
+        string status,
+        string severity,
+        bool alertRequired,
+        string reasonCode,
+        decimal tolerance,
+        decimal actualNavBase = 0m,
+        decimal actualCashBase = 0m,
+        decimal actualPositionsValueBase = 0m,
+        decimal targetNavBase = 0m,
+        decimal targetCashBase = 0m,
+        decimal targetPositionsValueBase = 0m,
+        decimal navDelta = 0m,
+        decimal cashDelta = 0m,
+        decimal positionsDelta = 0m) =>
+        new()
         {
-            return true;
+            Id = Guid.NewGuid(),
+            PortfolioId = portfolioId,
+            StatementDate = statementDateUtc,
+            Source = source,
+            ReportingCurrencyId = reportingCurrencyId,
+            Status = status,
+            Severity = severity,
+            AlertRequired = alertRequired,
+            ReasonCode = reasonCode,
+            ToleranceBase = tolerance,
+            ActualNavBase = actualNavBase,
+            ActualCashBase = actualCashBase,
+            ActualPositionsValueBase = actualPositionsValueBase,
+            TargetNavBase = targetNavBase,
+            TargetCashBase = targetCashBase,
+            TargetPositionsValueBase = targetPositionsValueBase,
+            NavDelta = navDelta,
+            CashDelta = cashDelta,
+            PositionsDelta = positionsDelta,
+            CreatedAt = DateTime.UtcNow
+        };
+
+    private static string DetermineSeverity(
+        ReconciliationOutcome result,
+        decimal tolerance,
+        decimal warningMultiplier,
+        decimal criticalMultiplier)
+    {
+        if (result.IsWithinTolerance)
+        {
+            return "info";
         }
 
-        return DateOnly.TryParse(target.Date, out var targetDate) && targetDate == runDate;
+        var maxAbsDelta = Math.Max(Math.Abs(result.NavDelta), Math.Max(Math.Abs(result.CashDelta), Math.Abs(result.PositionsDelta)));
+        var warningThreshold = tolerance * warningMultiplier;
+        var criticalThreshold = tolerance * criticalMultiplier;
+        if (maxAbsDelta >= criticalThreshold)
+        {
+            return "critical";
+        }
+
+        return maxAbsDelta >= warningThreshold ? "warning" : "warning";
     }
 
 }

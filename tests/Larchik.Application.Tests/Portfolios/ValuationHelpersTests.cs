@@ -104,6 +104,92 @@ public sealed class ValuationHelpersTests
     }
 
     [Fact]
+    public void HistoricalDataLookup_UsesCrossRate_WhenDirectPairIsMissing()
+    {
+        var date = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
+        FxRate[] fxRates =
+        [
+            new()
+            {
+                BaseCurrencyId = "USD",
+                QuoteCurrencyId = "RUB",
+                Date = date,
+                Rate = 80m,
+                Source = "CBR",
+                CreatedAt = date
+            },
+            new()
+            {
+                BaseCurrencyId = "EUR",
+                QuoteCurrencyId = "RUB",
+                Date = date,
+                Rate = 100m,
+                Source = "CBR",
+                CreatedAt = date
+            }
+        ];
+
+        var lookup = new HistoricalDataLookup([], fxRates);
+
+        var usdToEur = lookup.GetRate("USD", "EUR", date);
+
+        Assert.Equal(0.8m, usdToEur);
+        Assert.Equal(8m, lookup.Convert(10m, "USD", "EUR", date));
+    }
+
+    [Fact]
+    public void HistoricalDataLookup_PrefersRubleRoute_WhenMultipleCrossRoutesExist()
+    {
+        var date = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
+        FxRate[] fxRates =
+        [
+            new()
+            {
+                BaseCurrencyId = "USD",
+                QuoteCurrencyId = "RUB",
+                Date = date,
+                Rate = 80m,
+                Source = "CBR",
+                CreatedAt = date
+            },
+            new()
+            {
+                BaseCurrencyId = "EUR",
+                QuoteCurrencyId = "RUB",
+                Date = date,
+                Rate = 100m,
+                Source = "CBR",
+                CreatedAt = date
+            },
+            new()
+            {
+                BaseCurrencyId = "USD",
+                QuoteCurrencyId = "KZT",
+                Date = date,
+                Rate = 500m,
+                Source = "CBR",
+                CreatedAt = date
+            },
+            new()
+            {
+                BaseCurrencyId = "EUR",
+                QuoteCurrencyId = "KZT",
+                Date = date,
+                Rate = 700m,
+                Source = "CBR",
+                CreatedAt = date
+            }
+        ];
+
+        var lookup = new HistoricalDataLookup([], fxRates);
+
+        // RUB route yields 0.8, KZT route yields 500/700 ~= 0.714285.
+        var usdToEur = lookup.GetRate("USD", "EUR", date);
+
+        Assert.Equal(0.8m, usdToEur);
+    }
+
+    [Fact]
     public void InstrumentAccountingCurrencyHelper_UsesBaseCurrency_ForMixedOperationCurrencies()
     {
         var instrumentId = Guid.NewGuid();

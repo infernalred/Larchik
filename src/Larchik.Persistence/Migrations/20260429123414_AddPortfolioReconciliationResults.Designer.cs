@@ -3,6 +3,7 @@ using System;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Larchik.Persistence.Migrations
 {
     [DbContext(typeof(LarchikContext))]
-    partial class LarchikContextModelSnapshot : ModelSnapshot
+    [Migration("20260429123414_AddPortfolioReconciliationResults")]
+    partial class AddPortfolioReconciliationResults
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1167,10 +1170,6 @@ namespace Larchik.Persistence.Migrations
                         .HasColumnType("numeric(20,4)")
                         .HasColumnName("actual_positions_value_base");
 
-                    b.Property<bool>("AlertRequired")
-                        .HasColumnType("boolean")
-                        .HasColumnName("alert_required");
-
                     b.Property<decimal>("CashDelta")
                         .HasPrecision(20, 4)
                         .HasColumnType("numeric(20,4)")
@@ -1206,12 +1205,6 @@ namespace Larchik.Persistence.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)")
                         .HasColumnName("reporting_currency_id");
-
-                    b.Property<string>("Severity")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)")
-                        .HasColumnName("severity");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -1251,9 +1244,6 @@ namespace Larchik.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_portfolio_reconciliation_results");
-
-                    b.HasIndex("AlertRequired", "StatementDate")
-                        .HasDatabaseName("ix_portfolio_reconciliation_results_alert_required_statement_d");
 
                     b.HasIndex("Status", "StatementDate")
                         .HasDatabaseName("ix_portfolio_reconciliation_results_status_statement_date");

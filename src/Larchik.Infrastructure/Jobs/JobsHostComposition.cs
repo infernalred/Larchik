@@ -2,6 +2,8 @@ using Larchik.Application.FxRates.SyncCbrFxRates;
 using Larchik.Application.Prices.SyncMoexPrices;
 using Larchik.Application.Prices.SyncTbankPrices;
 using Larchik.Application.Stocks.SyncTbankInstrumentInfo;
+using Larchik.Application.Contracts;
+using Larchik.Infrastructure.Recalculation;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +35,8 @@ public static class JobsHostComposition
         services.AddScoped<SyncTbankPricesCommandHandler>();
         services.AddScoped<SyncTbankInstrumentInfoCommandHandler>();
         services.AddScoped<PortfolioReconciliationReportService>();
+        services.AddScoped<IPortfolioReconciliationReportService, PortfolioReconciliationReportService>();
+        services.AddScoped<IPortfolioRecalcService, PortfolioRecalcService>();
 
         services.AddBackgroundJobs(configuration);
     }

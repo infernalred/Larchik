@@ -8,6 +8,7 @@ namespace Larchik.Application.Portfolios.Valuation;
 /// </summary>
 public class HistoricalDataLookup
 {
+    private static readonly string[] PreferredCrossCurrencies = ["RUB", "USD", "EUR"];
     private readonly Dictionary<Guid, List<Price>> _pricesByInstrument;
     private readonly Dictionary<(string Base, string Quote), List<FxRate>> _fxByPair;
 
@@ -44,43 +45,110 @@ public class HistoricalDataLookup
 
     public decimal Convert(decimal amount, string fromCurrency, string toCurrency, DateTime asOfDate)
     {
-        if (string.Equals(fromCurrency, toCurrency, StringComparison.OrdinalIgnoreCase)) return amount;
-
-        var directKey = (fromCurrency.ToUpperInvariant(), toCurrency.ToUpperInvariant());
-        if (_fxByPair.TryGetValue(directKey, out var directList))
+        var from = fromCurrency.ToUpperInvariant();
+        var to = toCurrency.ToUpperInvariant();
+        if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
         {
-            var rate = FindRate(directList, asOfDate);
-            if (rate is > 0) return amount * rate.Value;
+            return amount;
         }
 
-        var inverseKey = (toCurrency.ToUpperInvariant(), fromCurrency.ToUpperInvariant());
-        if (_fxByPair.TryGetValue(inverseKey, out var inverseList))
+        if (TryFindDirectRate(from, to, asOfDate, out var directRate))
         {
-            var rate = FindRate(inverseList, asOfDate);
-            if (rate is > 0) return amount / rate.Value;
+            return amount * directRate;
         }
 
-        return amount;
+        if (TryFindDirectRate(to, from, asOfDate, out var inverseDirectRate))
+        {
+            return inverseDirectRate == 0m ? amount : amount / inverseDirectRate;
+        }
+
+        var crossRate = TryGetCrossRate(from, to, asOfDate);
+        return crossRate is > 0 ? amount * crossRate.Value : amount;
     }
 
     public decimal? GetRate(string fromCurrency, string toCurrency, DateTime asOfDate)
     {
-        if (string.Equals(fromCurrency, toCurrency, StringComparison.OrdinalIgnoreCase)) return 1m;
-
-        var directKey = (fromCurrency.ToUpperInvariant(), toCurrency.ToUpperInvariant());
-        if (_fxByPair.TryGetValue(directKey, out var directList))
+        var from = fromCurrency.ToUpperInvariant();
+        var to = toCurrency.ToUpperInvariant();
+        if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
         {
-            return FindRate(directList, asOfDate);
+            return 1m;
         }
 
-        var inverseKey = (toCurrency.ToUpperInvariant(), fromCurrency.ToUpperInvariant());
-        if (_fxByPair.TryGetValue(inverseKey, out var inverseList))
+        var direct = FindDirectOrInverseRate(from, to, asOfDate);
+        if (direct is not null)
         {
-            var rate = FindRate(inverseList, asOfDate);
-            return rate is null or 0 ? rate : 1 / rate;
+            return direct;
+        }
+
+        return TryGetCrossRate(from, to, asOfDate);
+    }
+
+    private decimal? TryGetCrossRate(string from, string to, DateTime asOfDate)
+    {
+        var candidateSet = _fxByPair.Keys
+            .SelectMany(x => new[] { x.Base, x.Quote })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(x => !string.Equals(x, from, StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(x, to, StringComparison.OrdinalIgnoreCase))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var candidates = PreferredCrossCurrencies
+            .Where(candidateSet.Contains)
+            .Concat(candidateSet.Except(PreferredCrossCurrencies, StringComparer.OrdinalIgnoreCase).OrderBy(x => x))
+            .ToArray();
+
+        foreach (var mid in candidates)
+        {
+            var firstLeg = FindDirectOrInverseRate(from, mid, asOfDate);
+            if (firstLeg is null or <= 0)
+            {
+                continue;
+            }
+
+            var secondLeg = FindDirectOrInverseRate(mid, to, asOfDate);
+            if (secondLeg is null or <= 0)
+            {
+                continue;
+            }
+
+            return firstLeg.Value * secondLeg.Value;
         }
 
         return null;
+    }
+
+    private decimal? FindDirectOrInverseRate(string from, string to, DateTime asOfDate)
+    {
+        if (TryFindDirectRate(from, to, asOfDate, out var directRate))
+        {
+            return directRate;
+        }
+
+        if (TryFindDirectRate(to, from, asOfDate, out var inverseDirectRate))
+        {
+            return inverseDirectRate == 0m ? null : 1 / inverseDirectRate;
+        }
+
+        return null;
+    }
+
+    private bool TryFindDirectRate(string from, string to, DateTime asOfDate, out decimal rate)
+    {
+        rate = 0m;
+        var key = (from, to);
+        if (!_fxByPair.TryGetValue(key, out var list))
+        {
+            return false;
+        }
+
+        var resolved = FindRate(list, asOfDate);
+        if (resolved is null)
+        {
+            return false;
+        }
+
+        rate = resolved.Value;
+        return true;
     }
 
     private static decimal? FindRate(IReadOnlyList<FxRate> list, DateTime asOfDate)

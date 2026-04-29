@@ -7,7 +7,6 @@ namespace Larchik.Infrastructure.Jobs;
 
 public class TbankPricesDailyJobHandler(
     SyncTbankPricesCommandHandler syncHandler,
-    PortfolioReconciliationReportService reconciliationReportService,
     IOptionsMonitor<BackgroundJobsOptions> optionsMonitor,
     ILogger<TbankPricesDailyJobHandler> logger)
     : IBackgroundJobHandler
@@ -52,15 +51,9 @@ public class TbankPricesDailyJobHandler(
 
         if (result.IsSuccess)
         {
-            var effectiveDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow.Date);
-            await reconciliationReportService.LogDailyReportAsync(
-                effectiveDate,
-                source: "prices.tbank.daily",
-                cancellationToken);
-
             logger.LogInformation(
                 "TBANK daily job completed for {Date} UTC. Saved DB changes: {Changes}",
-                effectiveDate.ToString("yyyy-MM-dd"),
+                (date ?? DateOnly.FromDateTime(DateTime.UtcNow.Date)).ToString("yyyy-MM-dd"),
                 result.Value);
         }
         else

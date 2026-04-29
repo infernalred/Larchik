@@ -72,8 +72,15 @@ public class TbankInstrumentInfoDailyJobOptions
 
 public class PortfolioReconciliationDailyJobOptions
 {
-    public bool Enabled { get; set; } = false;
+    public bool Enabled { get; set; } = true;
+    public int HourUtc { get; set; } = 21;
+    public int MinuteUtc { get; set; } = 30;
+    public int MaxAttempts { get; set; } = 8;
+    public int RetryDelayMinutes { get; set; } = 20;
+    public int LockTimeoutMinutes { get; set; } = 20;
     public decimal DeltaToleranceBase { get; set; } = 0.01m;
+    public decimal WarningToleranceMultiplier { get; set; } = 1m;
+    public decimal CriticalToleranceMultiplier { get; set; } = 5m;
     public PortfolioReconciliationTargetOptions[] Targets { get; set; } = [];
 }
 

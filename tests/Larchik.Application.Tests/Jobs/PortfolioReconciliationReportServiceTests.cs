@@ -12,7 +12,7 @@ namespace Larchik.Application.Tests.Jobs;
 public sealed class PortfolioReconciliationReportServiceTests
 {
     [Fact]
-    public async Task LogDailyReportAsync_LogsWarning_WhenDeltaExceedsTolerance()
+    public async Task LogDailyReportAsync_LogsCritical_WhenDeltaExceedsCriticalThreshold()
     {
         await using var database = SqliteTestContextFactory.Create();
         var (portfolioId, runDate) = await SeedPortfolioData(database.Context);
@@ -39,7 +39,49 @@ public sealed class PortfolioReconciliationReportServiceTests
 
         await service.LogDailyReportAsync(runDate, "prices.tbank.daily", CancellationToken.None);
 
+        Assert.Contains(entries, x => x.Level == LogLevel.Error && x.Message.Contains("CRITICAL", StringComparison.OrdinalIgnoreCase));
+        var persisted = await database.Context.PortfolioReconciliationResults.SingleAsync();
+        Assert.Equal("mismatch", persisted.Status);
+        Assert.Equal("delta_exceeds_tolerance", persisted.ReasonCode);
+        Assert.Equal("critical", persisted.Severity);
+        Assert.True(persisted.AlertRequired);
+    }
+
+    [Fact]
+    public async Task LogDailyReportAsync_LogsWarning_WhenDeltaExceedsWarningThresholdOnly()
+    {
+        await using var database = SqliteTestContextFactory.Create();
+        var (portfolioId, runDate) = await SeedPortfolioData(database.Context);
+        var entries = new List<LogEntry>();
+        var service = CreateService(database.Context, entries, new BackgroundJobsOptions
+        {
+            PortfolioReconciliationDaily = new PortfolioReconciliationDailyJobOptions
+            {
+                Enabled = true,
+                DeltaToleranceBase = 1m,
+                WarningToleranceMultiplier = 1m,
+                CriticalToleranceMultiplier = 5m,
+                Targets =
+                [
+                    new PortfolioReconciliationTargetOptions
+                    {
+                        PortfolioId = portfolioId,
+                        Date = runDate.ToString("yyyy-MM-dd"),
+                        NavBase = 998m,
+                        CashBase = 399m,
+                        PositionsValueBase = 599m
+                    }
+                ]
+            }
+        });
+
+        await service.LogDailyReportAsync(runDate, "prices.tbank.daily", CancellationToken.None);
+
         Assert.Contains(entries, x => x.Level == LogLevel.Warning && x.Message.Contains("reconciliation mismatch", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(entries, x => x.Level == LogLevel.Error);
+        var persisted = await database.Context.PortfolioReconciliationResults.SingleAsync();
+        Assert.Equal("warning", persisted.Severity);
+        Assert.True(persisted.AlertRequired);
     }
 
     [Fact]
@@ -72,6 +114,11 @@ public sealed class PortfolioReconciliationReportServiceTests
 
         Assert.DoesNotContain(entries, x => x.Level == LogLevel.Warning);
         Assert.Contains(entries, x => x.Level == LogLevel.Information && x.Message.Contains("within tolerance", StringComparison.OrdinalIgnoreCase));
+        var persisted = await database.Context.PortfolioReconciliationResults.SingleAsync();
+        Assert.Equal("matched", persisted.Status);
+        Assert.Equal("within_tolerance", persisted.ReasonCode);
+        Assert.Equal("info", persisted.Severity);
+        Assert.False(persisted.AlertRequired);
     }
 
     [Fact]
@@ -106,6 +153,11 @@ public sealed class PortfolioReconciliationReportServiceTests
         Assert.DoesNotContain(entries, x => x.Level == LogLevel.Warning);
         Assert.Contains(entries, x => x.Message.Contains("currency conversion applied", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(entries, x => x.Message.Contains("within tolerance", StringComparison.OrdinalIgnoreCase));
+        var persisted = await database.Context.PortfolioReconciliationResults.SingleAsync();
+        Assert.Equal("matched", persisted.Status);
+        Assert.Equal("RUB", persisted.ReportingCurrencyId);
+        Assert.Equal("info", persisted.Severity);
+        Assert.False(persisted.AlertRequired);
     }
 
     [Fact]
@@ -138,6 +190,53 @@ public sealed class PortfolioReconciliationReportServiceTests
 
         Assert.DoesNotContain(entries, x => x.Level == LogLevel.Warning && x.Message.Contains("mismatch", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(entries, x => x.Level == LogLevel.Information && x.Message.Contains("within tolerance", StringComparison.OrdinalIgnoreCase));
+        var persisted = await database.Context.PortfolioReconciliationResults.SingleAsync();
+        Assert.Equal("matched", persisted.Status);
+        Assert.Equal("within_tolerance", persisted.ReasonCode);
+        Assert.Equal("info", persisted.Severity);
+        Assert.False(persisted.AlertRequired);
+    }
+
+    [Fact]
+    public async Task LogDailyReportAsync_SkipsMissingPortfolioWithoutPersistFailure_AndSavesValidTargets()
+    {
+        await using var database = SqliteTestContextFactory.Create();
+        var (portfolioId, runDate) = await SeedPortfolioData(database.Context);
+        var missingPortfolioId = Guid.NewGuid();
+        var entries = new List<LogEntry>();
+        var service = CreateService(database.Context, entries, new BackgroundJobsOptions
+        {
+            PortfolioReconciliationDaily = new PortfolioReconciliationDailyJobOptions
+            {
+                Enabled = true,
+                DeltaToleranceBase = 1m,
+                Targets =
+                [
+                    new PortfolioReconciliationTargetOptions
+                    {
+                        PortfolioId = missingPortfolioId,
+                        Date = runDate.ToString("yyyy-MM-dd"),
+                        NavBase = 1000m,
+                        CashBase = 400m,
+                        PositionsValueBase = 600m
+                    },
+                    new PortfolioReconciliationTargetOptions
+                    {
+                        PortfolioId = portfolioId,
+                        Date = runDate.ToString("yyyy-MM-dd"),
+                        NavBase = 1000m,
+                        CashBase = 400m,
+                        PositionsValueBase = 600m
+                    }
+                ]
+            }
+        });
+
+        await service.LogDailyReportAsync(runDate, "reconciliation.daily", CancellationToken.None);
+
+        Assert.Contains(entries, x => x.Level == LogLevel.Warning && x.Message.Contains("portfolio not found", StringComparison.OrdinalIgnoreCase));
+        Assert.Single(database.Context.PortfolioReconciliationResults);
+        Assert.Equal(portfolioId, database.Context.PortfolioReconciliationResults.Single().PortfolioId);
     }
 
     private static PortfolioReconciliationReportService CreateService(
