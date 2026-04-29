@@ -7,6 +7,7 @@ namespace Larchik.Infrastructure.Jobs;
 
 public class MoexPricesDailyJobHandler(
     SyncMoexPricesCommandHandler syncHandler,
+    PortfolioReconciliationReportService reconciliationReportService,
     IOptionsMonitor<BackgroundJobsOptions> optionsMonitor,
     ILogger<MoexPricesDailyJobHandler> logger)
     : IBackgroundJobHandler
@@ -47,9 +48,15 @@ public class MoexPricesDailyJobHandler(
 
         if (result.IsSuccess)
         {
+            var effectiveDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow.Date);
+            await reconciliationReportService.LogDailyReportAsync(
+                effectiveDate,
+                source: "prices.moex.daily",
+                cancellationToken);
+
             logger.LogInformation(
                 "MOEX daily job completed for {Date} UTC. Saved DB changes: {Changes}",
-                (date ?? DateOnly.FromDateTime(DateTime.UtcNow.Date)).ToString("yyyy-MM-dd"),
+                effectiveDate.ToString("yyyy-MM-dd"),
                 result.Value);
         }
         else

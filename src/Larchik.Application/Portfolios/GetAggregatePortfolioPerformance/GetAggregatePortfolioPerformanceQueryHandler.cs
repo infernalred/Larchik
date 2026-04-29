@@ -54,6 +54,7 @@ public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context
             operations,
             baseCurrency,
             maxPriceDate,
+            additionalCurrencies: null,
             cancellationToken);
         var operationsByPortfolio = analytics.Operations
             .GroupBy(x => x.PortfolioId)

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios;
 
-internal static class PortfolioAnalyticsQueryHelper
+public static class PortfolioAnalyticsQueryHelper
 {
     public static string? ResolveBaseCurrency(string? requestedCurrency, IReadOnlyCollection<Portfolio> portfolios)
     {
@@ -28,6 +28,7 @@ internal static class PortfolioAnalyticsQueryHelper
         IReadOnlyList<Operation> operations,
         string baseCurrency,
         DateTime maxPriceDate,
+        IEnumerable<string>? additionalCurrencies,
         CancellationToken cancellationToken)
     {
         var instrumentIds = operations
@@ -59,13 +60,21 @@ internal static class PortfolioAnalyticsQueryHelper
             neededCurrencies.Add(instrument.CurrencyId);
         }
 
+        if (additionalCurrencies is not null)
+        {
+            foreach (var currency in additionalCurrencies.Where(x => !string.IsNullOrWhiteSpace(x)))
+            {
+                neededCurrencies.Add(currency.Trim().ToUpperInvariant());
+            }
+        }
+
         var fxRates = await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
         var data = new HistoricalDataLookup(prices, fxRates);
 
         return new PortfolioAnalyticsContext(mergedOperations, instruments, data);
     }
 
-    internal static DateTime NormalizeMaxPriceDateUtc(DateTime? to)
+    public static DateTime NormalizeMaxPriceDateUtc(DateTime? to)
     {
         var date = to?.Date ?? DateTime.UtcNow.Date;
         var utcDate = date.Kind switch
@@ -78,7 +87,7 @@ internal static class PortfolioAnalyticsQueryHelper
         return DateTime.SpecifyKind(utcDate.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
     }
 
-    internal sealed record PortfolioAnalyticsContext(
+    public sealed record PortfolioAnalyticsContext(
         IReadOnlyList<Operation> Operations,
         IReadOnlyDictionary<Guid, Instrument> Instruments,
         HistoricalDataLookup Data);

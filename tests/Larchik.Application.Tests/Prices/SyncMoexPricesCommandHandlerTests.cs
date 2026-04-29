@@ -272,4 +272,70 @@ public sealed class SyncMoexPricesCommandHandlerTests
         Assert.Contains("FX rate is missing for MOEX bond price normalization", result.Error);
         Assert.Empty(await harness.Context.Prices.ToListAsync());
     }
+
+    [Fact]
+    public async Task Handle_SkipsInstrument_WhenPriceSourceIsNotMoex()
+    {
+        await using var harness = new PriceSyncTestHarness();
+        harness.AddInstrument("SBER", currencyId: "RUB", priceSource: Larchik.Persistence.Entities.PriceSource.TBANK);
+        await harness.Context.SaveChangesAsync();
+
+        var factory = new FakeHttpClientFactory((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                {
+                  "history": {
+                    "columns": ["SECID","TRADEDATE","CLOSE","CURRENCYID"],
+                    "data": [["SBER","2026-04-20",100.5,"RUB"]]
+                  }
+                }
+                """, Encoding.UTF8, "application/json")
+            }));
+
+        var handler = new SyncMoexPricesCommandHandler(
+            harness.Context,
+            factory,
+            NullLogger<SyncMoexPricesCommandHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SyncMoexPricesCommand(new DateOnly(2026, 4, 20), Boards: ["TQBR"], BaseUrl: "https://moex.test"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Empty(await harness.Context.Prices.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Handle_SkipsInstrument_WhenTradingIsDisabled()
+    {
+        await using var harness = new PriceSyncTestHarness();
+        harness.AddInstrument("SBER", currencyId: "RUB", priceSource: Larchik.Persistence.Entities.PriceSource.MOEX, isTrading: false);
+        await harness.Context.SaveChangesAsync();
+
+        var factory = new FakeHttpClientFactory((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                {
+                  "history": {
+                    "columns": ["SECID","TRADEDATE","CLOSE","CURRENCYID"],
+                    "data": [["SBER","2026-04-20",100.5,"RUB"]]
+                  }
+                }
+                """, Encoding.UTF8, "application/json")
+            }));
+
+        var handler = new SyncMoexPricesCommandHandler(
+            harness.Context,
+            factory,
+            NullLogger<SyncMoexPricesCommandHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SyncMoexPricesCommand(new DateOnly(2026, 4, 20), Boards: ["TQBR"], BaseUrl: "https://moex.test"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Empty(await harness.Context.Prices.ToListAsync());
+    }
 }

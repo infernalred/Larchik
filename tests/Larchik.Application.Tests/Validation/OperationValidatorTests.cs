@@ -65,6 +65,38 @@ public class OperationValidatorTests
         Assert.Empty(result.Errors);
     }
 
+    [Fact]
+    public void Validate_RejectsNonUtcTradeDate()
+    {
+        var model = CreateModel(
+            Type: OperationType.Deposit,
+            Price: 100m) with
+        {
+            TradeDate = new DateTimeOffset(2026, 4, 19, 13, 0, 0, TimeSpan.FromHours(3))
+        };
+
+        var result = validator.Validate(model);
+
+        Assert.Contains(result.Errors, x => x.ErrorMessage.Contains("TradeDate must be in UTC", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Validate_RejectsSettlementDateBeforeTradeDate()
+    {
+        var model = CreateModel(
+            Type: OperationType.Buy,
+            InstrumentId: Guid.NewGuid(),
+            Quantity: 1m,
+            Price: 100m) with
+        {
+            SettlementDate = TradeDate.AddDays(-1)
+        };
+
+        var result = validator.Validate(model);
+
+        Assert.Contains(result.Errors, x => x.ErrorMessage.Contains("SettlementDate must be greater than or equal to TradeDate", StringComparison.Ordinal));
+    }
+
     private static OperationModel CreateModel(
         Guid? InstrumentId = null,
         OperationType Type = OperationType.Deposit,

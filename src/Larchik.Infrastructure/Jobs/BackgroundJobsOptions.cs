@@ -10,6 +10,7 @@ public class BackgroundJobsOptions
     public MoexPricesDailyJobOptions MoexPricesDaily { get; set; } = new();
     public TbankPricesDailyJobOptions TbankPricesDaily { get; set; } = new();
     public TbankInstrumentInfoDailyJobOptions TbankInstrumentInfoDaily { get; set; } = new();
+    public PortfolioReconciliationDailyJobOptions PortfolioReconciliationDaily { get; set; } = new();
 }
 
 public class FxCbrDailyJobOptions
@@ -67,4 +68,22 @@ public class TbankInstrumentInfoDailyJobOptions
     public bool AllowInvalidTls { get; set; }
     public int MaxParallelism { get; set; } = 6;
     public string[] CountryExclusions { get; set; } = [];
+}
+
+public class PortfolioReconciliationDailyJobOptions
+{
+    public bool Enabled { get; set; } = false;
+    public decimal DeltaToleranceBase { get; set; } = 0.01m;
+    public PortfolioReconciliationTargetOptions[] Targets { get; set; } = [];
+}
+
+public class PortfolioReconciliationTargetOptions
+{
+    public Guid PortfolioId { get; set; }
+    public string? Date { get; set; }
+    public string? CurrencyId { get; set; }
+    public decimal NavBase { get; set; }
+    public decimal CashBase { get; set; }
+    public decimal PositionsValueBase { get; set; }
+    public decimal? DeltaToleranceBase { get; set; }
 }

@@ -145,4 +145,70 @@ public sealed class SyncTbankPricesCommandHandlerTests
         Assert.Single(requestedBodies);
         Assert.Contains("\"instrumentId\":\"HISTORICAL_FIGI\"", requestedBodies[0]);
     }
+
+    [Fact]
+    public async Task Handle_SkipsInstrument_WhenPriceSourceIsNotTbank()
+    {
+        await using var harness = new PriceSyncTestHarness();
+        harness.AddInstrument("AAPL", currencyId: "USD", figi: "FIGI123", priceSource: Larchik.Persistence.Entities.PriceSource.MOEX);
+        await harness.Context.SaveChangesAsync();
+
+        var callCount = 0;
+        var factory = new FakeHttpClientFactory((_, _) =>
+        {
+            callCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                { "candles": [{ "time": "2026-04-20T20:00:00Z", "close": { "units": "101", "nano": "0" } }] }
+                """, Encoding.UTF8, "application/json")
+            });
+        });
+
+        var handler = new SyncTbankPricesCommandHandler(
+            harness.Context,
+            factory,
+            NullLogger<SyncTbankPricesCommandHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SyncTbankPricesCommand(new DateOnly(2026, 4, 20), Token: "secret", BaseUrl: "https://tbank.test"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(0, callCount);
+        Assert.Empty(await harness.Context.Prices.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Handle_SkipsInstrument_WhenTradingIsDisabled()
+    {
+        await using var harness = new PriceSyncTestHarness();
+        harness.AddInstrument("AAPL", currencyId: "USD", figi: "FIGI123", priceSource: Larchik.Persistence.Entities.PriceSource.TBANK, isTrading: false);
+        await harness.Context.SaveChangesAsync();
+
+        var callCount = 0;
+        var factory = new FakeHttpClientFactory((_, _) =>
+        {
+            callCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                { "candles": [{ "time": "2026-04-20T20:00:00Z", "close": { "units": "101", "nano": "0" } }] }
+                """, Encoding.UTF8, "application/json")
+            });
+        });
+
+        var handler = new SyncTbankPricesCommandHandler(
+            harness.Context,
+            factory,
+            NullLogger<SyncTbankPricesCommandHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SyncTbankPricesCommand(new DateOnly(2026, 4, 20), Token: "secret", BaseUrl: "https://tbank.test"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(0, callCount);
+        Assert.Empty(await harness.Context.Prices.ToListAsync());
+    }
 }

@@ -32,6 +32,7 @@ public static class JobsHostComposition
         services.AddScoped<SyncMoexPricesCommandHandler>();
         services.AddScoped<SyncTbankPricesCommandHandler>();
         services.AddScoped<SyncTbankInstrumentInfoCommandHandler>();
+        services.AddScoped<PortfolioReconciliationReportService>();
 
         services.AddBackgroundJobs(configuration);
     }

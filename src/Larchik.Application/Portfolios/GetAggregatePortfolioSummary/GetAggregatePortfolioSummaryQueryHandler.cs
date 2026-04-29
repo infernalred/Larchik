@@ -50,6 +50,7 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
             operations,
             baseCurrency,
             asOfDateTime,
+            additionalCurrencies: null,
             cancellationToken);
         var operationsByPortfolio = analytics.Operations
             .GroupBy(x => x.PortfolioId)

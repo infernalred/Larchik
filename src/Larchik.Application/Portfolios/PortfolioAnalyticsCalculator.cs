@@ -5,7 +5,7 @@ using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Portfolios;
 
-internal sealed class PortfolioAnalyticsCalculator
+public sealed class PortfolioAnalyticsCalculator
 {
     public PortfolioSummaryDto CalculateSummary(
         Portfolio portfolio,

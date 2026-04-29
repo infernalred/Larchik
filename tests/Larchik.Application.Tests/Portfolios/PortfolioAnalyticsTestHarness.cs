@@ -125,6 +125,20 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
         });
     }
 
+    public void AddFxRate(string baseCurrencyId, string quoteCurrencyId, DateTime date, decimal rate, string source = "CBR")
+    {
+        context.FxRates.Add(new FxRate
+        {
+            Id = Guid.NewGuid(),
+            BaseCurrencyId = baseCurrencyId,
+            QuoteCurrencyId = quoteCurrencyId,
+            Date = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+            Rate = rate,
+            Source = source,
+            CreatedAt = DateTime.SpecifyKind(date, DateTimeKind.Utc)
+        });
+    }
+
     public Task SaveChangesAsync() => context.SaveChangesAsync();
 
     public Task<Result<PortfoliosSummaryDto>> HandleAsync(GetPortfoliosSummaryQuery query) =>

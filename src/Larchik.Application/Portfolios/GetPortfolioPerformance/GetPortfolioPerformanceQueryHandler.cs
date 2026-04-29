@@ -43,6 +43,7 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             operations,
             portfolio.ReportingCurrencyId,
             maxPriceDate,
+            additionalCurrencies: null,
             cancellationToken);
 
         var method = request.Method ?? DefaultValuationMethod;

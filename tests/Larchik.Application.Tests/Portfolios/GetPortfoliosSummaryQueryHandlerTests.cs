@@ -77,4 +77,70 @@ public sealed class GetPortfoliosSummaryQueryHandlerTests
         Assert.Equal(100m, result.UnrealizedBase);
         Assert.Equal(100m, result.PnlBase);
     }
+
+    [Fact]
+    public async Task Handle_ConvertsCrossCurrencyOperationsUsingHistoricalFxRate()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var portfolioId = harness.AddPortfolio("Multi FX", "RUB");
+        var instrumentId = harness.AddInstrument("AAPL", "USD");
+        var tradeDate = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
+        var valuationDate = tradeDate.AddDays(1);
+
+        harness.AddOperation(portfolioId, OperationType.Deposit, "RUB", tradeDate, price: 10000m);
+        harness.AddOperation(portfolioId, OperationType.Buy, "RUB", tradeDate, instrumentId, quantity: 1m, price: 80m);
+        harness.AddPrice(instrumentId, "USD", valuationDate, 100m);
+        harness.AddFxRate("USD", "RUB", tradeDate, 80m);
+        harness.AddFxRate("USD", "RUB", valuationDate, 90m);
+        await harness.SaveChangesAsync();
+
+        var result = await harness.GetPortfoliosSummaryAsync();
+
+        Assert.Equal(8910m, result.UnrealizedBase);
+        Assert.Equal(18920m, result.NavBase);
+        Assert.Equal(8910m, result.PnlBase);
+    }
+
+    [Fact]
+    public async Task Handle_AccountsForSellFeeInRealizedAndCashBalances()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var portfolioId = harness.AddPortfolio("Fees", "RUB");
+        var instrumentId = harness.AddInstrument("GAZP", "RUB");
+        var now = DateTime.UtcNow;
+
+        harness.AddOperation(portfolioId, OperationType.Deposit, "RUB", now.AddDays(-5), price: 2000m);
+        harness.AddOperation(portfolioId, OperationType.Buy, "RUB", now.AddDays(-4), instrumentId, quantity: 10m, price: 100m);
+        harness.AddOperation(portfolioId, OperationType.Sell, "RUB", now.AddDays(-3), instrumentId, quantity: 4m, price: 120m, fee: 10m);
+        harness.AddPrice(instrumentId, "RUB", now.AddDays(-1), 110m);
+        await harness.SaveChangesAsync();
+
+        var result = await harness.GetPortfoliosSummaryAsync();
+
+        Assert.Equal(1470m, result.CashBase);
+        Assert.Equal(660m, result.PositionsValueBase);
+        Assert.Equal(70m, result.RealizedBase);
+        Assert.Equal(60m, result.UnrealizedBase);
+        Assert.Equal(130m, result.PnlBase);
+    }
+
+    [Fact]
+    public async Task Handle_KeepsPositionWithZeroMarketValue_WhenAsOfPriceIsMissing()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var portfolioId = harness.AddPortfolio("No Price", "RUB");
+        var instrumentId = harness.AddInstrument("NVTK", "RUB");
+        var now = DateTime.UtcNow;
+
+        harness.AddOperation(portfolioId, OperationType.Deposit, "RUB", now.AddDays(-5), price: 1000m);
+        harness.AddOperation(portfolioId, OperationType.Buy, "RUB", now.AddDays(-4), instrumentId, quantity: 10m, price: 50m);
+        await harness.SaveChangesAsync();
+
+        var result = await harness.GetPortfoliosSummaryAsync();
+
+        Assert.Equal(500m, result.CashBase);
+        Assert.Equal(0m, result.PositionsValueBase);
+        Assert.Equal(-500m, result.UnrealizedBase);
+        Assert.Equal(-500m, result.PnlBase);
+    }
 }

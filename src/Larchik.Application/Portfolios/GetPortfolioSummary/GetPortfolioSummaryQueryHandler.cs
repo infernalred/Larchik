@@ -33,6 +33,7 @@ public class GetPortfolioSummaryQueryHandler(LarchikContext context, IUserAccess
             operations,
             portfolio.ReportingCurrencyId,
             asOfDateTime,
+            additionalCurrencies: null,
             cancellationToken);
 
         var method = request.Method ?? DefaultValuationMethod;
