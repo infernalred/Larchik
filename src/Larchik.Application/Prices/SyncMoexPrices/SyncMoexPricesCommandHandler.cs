@@ -407,8 +407,8 @@ public class SyncMoexPricesCommandHandler(
                             return Result<MoexBoardPrices>.Failure(pageResult.Error ?? "MOEX response parse failed");
                         }
 
-                        var rows = pageResult.Value!;
-                        if (rows.Count == 0)
+                        var page = pageResult.Value!;
+                        if (page.RawRowCount == 0)
                         {
                             break;
                         }
@@ -416,7 +416,7 @@ public class SyncMoexPricesCommandHandler(
                         marketHasData = true;
                         gotAnyData = true;
 
-                        foreach (var row in rows)
+                        foreach (var row in page.Rows)
                         {
                             if (!prices.ContainsKey(row.SecId))
                             {
@@ -431,7 +431,7 @@ public class SyncMoexPricesCommandHandler(
                             }
                         }
 
-                        if (rows.Count < pageSize)
+                        if (page.RawRowCount < pageSize)
                         {
                             break;
                         }
@@ -633,25 +633,25 @@ public class SyncMoexPricesCommandHandler(
         }
     }
 
-    private static Result<List<MoexPriceRow>> ParseHistoryRows(string json)
+    private static Result<MoexHistoryPage> ParseHistoryRows(string json)
     {
         try
         {
             using var doc = JsonDocument.Parse(json);
             if (!doc.RootElement.TryGetProperty("history", out var history))
             {
-                return Result<List<MoexPriceRow>>.Failure("MOEX response has no 'history' section");
+                return Result<MoexHistoryPage>.Failure("MOEX response has no 'history' section");
             }
 
             if (!history.TryGetProperty("columns", out var columnsElement) ||
                 columnsElement.ValueKind != JsonValueKind.Array)
             {
-                return Result<List<MoexPriceRow>>.Failure("MOEX response has invalid 'history.columns'");
+                return Result<MoexHistoryPage>.Failure("MOEX response has invalid 'history.columns'");
             }
 
             if (!history.TryGetProperty("data", out var dataElement) || dataElement.ValueKind != JsonValueKind.Array)
             {
-                return Result<List<MoexPriceRow>>.Failure("MOEX response has invalid 'history.data'");
+                return Result<MoexHistoryPage>.Failure("MOEX response has invalid 'history.data'");
             }
 
             var columns = columnsElement
@@ -662,7 +662,7 @@ public class SyncMoexPricesCommandHandler(
             var secIdIndex = Array.FindIndex(columns, x => x.Equals("SECID", StringComparison.OrdinalIgnoreCase));
             if (secIdIndex < 0)
             {
-                return Result<List<MoexPriceRow>>.Failure("MOEX response has no SECID column");
+                return Result<MoexHistoryPage>.Failure("MOEX response has no SECID column");
             }
 
             var priceIndexes = PriceColumns
@@ -676,10 +676,11 @@ public class SyncMoexPricesCommandHandler(
 
             if (priceIndexes.Length == 0)
             {
-                return Result<List<MoexPriceRow>>.Failure("MOEX response has no supported price columns");
+                return Result<MoexHistoryPage>.Failure("MOEX response has no supported price columns");
             }
 
             var rows = new List<MoexPriceRow>();
+            var rawRowCount = 0;
 
             foreach (var rowElement in dataElement.EnumerateArray())
             {
@@ -687,6 +688,8 @@ public class SyncMoexPricesCommandHandler(
                 {
                     continue;
                 }
+
+                rawRowCount++;
 
                 if (!TryGetString(rowElement, secIdIndex, out var secId) || string.IsNullOrWhiteSpace(secId))
                 {
@@ -720,11 +723,11 @@ public class SyncMoexPricesCommandHandler(
                     accruedInterest));
             }
 
-            return Result<List<MoexPriceRow>>.Success(rows);
+            return Result<MoexHistoryPage>.Success(new MoexHistoryPage(rows, rawRowCount));
         }
         catch (Exception ex)
         {
-            return Result<List<MoexPriceRow>>.Failure($"Failed to parse MOEX response: {ex.Message}");
+            return Result<MoexHistoryPage>.Failure($"Failed to parse MOEX response: {ex.Message}");
         }
     }
 
@@ -951,4 +954,5 @@ public class SyncMoexPricesCommandHandler(
         decimal? FaceValue,
         string? FaceCurrencyId,
         decimal? AccruedInterest);
+    private sealed record MoexHistoryPage(List<MoexPriceRow> Rows, int RawRowCount);
 }

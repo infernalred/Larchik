@@ -212,6 +212,108 @@ public sealed class SyncMoexPricesCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ContinuesMoexPagination_WhenFilteredPriceRowsDoNotFillPage()
+    {
+        await using var harness = new PriceSyncTestHarness();
+        var instrumentId = harness.AddInstrument(
+            "RU000A10BQC8",
+            currencyId: "RUB",
+            type: Larchik.Persistence.Entities.InstrumentType.Bond,
+            priceSource: Larchik.Persistence.Entities.PriceSource.MOEX);
+        await harness.Context.SaveChangesAsync();
+
+        var firstRawRows = Enumerable.Range(0, 100)
+            .Select(i => i < 71
+                ? $"""["UNMATCHED{i:D3}","2026-04-29",100,null,null,null,"RUB",1000,"RUB",0]"""
+                : $"""["NOPRICE{i:D3}","2026-04-29",null,null,null,null,"RUB",1000,"RUB",0]""");
+
+        var factory = new FakeHttpClientFactory((request, _) =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("/history/engines/stock/markets/shares/boards/TQCB/securities.json", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""
+                    {
+                      "history": {
+                        "columns": ["SECID","TRADEDATE","LEGALCLOSEPRICE","MARKETPRICE2","CLOSE","WAPRICE","CURRENCYID","FACEVALUE","FACEUNIT","ACCINT"],
+                        "data": []
+                      }
+                    }
+                    """, Encoding.UTF8, "application/json")
+                });
+            }
+
+            if (url.Contains("/history/engines/stock/markets/bonds/boards/TQCB/securities.json", StringComparison.Ordinal) &&
+                url.Contains("start=0", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent($$"""
+                    {
+                      "history": {
+                        "columns": ["SECID","TRADEDATE","LEGALCLOSEPRICE","MARKETPRICE2","CLOSE","WAPRICE","CURRENCYID","FACEVALUE","FACEUNIT","ACCINT"],
+                        "data": [{{string.Join(",", firstRawRows)}}]
+                      }
+                    }
+                    """, Encoding.UTF8, "application/json")
+                });
+            }
+
+            if (url.Contains("/history/engines/stock/markets/bonds/boards/TQCB/securities.json", StringComparison.Ordinal) &&
+                url.Contains("start=100", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""
+                    {
+                      "history": {
+                        "columns": ["SECID","TRADEDATE","LEGALCLOSEPRICE","MARKETPRICE2","CLOSE","WAPRICE","CURRENCYID","FACEVALUE","FACEUNIT","ACCINT"],
+                        "data": [["RU000A10BQC8","2026-04-29",105.44,105,105.2,105.03,"SUR",1000,"RUB",0]]
+                      }
+                    }
+                    """, Encoding.UTF8, "application/json")
+                });
+            }
+
+            if (url.Contains("/securities/RU000A10BQC8.json", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""
+                    {
+                      "boards": {
+                        "columns": ["BOARDID","IS_TRADED"],
+                        "data": [["TQCB",1]]
+                      }
+                    }
+                    """, Encoding.UTF8, "application/json")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
+        var handler = new SyncMoexPricesCommandHandler(
+            harness.Context,
+            factory,
+            NullLogger<SyncMoexPricesCommandHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SyncMoexPricesCommand(new DateOnly(2026, 4, 29), Boards: ["TQCB"], BaseUrl: "https://moex.test"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        var price = await harness.Context.Prices.SingleAsync();
+        Assert.Equal(instrumentId, price.InstrumentId);
+        Assert.Equal(1054.4m, price.Value);
+        Assert.Equal("RUB", price.CurrencyId);
+        Assert.Equal("RUB", price.SourceCurrencyId);
+        Assert.Equal("MOEX", price.Provider);
+    }
+
+    [Fact]
     public async Task Handle_FailsForBond_WhenRequiredFxRateIsMissing()
     {
         await using var harness = new PriceSyncTestHarness();
