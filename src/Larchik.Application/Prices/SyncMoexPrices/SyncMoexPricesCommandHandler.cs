@@ -5,7 +5,6 @@ using Larchik.Application.Helpers;
 using Larchik.Application.Portfolios.Valuation;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +14,6 @@ public class SyncMoexPricesCommandHandler(
     LarchikContext context,
     IHttpClientFactory httpClientFactory,
     ILogger<SyncMoexPricesCommandHandler> logger)
-    : IRequestHandler<SyncMoexPricesCommand, Result<int>>
 {
     private static readonly string[] DefaultBoards = ["TQBR", "TQTF", "TQIF", "TQCB", "TQOB", "CETS", "MTQR"];
     private const int MaxHistoryLookbackDays = 7;

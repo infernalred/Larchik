@@ -2,13 +2,11 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios.GetPortfolio;
 
 public class GetPortfolioQueryHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<GetPortfolioQuery, Result<PortfolioDto?>>
 {
     public async Task<Result<PortfolioDto?>> Handle(GetPortfolioQuery request, CancellationToken cancellationToken)
     {

@@ -2,13 +2,11 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Operations.ImportBroker;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Operations.EditOperation;
 
 public class EditOperationCommandHandler(LarchikContext context, IUserAccessor userAccessor, IPortfolioRecalcService recalc)
-    : IRequestHandler<EditOperationCommand, Result<Unit>?>
 {
     public async Task<Result<Unit>?> Handle(EditOperationCommand request, CancellationToken cancellationToken)
     {

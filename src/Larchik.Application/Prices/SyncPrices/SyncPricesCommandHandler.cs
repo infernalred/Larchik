@@ -2,13 +2,11 @@ using Larchik.Application.Helpers;
 using Larchik.Application.Portfolios.Valuation;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Prices.SyncPrices;
 
 public class SyncPricesCommandHandler(LarchikContext context)
-    : IRequestHandler<SyncPricesCommand, Result<int>>
 {
     public async Task<Result<int>> Handle(SyncPricesCommand request, CancellationToken cancellationToken)
     {

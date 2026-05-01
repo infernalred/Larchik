@@ -2,15 +2,12 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Common.Paging;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
-using Larchik.Application.Portfolios.Reconciliation;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios.Reconciliation.GetPortfolioReconciliationHistory;
 
 public sealed class GetPortfolioReconciliationHistoryQueryHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<GetPortfolioReconciliationHistoryQuery, Result<PagedResult<PortfolioReconciliationResultDto>>>
 {
     private const int MaxPageSize = 200;
 

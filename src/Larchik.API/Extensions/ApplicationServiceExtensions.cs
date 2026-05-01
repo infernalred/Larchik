@@ -2,6 +2,7 @@ using Larchik.API.Configuration;
 using Larchik.API.DTOs;
 using Larchik.Application.Currencies.GetCurrencies;
 using Larchik.Application.Contracts;
+using Larchik.Application.DependencyInjection;
 using Larchik.Persistence.Context;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -29,7 +30,7 @@ public static class ApplicationServiceExtensions
             opt.UseSnakeCaseNamingConvention();
         });
 
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(GetCurrenciesQuery).Assembly));
+        services.AddApplicationHandlers();
         services.AddValidatorsFromAssemblyContaining<GetCurrenciesQuery>();
         services.AddValidatorsFromAssemblyContaining<ImportBrokerReportRequestValidator>();
         services.AddFluentValidationAutoValidation();

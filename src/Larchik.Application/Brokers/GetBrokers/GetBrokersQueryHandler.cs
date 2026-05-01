@@ -2,13 +2,11 @@ using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Application.Operations.ImportBroker;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Brokers.GetBrokers;
 
 public class GetBrokersQueryHandler(LarchikContext context, IEnumerable<IBrokerReportParser> parsers)
-    : IRequestHandler<GetBrokersQuery, Result<BrokerDto[]>>
 {
     public async Task<Result<BrokerDto[]>> Handle(GetBrokersQuery request, CancellationToken cancellationToken)
     {

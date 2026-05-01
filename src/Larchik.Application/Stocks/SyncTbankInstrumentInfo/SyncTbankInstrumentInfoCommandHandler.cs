@@ -5,7 +5,6 @@ using System.Text.Json;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +14,6 @@ public class SyncTbankInstrumentInfoCommandHandler(
     LarchikContext context,
     IHttpClientFactory httpClientFactory,
     ILogger<SyncTbankInstrumentInfoCommandHandler> logger)
-    : IRequestHandler<SyncTbankInstrumentInfoCommand, Result<int>>
 {
     private const string DefaultBaseUrl =
         "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.InstrumentsService/GetInstrumentBy";

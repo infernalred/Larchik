@@ -3,13 +3,11 @@ using Larchik.Application.Helpers;
 using Larchik.Application.Operations.ImportBroker;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Operations.CreateOperation;
 
 public class CreateOperationCommandHandler(LarchikContext context, IUserAccessor userAccessor, IPortfolioRecalcService recalc)
-    : IRequestHandler<CreateOperationCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(CreateOperationCommand request, CancellationToken cancellationToken)
     {

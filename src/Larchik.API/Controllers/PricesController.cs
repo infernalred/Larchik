@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Larchik.API.Controllers;
 
-public class PricesController : BaseApiController
+public class PricesController(SyncPricesCommandHandler syncPrices) : BaseApiController
 {
     [Authorize(Roles = Roles.Admin)]
     [HttpPost("sync")]
@@ -16,6 +16,6 @@ public class PricesController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
     public async Task<ActionResult<int>> Sync([FromBody] IReadOnlyCollection<PriceModel> prices)
     {
-        return HandleResult(await Mediator.Send(new SyncPricesCommand(prices), HttpContext.RequestAborted));
+        return HandleResult(await syncPrices.Handle(new SyncPricesCommand(prices), HttpContext.RequestAborted));
     }
 }

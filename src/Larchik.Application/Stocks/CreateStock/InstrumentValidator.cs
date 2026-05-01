@@ -1,6 +1,5 @@
 using FluentValidation;
 using Larchik.Application.Models;
-using Larchik.Persistence.Entities;
 
 namespace Larchik.Application.Stocks.CreateStock;
 

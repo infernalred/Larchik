@@ -2,13 +2,11 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios.Reconciliation.GetLatestPortfolioReconciliationResult;
 
 public sealed class GetLatestPortfolioReconciliationResultQueryHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<GetLatestPortfolioReconciliationResultQuery, Result<PortfolioReconciliationResultDto>>
 {
     public async Task<Result<PortfolioReconciliationResultDto>> Handle(
         GetLatestPortfolioReconciliationResultQuery request,

@@ -2,13 +2,11 @@ using Larchik.Application.Common.Paging;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.GetAdminInstruments;
 
 public class GetAdminInstrumentsQueryHandler(LarchikContext context)
-    : IRequestHandler<GetAdminInstrumentsQuery, Result<PagedResult<InstrumentDto>>>
 {
     private const int MaxPageSize = 200;
 

@@ -1,13 +1,11 @@
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.ReferenceData.GetCountries;
 
 public sealed class GetCountriesQueryHandler(LarchikContext context)
-    : IRequestHandler<GetCountriesQuery, Result<IReadOnlyCollection<ReferenceItemDto>>>
 {
     public async Task<Result<IReadOnlyCollection<ReferenceItemDto>>> Handle(
         GetCountriesQuery request,

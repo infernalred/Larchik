@@ -2,13 +2,11 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios.Reconciliation.GetPortfolioReconciliationAlertsSummary;
 
 public sealed class GetPortfolioReconciliationAlertsSummaryQueryHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<GetPortfolioReconciliationAlertsSummaryQuery, Result<PortfolioReconciliationAlertsSummaryDto>>
 {
     public async Task<Result<PortfolioReconciliationAlertsSummaryDto>> Handle(
         GetPortfolioReconciliationAlertsSummaryQuery request,

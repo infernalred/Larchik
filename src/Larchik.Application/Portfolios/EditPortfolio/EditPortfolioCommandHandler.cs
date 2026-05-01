@@ -1,13 +1,11 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios.EditPortfolio;
 
 public class EditPortfolioCommandHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<EditPortfolioCommand, Result<Unit>?>
 {
     public async Task<Result<Unit>?> Handle(EditPortfolioCommand request, CancellationToken cancellationToken)
     {

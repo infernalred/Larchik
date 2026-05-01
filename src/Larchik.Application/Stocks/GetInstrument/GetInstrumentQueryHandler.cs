@@ -1,12 +1,11 @@
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.GetInstrument;
 
-public class GetInstrumentQueryHandler(LarchikContext context) : IRequestHandler<GetInstrumentQuery, Result<InstrumentDto?>>
+public class GetInstrumentQueryHandler(LarchikContext context)
 {
     public async Task<Result<InstrumentDto?>> Handle(GetInstrumentQuery request, CancellationToken cancellationToken)
     {

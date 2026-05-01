@@ -3,13 +3,11 @@ using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios.GetAggregatePortfolioPerformance;
 
 public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<GetAggregatePortfolioPerformanceQuery, Result<IReadOnlyCollection<PortfolioPerformanceDto>>>
 {
     public async Task<Result<IReadOnlyCollection<PortfolioPerformanceDto>>> Handle(
         GetAggregatePortfolioPerformanceQuery request,

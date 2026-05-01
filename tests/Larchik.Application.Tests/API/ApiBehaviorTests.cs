@@ -3,7 +3,6 @@ using System.Text.Json;
 using Larchik.API.Configuration;
 using Larchik.API.DTOs;
 using Larchik.API.Middleware;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;

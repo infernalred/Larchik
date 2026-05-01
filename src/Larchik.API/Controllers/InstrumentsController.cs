@@ -1,5 +1,6 @@
 using System.Net;
 using Larchik.Application.Common.Paging;
+using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Application.Stocks.CreateStock;
 using Larchik.Application.Stocks.EditStock;
@@ -11,13 +12,21 @@ using Larchik.Application.Stocks.InstrumentCorporateActions.EditInstrumentCorpor
 using Larchik.Application.Stocks.InstrumentCorporateActions.GetInstrumentCorporateActions;
 using Larchik.Application.Stocks.SearchInstruments;
 using Larchik.Persistence.Constants;
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Larchik.API.Controllers;
 
-public class InstrumentsController : BaseApiController
+public class InstrumentsController(
+    GetAdminInstrumentsQueryHandler listAdmin,
+    SearchInstrumentsQueryHandler searchInstruments,
+    CreateInstrumentCommandHandler createInstrument,
+    GetInstrumentQueryHandler getInstrument,
+    EditInstrumentCommandHandler editInstrument,
+    GetInstrumentCorporateActionsQueryHandler listCorporateActions,
+    CreateInstrumentCorporateActionCommandHandler createCorporateAction,
+    EditInstrumentCorporateActionCommandHandler editCorporateAction,
+    DeleteInstrumentCorporateActionCommandHandler deleteCorporateAction) : BaseApiController
 {
     [Authorize(Roles = $"{Roles.Admin}")]
     [HttpGet("admin")]
@@ -30,14 +39,14 @@ public class InstrumentsController : BaseApiController
         [FromQuery] bool? isTrading,
         [FromQuery] PageQuery paging)
     {
-        return HandleResult(await Mediator.Send(new GetAdminInstrumentsQuery(query, country, isTrading, paging), HttpContext.RequestAborted));
+        return HandleResult(await listAdmin.Handle(new GetAdminInstrumentsQuery(query, country, isTrading, paging), HttpContext.RequestAborted));
     }
 
     [HttpGet]
     [ProducesResponseType(typeof(InstrumentLookupDto[]), (int)HttpStatusCode.OK)]
     public async Task<ActionResult<InstrumentLookupDto[]>> Search([FromQuery] string? query, [FromQuery] int limit = 20)
     {
-        return HandleResult(await Mediator.Send(new SearchInstrumentsQuery(query, limit), HttpContext.RequestAborted));
+        return HandleResult(await searchInstruments.Handle(new SearchInstrumentsQuery(query, limit), HttpContext.RequestAborted));
     }
 
     [Authorize(Roles = $"{Roles.Admin}")]
@@ -47,7 +56,7 @@ public class InstrumentsController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
     public async Task<ActionResult<Unit>> CreateInstrument([FromBody] InstrumentModel model)
     {
-        return HandleResult(await Mediator.Send(new CreateInstrumentCommand(model), HttpContext.RequestAborted));
+        return HandleResult(await createInstrument.Handle(new CreateInstrumentCommand(model), HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:guid}")]
@@ -57,7 +66,7 @@ public class InstrumentsController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<InstrumentDto>> GetInstrument(Guid id)
     {
-        return HandleResult(await Mediator.Send(new GetInstrumentQuery(id), HttpContext.RequestAborted));
+        return HandleResult(await getInstrument.Handle(new GetInstrumentQuery(id), HttpContext.RequestAborted));
     }
 
     [Authorize(Roles = $"{Roles.Admin}")]
@@ -68,7 +77,7 @@ public class InstrumentsController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<Unit>> EditInstrument(Guid id, [FromBody] InstrumentModel model)
     {
-        return HandleResult(await Mediator.Send(new EditInstrumentCommand(id, model), HttpContext.RequestAborted));
+        return HandleResult(await editInstrument.Handle(new EditInstrumentCommand(id, model), HttpContext.RequestAborted));
     }
 
     [Authorize(Roles = $"{Roles.Admin}")]
@@ -78,7 +87,7 @@ public class InstrumentsController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
     public async Task<ActionResult<IReadOnlyCollection<InstrumentCorporateActionDto>>> ListCorporateActions(Guid id)
     {
-        return HandleResult(await Mediator.Send(new GetInstrumentCorporateActionsQuery(id), HttpContext.RequestAborted));
+        return HandleResult(await listCorporateActions.Handle(new GetInstrumentCorporateActionsQuery(id), HttpContext.RequestAborted));
     }
 
     [Authorize(Roles = $"{Roles.Admin}")]
@@ -88,7 +97,7 @@ public class InstrumentsController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.Forbidden)]
     public async Task<ActionResult<Guid>> CreateCorporateAction(Guid id, [FromBody] InstrumentCorporateActionModel model)
     {
-        return HandleResult(await Mediator.Send(new CreateInstrumentCorporateActionCommand(id, model), HttpContext.RequestAborted));
+        return HandleResult(await createCorporateAction.Handle(new CreateInstrumentCorporateActionCommand(id, model), HttpContext.RequestAborted));
     }
 
     [Authorize(Roles = $"{Roles.Admin}")]
@@ -99,7 +108,7 @@ public class InstrumentsController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<Unit>> EditCorporateAction(Guid id, Guid actionId, [FromBody] InstrumentCorporateActionModel model)
     {
-        return HandleResult(await Mediator.Send(new EditInstrumentCorporateActionCommand(id, actionId, model), HttpContext.RequestAborted));
+        return HandleResult(await editCorporateAction.Handle(new EditInstrumentCorporateActionCommand(id, actionId, model), HttpContext.RequestAborted));
     }
 
     [Authorize(Roles = $"{Roles.Admin}")]
@@ -110,6 +119,6 @@ public class InstrumentsController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<Unit>> DeleteCorporateAction(Guid id, Guid actionId)
     {
-        return HandleResult(await Mediator.Send(new DeleteInstrumentCorporateActionCommand(id, actionId), HttpContext.RequestAborted));
+        return HandleResult(await deleteCorporateAction.Handle(new DeleteInstrumentCorporateActionCommand(id, actionId), HttpContext.RequestAborted));
     }
 }

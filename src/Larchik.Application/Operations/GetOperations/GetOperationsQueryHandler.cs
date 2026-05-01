@@ -3,13 +3,10 @@ using Larchik.Application.Common.Paging;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Operations.GetOperations;
 
 public class GetOperationsQueryHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<GetOperationsQuery, Result<PagedResult<OperationDto>>>
 {
     private const int MaxPageSize = 200;
 

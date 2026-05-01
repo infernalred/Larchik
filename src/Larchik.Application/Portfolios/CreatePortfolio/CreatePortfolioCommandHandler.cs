@@ -2,12 +2,10 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 
 namespace Larchik.Application.Portfolios.CreatePortfolio;
 
 public class CreatePortfolioCommandHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<CreatePortfolioCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(CreatePortfolioCommand request, CancellationToken cancellationToken)
     {

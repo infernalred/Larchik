@@ -1,13 +1,11 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios.DeletePortfolio;
 
 public class DeletePortfolioCommandHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<DeletePortfolioCommand, Result<Unit>>
 {
     public async Task<Result<Unit>> Handle(DeletePortfolioCommand request, CancellationToken cancellationToken)
     {

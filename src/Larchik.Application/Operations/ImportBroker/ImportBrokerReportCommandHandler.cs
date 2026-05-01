@@ -3,7 +3,6 @@ using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +14,6 @@ public class ImportBrokerReportCommandHandler(
     IPortfolioRecalcService recalc,
     IEnumerable<IBrokerReportParser> parsers,
     ILogger<ImportBrokerReportCommandHandler> logger)
-    : IRequestHandler<ImportBrokerReportCommand, Result<ImportResultDto>>
 {
     public async Task<Result<ImportResultDto>> Handle(ImportBrokerReportCommand request, CancellationToken cancellationToken)
     {

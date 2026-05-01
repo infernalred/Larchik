@@ -2,13 +2,11 @@ using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.InstrumentCorporateActions.GetInstrumentCorporateActions;
 
 public class GetInstrumentCorporateActionsQueryHandler(LarchikContext context)
-    : IRequestHandler<GetInstrumentCorporateActionsQuery, Result<IReadOnlyCollection<InstrumentCorporateActionDto>>>
 {
     public async Task<Result<IReadOnlyCollection<InstrumentCorporateActionDto>>> Handle(
         GetInstrumentCorporateActionsQuery request,

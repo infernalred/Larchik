@@ -9,7 +9,6 @@ using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Larchik.Application.Tests.TestInfrastructure;
-using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace Larchik.Application.Tests.Portfolios;

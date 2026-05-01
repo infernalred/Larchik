@@ -1,13 +1,11 @@
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.SearchInstruments;
 
 public class SearchInstrumentsQueryHandler(LarchikContext context)
-    : IRequestHandler<SearchInstrumentsQuery, Result<InstrumentLookupDto[]>>
 {
     public async Task<Result<InstrumentLookupDto[]>> Handle(SearchInstrumentsQuery request, CancellationToken cancellationToken)
     {

@@ -1,13 +1,11 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Operations.DeleteOperation;
 
 public class DeleteOperationCommandHandler(LarchikContext context, IUserAccessor userAccessor, IPortfolioRecalcService recalc)
-    : IRequestHandler<DeleteOperationCommand, Result<Unit>>
 {
     private const string OperationNotFoundMessage = "Not found";
     private const string AdministrativeOperationMessage = "Split and reverse split must be managed as administrative corporate actions.";

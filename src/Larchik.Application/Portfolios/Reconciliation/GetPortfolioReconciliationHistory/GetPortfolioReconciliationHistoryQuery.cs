@@ -1,7 +1,4 @@
 using Larchik.Application.Common.Paging;
-using Larchik.Application.Helpers;
-using Larchik.Application.Models;
-using MediatR;
 
 namespace Larchik.Application.Portfolios.Reconciliation.GetPortfolioReconciliationHistory;
 
@@ -15,4 +12,4 @@ public sealed record GetPortfolioReconciliationHistoryQuery(
     string? Source = null,
     string? SortBy = null,
     string? SortDirection = null,
-    PageQuery? Paging = null) : IRequest<Result<PagedResult<PortfolioReconciliationResultDto>>>;
+    PageQuery? Paging = null);

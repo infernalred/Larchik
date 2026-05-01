@@ -3,13 +3,11 @@ using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios.GetAggregatePortfolioSummary;
 
 public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<GetAggregatePortfolioSummaryQuery, Result<PortfolioSummaryDto>>
 {
     private const string DefaultValuationMethod = "adjustingAvg";
 

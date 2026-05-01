@@ -3,7 +3,6 @@ using System.Xml.Linq;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +12,6 @@ public class SyncCbrFxRatesCommandHandler(
     LarchikContext context,
     IHttpClientFactory httpClientFactory,
     ILogger<SyncCbrFxRatesCommandHandler> logger)
-    : IRequestHandler<SyncCbrFxRatesCommand, Result<int>>
 {
     public async Task<Result<int>> Handle(SyncCbrFxRatesCommand request, CancellationToken cancellationToken)
     {

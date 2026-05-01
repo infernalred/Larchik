@@ -1,13 +1,11 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.EditStock;
 
 public class EditInstrumentCommandHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<EditInstrumentCommand, Result<Unit>?>
 {
     public async Task<Result<Unit>?> Handle(EditInstrumentCommand request, CancellationToken cancellationToken)
     {

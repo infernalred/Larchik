@@ -1,12 +1,11 @@
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Categories.GetCategories;
 
-public class GetCategoriesQueryHandler(LarchikContext context) : IRequestHandler<GetCategoriesQuery, Result<Category[]>>
+public class GetCategoriesQueryHandler(LarchikContext context)
 {
     public async Task<Result<Category[]>> Handle(GetCategoriesQuery request, CancellationToken cancellationToken)
     {

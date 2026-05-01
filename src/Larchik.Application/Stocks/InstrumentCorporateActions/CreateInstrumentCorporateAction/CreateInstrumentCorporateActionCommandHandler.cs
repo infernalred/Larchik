@@ -2,13 +2,11 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.InstrumentCorporateActions.CreateInstrumentCorporateAction;
 
 public class CreateInstrumentCorporateActionCommandHandler(LarchikContext context, IPortfolioRecalcService recalc)
-    : IRequestHandler<CreateInstrumentCorporateActionCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(CreateInstrumentCorporateActionCommand request, CancellationToken cancellationToken)
     {

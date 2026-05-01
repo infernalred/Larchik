@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Larchik.API.Controllers;
 
-public class CategoriesController : BaseApiController
+public class CategoriesController(GetCategoriesQueryHandler getCategories) : BaseApiController
 {
     [HttpGet]
     [ProducesResponseType(typeof(Category[]), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.Unauthorized)]
     public async Task<ActionResult<Category[]>> GetCategories()
     {
-        return HandleResult(await Mediator.Send(new GetCategoriesQuery(), HttpContext.RequestAborted));
+        return HandleResult(await getCategories.Handle(new GetCategoriesQuery(), HttpContext.RequestAborted));
     }
 }

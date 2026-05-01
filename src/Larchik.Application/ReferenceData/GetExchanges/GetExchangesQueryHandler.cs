@@ -1,13 +1,11 @@
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.ReferenceData.GetExchanges;
 
 public sealed class GetExchangesQueryHandler(LarchikContext context)
-    : IRequestHandler<GetExchangesQuery, Result<IReadOnlyCollection<ReferenceItemDto>>>
 {
     public async Task<Result<IReadOnlyCollection<ReferenceItemDto>>> Handle(
         GetExchangesQuery request,

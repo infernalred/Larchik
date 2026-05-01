@@ -2,13 +2,11 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios.ClearPortfolioData;
 
 public class ClearPortfolioDataCommandHandler(LarchikContext context, IUserAccessor userAccessor)
-    : IRequestHandler<ClearPortfolioDataCommand, Result<ClearPortfolioDataResultDto>>
 {
     public async Task<Result<ClearPortfolioDataResultDto>> Handle(
         ClearPortfolioDataCommand request,

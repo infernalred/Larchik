@@ -1,13 +1,11 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Stocks.InstrumentCorporateActions.DeleteInstrumentCorporateAction;
 
 public class DeleteInstrumentCorporateActionCommandHandler(LarchikContext context, IPortfolioRecalcService recalc)
-    : IRequestHandler<DeleteInstrumentCorporateActionCommand, Result<Unit>>
 {
     public async Task<Result<Unit>> Handle(DeleteInstrumentCorporateActionCommand request, CancellationToken cancellationToken)
     {

@@ -1,5 +1,6 @@
 using System.Net;
 using Larchik.Application.Common.Paging;
+using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Application.Portfolios.ClearPortfolioData;
 using Larchik.Application.Portfolios.CreatePortfolio;
@@ -13,22 +14,37 @@ using Larchik.Application.Portfolios.GetPortfolios;
 using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Application.Portfolios.GetPortfolioSummary;
 using Larchik.Application.Portfolios.RecalculatePortfolio;
+using Larchik.Application.Portfolios.Reconciliation.GetLatestPortfolioReconciliationResult;
 using Larchik.Application.Portfolios.Reconciliation.GetPortfolioReconciliationAlerts;
 using Larchik.Application.Portfolios.Reconciliation.GetPortfolioReconciliationAlertsSummary;
-using Larchik.Application.Portfolios.Reconciliation.GetLatestPortfolioReconciliationResult;
 using Larchik.Application.Portfolios.Reconciliation.GetPortfolioReconciliationHistory;
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Larchik.API.Controllers;
 
-public class PortfoliosController : BaseApiController
+public class PortfoliosController(
+    GetPortfoliosQueryHandler getPortfolios,
+    GetPortfolioQueryHandler getPortfolio,
+    CreatePortfolioCommandHandler createPortfolio,
+    EditPortfolioCommandHandler editPortfolio,
+    DeletePortfolioCommandHandler deletePortfolio,
+    ClearPortfolioDataCommandHandler clearPortfolioData,
+    RecalculatePortfolioCommandHandler recalculatePortfolio,
+    GetPortfolioSummaryQueryHandler getPortfolioSummary,
+    GetPortfoliosSummaryQueryHandler getPortfoliosSummary,
+    GetAggregatePortfolioSummaryQueryHandler getAggregatePortfolioSummary,
+    GetPortfolioPerformanceQueryHandler getPortfolioPerformance,
+    GetAggregatePortfolioPerformanceQueryHandler getAggregatePortfolioPerformance,
+    GetPortfolioReconciliationHistoryQueryHandler getReconciliationHistory,
+    GetPortfolioReconciliationAlertsQueryHandler getReconciliationAlerts,
+    GetPortfolioReconciliationAlertsSummaryQueryHandler getReconciliationAlertsSummary,
+    GetLatestPortfolioReconciliationResultQueryHandler getLatestReconciliation) : BaseApiController
 {
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<PortfolioDto>), (int)HttpStatusCode.OK)]
     public async Task<ActionResult<IEnumerable<PortfolioDto>>> List()
     {
-        return HandleResult(await Mediator.Send(new GetPortfoliosQuery(), HttpContext.RequestAborted));
+        return HandleResult(await getPortfolios.Handle(new GetPortfoliosQuery(), HttpContext.RequestAborted));
     }
 
     [HttpGet("{id:guid}")]
@@ -36,14 +52,14 @@ public class PortfoliosController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<PortfolioDto>> Get(Guid id)
     {
-        return HandleResult(await Mediator.Send(new GetPortfolioQuery(id), HttpContext.RequestAborted));
+        return HandleResult(await getPortfolio.Handle(new GetPortfolioQuery(id), HttpContext.RequestAborted));
     }
 
     [HttpPost]
     [ProducesResponseType(typeof(Guid), (int)HttpStatusCode.OK)]
     public async Task<ActionResult<Guid>> Create([FromBody] PortfolioModel model)
     {
-        return HandleResult(await Mediator.Send(new CreatePortfolioCommand(model), HttpContext.RequestAborted));
+        return HandleResult(await createPortfolio.Handle(new CreatePortfolioCommand(model), HttpContext.RequestAborted));
     }
 
     [HttpPut("{id:guid}")]
@@ -51,7 +67,7 @@ public class PortfoliosController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<Unit>> Edit(Guid id, [FromBody] PortfolioModel model)
     {
-        return HandleResult(await Mediator.Send(new EditPortfolioCommand(id, model), HttpContext.RequestAborted));
+        return HandleResult(await editPortfolio.Handle(new EditPortfolioCommand(id, model), HttpContext.RequestAborted));
     }
 
     [HttpDelete("{id:guid}")]
@@ -59,7 +75,7 @@ public class PortfoliosController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<Unit>> Delete(Guid id)
     {
-        return HandleResult(await Mediator.Send(new DeletePortfolioCommand(id), HttpContext.RequestAborted));
+        return HandleResult(await deletePortfolio.Handle(new DeletePortfolioCommand(id), HttpContext.RequestAborted));
     }
 
     [HttpDelete("{id:guid}/data")]
@@ -67,7 +83,7 @@ public class PortfoliosController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<ClearPortfolioDataResultDto>> ClearData(Guid id)
     {
-        return HandleResult(await Mediator.Send(new ClearPortfolioDataCommand(id), HttpContext.RequestAborted));
+        return HandleResult(await clearPortfolioData.Handle(new ClearPortfolioDataCommand(id), HttpContext.RequestAborted));
     }
 
     [HttpPost("{id:guid}/recalculate")]
@@ -75,7 +91,7 @@ public class PortfoliosController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<RecalculatePortfolioResultDto>> Recalculate(Guid id)
     {
-        return HandleResult(await Mediator.Send(new RecalculatePortfolioCommand(id), HttpContext.RequestAborted));
+        return HandleResult(await recalculatePortfolio.Handle(new RecalculatePortfolioCommand(id), HttpContext.RequestAborted));
     }
 
     /// <summary>
@@ -88,7 +104,7 @@ public class PortfoliosController : BaseApiController
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<ActionResult<PortfolioSummaryDto>> GetSummary(Guid id, [FromQuery] string? method)
     {
-        return HandleResult(await Mediator.Send(new GetPortfolioSummaryQuery(id, method), HttpContext.RequestAborted));
+        return HandleResult(await getPortfolioSummary.Handle(new GetPortfolioSummaryQuery(id, method), HttpContext.RequestAborted));
     }
 
     /// <summary>
@@ -103,7 +119,7 @@ public class PortfoliosController : BaseApiController
         [FromQuery] string? method,
         [FromQuery] string? currency)
     {
-        return HandleResult(await Mediator.Send(new GetPortfoliosSummaryQuery(method, currency), HttpContext.RequestAborted));
+        return HandleResult(await getPortfoliosSummary.Handle(new GetPortfoliosSummaryQuery(method, currency), HttpContext.RequestAborted));
     }
 
     /// <summary>
@@ -118,7 +134,7 @@ public class PortfoliosController : BaseApiController
         [FromQuery] string? method,
         [FromQuery] string? currency)
     {
-        return HandleResult(await Mediator.Send(new GetAggregatePortfolioSummaryQuery(method, currency), HttpContext.RequestAborted));
+        return HandleResult(await getAggregatePortfolioSummary.Handle(new GetAggregatePortfolioSummaryQuery(method, currency), HttpContext.RequestAborted));
     }
 
     /// <summary>
@@ -135,7 +151,7 @@ public class PortfoliosController : BaseApiController
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null)
     {
-        return HandleResult(await Mediator.Send(
+        return HandleResult(await getPortfolioPerformance.Handle(
             new GetPortfolioPerformanceQuery(id, method, from, to),
             HttpContext.RequestAborted));
     }
@@ -154,7 +170,7 @@ public class PortfoliosController : BaseApiController
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null)
     {
-        return HandleResult(await Mediator.Send(
+        return HandleResult(await getAggregatePortfolioPerformance.Handle(
             new GetAggregatePortfolioPerformanceQuery(method, currency, from, to),
             HttpContext.RequestAborted));
     }
@@ -180,7 +196,7 @@ public class PortfoliosController : BaseApiController
         [FromQuery] string? sortDirection = null,
         [FromQuery] PageQuery? paging = null)
     {
-        return HandleResult(await Mediator.Send(
+        return HandleResult(await getReconciliationHistory.Handle(
             new GetPortfolioReconciliationHistoryQuery(
                 portfolioId,
                 from,
@@ -209,7 +225,7 @@ public class PortfoliosController : BaseApiController
         [FromQuery] string? source = null,
         [FromQuery] PageQuery? paging = null)
     {
-        return HandleResult(await Mediator.Send(
+        return HandleResult(await getReconciliationAlerts.Handle(
             new GetPortfolioReconciliationAlertsQuery(portfolioId, from, to, severity, source, paging),
             HttpContext.RequestAborted));
     }
@@ -225,7 +241,7 @@ public class PortfoliosController : BaseApiController
         [FromQuery] DateTime? to = null,
         [FromQuery] string? source = null)
     {
-        return HandleResult(await Mediator.Send(
+        return HandleResult(await getReconciliationAlertsSummary.Handle(
             new GetPortfolioReconciliationAlertsSummaryQuery(from, to, source),
             HttpContext.RequestAborted));
     }
@@ -241,7 +257,7 @@ public class PortfoliosController : BaseApiController
         Guid id,
         [FromQuery] string? source = null)
     {
-        return HandleResult(await Mediator.Send(
+        return HandleResult(await getLatestReconciliation.Handle(
             new GetLatestPortfolioReconciliationResultQuery(id, source),
             HttpContext.RequestAborted));
     }

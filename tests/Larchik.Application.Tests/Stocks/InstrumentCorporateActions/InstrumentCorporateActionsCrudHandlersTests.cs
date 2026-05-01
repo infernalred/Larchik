@@ -7,7 +7,6 @@ using Larchik.Application.Stocks.InstrumentCorporateActions.GetInstrumentCorpora
 using Larchik.Application.Tests.TestInfrastructure;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 

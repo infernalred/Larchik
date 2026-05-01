@@ -1,7 +1,3 @@
-using Larchik.Application.Helpers;
-using Larchik.Application.Models;
-using MediatR;
-
 namespace Larchik.Application.Operations.ImportBroker;
 
 public record ImportBrokerReportCommand(
@@ -9,5 +5,5 @@ public record ImportBrokerReportCommand(
     string BrokerCode,
     Stream FileStream,
     string FileName,
-    bool StrictUnknownCashMapping = false)
-    : IRequest<Result<ImportResultDto>>;
+    bool StrictUnknownCashMapping = false);
+

@@ -1,5 +1,3 @@
-using System.Net;
-
 namespace Larchik.Application.Tests.TestDoubles;
 
 internal sealed class FakeHttpClientFactory(

@@ -1,4 +1,3 @@
-using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 

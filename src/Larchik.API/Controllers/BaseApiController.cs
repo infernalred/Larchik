@@ -1,5 +1,4 @@
 using Larchik.Application.Helpers;
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Larchik.API.Controllers;
@@ -8,10 +7,6 @@ namespace Larchik.API.Controllers;
 [Route("api/[controller]")]
 public class BaseApiController : ControllerBase
 {
-    private IMediator? _mediator;
-
-    protected IMediator Mediator => _mediator ??= HttpContext.RequestServices.GetRequiredService<IMediator>();
-
     protected ActionResult HandleResult<T>(Result<T>? result)
     {
         if (result is null) return NotFound();

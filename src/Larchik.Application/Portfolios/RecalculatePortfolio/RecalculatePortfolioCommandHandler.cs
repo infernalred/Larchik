@@ -2,7 +2,6 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Persistence.Context;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Larchik.Application.Portfolios.RecalculatePortfolio;
@@ -11,7 +10,6 @@ public class RecalculatePortfolioCommandHandler(
     LarchikContext context,
     IUserAccessor userAccessor,
     IPortfolioRecalcService recalc)
-    : IRequestHandler<RecalculatePortfolioCommand, Result<RecalculatePortfolioResultDto>>
 {
     public async Task<Result<RecalculatePortfolioResultDto>> Handle(
         RecalculatePortfolioCommand request,

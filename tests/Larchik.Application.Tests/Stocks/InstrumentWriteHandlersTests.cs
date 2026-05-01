@@ -5,7 +5,6 @@ using Larchik.Application.Stocks.CreateStock;
 using Larchik.Application.Stocks.EditStock;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
-using MediatR;
 using Larchik.Application.Tests.TestInfrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;

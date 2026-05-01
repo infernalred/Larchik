@@ -9,7 +9,7 @@ namespace Larchik.API.Controllers;
 
 [Authorize]
 [Route("api/portfolios/{portfolioId:guid}/imports")]
-public class ImportsController : BaseApiController
+public class ImportsController(ImportBrokerReportCommandHandler importBrokerReport) : BaseApiController
 {
     [HttpPost("{brokerCode}")]
     [ProducesResponseType(typeof(ImportResultDto), (int)HttpStatusCode.OK)]
@@ -25,7 +25,7 @@ public class ImportsController : BaseApiController
         await file.CopyToAsync(ms, HttpContext.RequestAborted);
         ms.Position = 0;
 
-        var result = await Mediator.Send(
+        var result = await importBrokerReport.Handle(
             new ImportBrokerReportCommand(portfolioId, brokerCode, ms, file.FileName),
             HttpContext.RequestAborted);
 
