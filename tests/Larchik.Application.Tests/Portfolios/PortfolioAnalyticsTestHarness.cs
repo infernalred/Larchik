@@ -9,6 +9,7 @@ using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Larchik.Application.Tests.TestInfrastructure;
+using Microsoft.Extensions.Caching.Memory;
 using Xunit;
 
 namespace Larchik.Application.Tests.Portfolios;
@@ -22,6 +23,8 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
 
     private readonly SqliteTestDatabase database;
     private readonly LarchikContext context;
+
+    internal LarchikContext Context => context;
     private readonly GetPortfoliosSummaryQueryHandler portfoliosSummaryHandler;
     private readonly GetPortfolioSummaryQueryHandler portfolioSummaryHandler;
     private readonly GetAggregatePortfolioSummaryQueryHandler aggregateSummaryHandler;
@@ -36,9 +39,10 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
         SeedReferenceData();
 
         var userAccessor = new FixedUserAccessor(UserId);
+        var memoryCache = new MemoryCache(new MemoryCacheOptions());
         portfoliosSummaryHandler = new GetPortfoliosSummaryQueryHandler(context, userAccessor);
-        portfolioSummaryHandler = new GetPortfolioSummaryQueryHandler(context, userAccessor);
-        aggregateSummaryHandler = new GetAggregatePortfolioSummaryQueryHandler(context, userAccessor);
+        portfolioSummaryHandler = new GetPortfolioSummaryQueryHandler(context, userAccessor, memoryCache);
+        aggregateSummaryHandler = new GetAggregatePortfolioSummaryQueryHandler(context, userAccessor, memoryCache);
         portfolioPerformanceHandler = new GetPortfolioPerformanceQueryHandler(context, userAccessor);
         aggregatePerformanceHandler = new GetAggregatePortfolioPerformanceQueryHandler(context, userAccessor);
     }
@@ -126,15 +130,17 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
 
     public void AddFxRate(string baseCurrencyId, string quoteCurrencyId, DateTime date, decimal rate, string source = "CBR")
     {
+        var d = DateTime.SpecifyKind(date, DateTimeKind.Utc);
         context.FxRates.Add(new FxRate
         {
             Id = Guid.NewGuid(),
             BaseCurrencyId = baseCurrencyId,
             QuoteCurrencyId = quoteCurrencyId,
-            Date = DateTime.SpecifyKind(date, DateTimeKind.Utc),
+            Date = d,
             Rate = rate,
             Source = source,
-            CreatedAt = DateTime.SpecifyKind(date, DateTimeKind.Utc)
+            CreatedAt = d,
+            UpdatedAt = d
         });
     }
 

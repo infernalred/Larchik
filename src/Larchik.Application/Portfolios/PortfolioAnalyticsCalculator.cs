@@ -14,217 +14,22 @@ public sealed class PortfolioAnalyticsCalculator
         HistoricalDataLookup data,
         string valuationMethod,
         string baseCurrency,
-        DateTime asOfDate)
+        DateTime asOfDate,
+        bool includeAnnualizedReturn = true)
     {
-        var cashByCurrency = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
-        var positions = new Dictionary<Guid, decimal>();
-        decimal netInflowBase = 0;
-        decimal grossDepositsBase = 0;
-        decimal grossWithdrawalsBase = 0;
-        var valuationOperations = new List<ValuationOperation>();
-        var usesBrokerCashLedger = BrokerCashLedgerHelper.UsesBrokerCashLedger(portfolio);
+        var acc = PortfolioLedgerAccumulator.Accumulate(portfolio, operations, instruments, data, baseCurrency, asOfDate);
+        var cashByCurrency = acc.CashByCurrency;
+        var positions = acc.Positions;
+        var valuationOperations = acc.ValuationOperations;
+        var netInflowBase = acc.NetInflowBase;
+        var grossDepositsBase = acc.GrossDepositsBase;
+        var grossWithdrawalsBase = acc.GrossWithdrawalsBase;
         var accountingCurrencies = InstrumentAccountingCurrencyHelper.Build(operations, instruments, baseCurrency);
-
-        foreach (var op in operations)
-        {
-            if (op.TradeDate.Date > asOfDate.Date)
-            {
-                break;
-            }
-
-            var instrument = op.InstrumentId is not null && instruments.TryGetValue(op.InstrumentId.Value, out var resolvedInstrument)
-                ? resolvedInstrument
-                : null;
-            var cashEffective = BrokerCashLedgerHelper.IsCashEffective(op, asOfDate);
-            var amount = op.Price != 0 ? op.Price : op.Quantity;
-            var tradeValue = op.Quantity * op.Price;
-
-            switch (op.Type)
-            {
-                case OperationType.Buy when op.InstrumentId != null:
-                    var hasBuyCashLedger = BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger);
-                    if (hasBuyCashLedger)
-                    {
-                        if (instrument?.Type != InstrumentType.Currency)
-                        {
-                            AddPosition(op.InstrumentId.Value, op.Quantity, positions);
-                        }
-
-                        break;
-                    }
-
-                    if (instrument?.Type == InstrumentType.Currency)
-                    {
-                        if (cashEffective)
-                        {
-                            AddCash(instrument.CurrencyId, op.Quantity, cashByCurrency);
-                            AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
-                        }
-
-                        break;
-                    }
-
-                    AddPosition(op.InstrumentId.Value, op.Quantity, positions);
-                    if (cashEffective)
-                    {
-                        AddCash(op.CurrencyId, -(tradeValue + op.Fee), cashByCurrency);
-                    }
-
-                    break;
-                case OperationType.Sell when op.InstrumentId != null:
-                    var hasSellCashLedger = BrokerCashLedgerHelper.IsImportedBrokerOperation(op, usesBrokerCashLedger);
-                    if (hasSellCashLedger)
-                    {
-                        if (instrument?.Type != InstrumentType.Currency)
-                        {
-                            AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
-                        }
-
-                        break;
-                    }
-
-                    if (instrument?.Type == InstrumentType.Currency)
-                    {
-                        if (cashEffective)
-                        {
-                            AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
-                            AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
-                        }
-
-                        break;
-                    }
-
-                    AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
-                    if (cashEffective)
-                    {
-                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
-                    }
-
-                    break;
-                case OperationType.BondPartialRedemption when op.InstrumentId != null:
-                    if (cashEffective)
-                    {
-                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
-                    }
-
-                    break;
-                case OperationType.BondMaturity when op.InstrumentId != null:
-                    AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
-                    if (cashEffective)
-                    {
-                        AddCash(op.CurrencyId, tradeValue - op.Fee, cashByCurrency);
-                    }
-
-                    break;
-                case OperationType.Split when op.InstrumentId != null:
-                case OperationType.ReverseSplit when op.InstrumentId != null:
-                    if (instrument?.Type != InstrumentType.Currency)
-                    {
-                        ApplySplitFactor(op.InstrumentId.Value, op.Quantity, positions, op.Type, op.CreatedAt);
-                    }
-
-                    break;
-                case OperationType.Dividend:
-                    AddCash(op.CurrencyId, amount, cashByCurrency);
-                    break;
-                case OperationType.Fee:
-                    AddCash(op.CurrencyId, amount != 0 ? -amount : -op.Fee, cashByCurrency);
-                    break;
-                case OperationType.CashAdjustment:
-                    if (BrokerCashLedgerHelper.AffectsCashBalance(op, usesBrokerCashLedger))
-                    {
-                        AddCash(op.CurrencyId, op.Price, cashByCurrency);
-                    }
-                    break;
-                case OperationType.Deposit:
-                    AddCash(op.CurrencyId, amount, cashByCurrency);
-                    var depositBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
-                    netInflowBase += depositBase;
-                    grossDepositsBase += depositBase;
-                    break;
-                case OperationType.Withdraw:
-                    AddCash(op.CurrencyId, -amount, cashByCurrency);
-                    var withdrawBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
-                    netInflowBase -= withdrawBase;
-                    grossWithdrawalsBase += withdrawBase;
-                    break;
-                case OperationType.TransferIn:
-                    if (op.InstrumentId != null)
-                    {
-                        if (instrument?.Type == InstrumentType.Currency)
-                        {
-                            AddCash(instrument.CurrencyId, op.Quantity, cashByCurrency);
-                            break;
-                        }
-
-                        AddPosition(op.InstrumentId.Value, op.Quantity, positions);
-                    }
-                    else
-                    {
-                        AddCash(op.CurrencyId, amount, cashByCurrency);
-                        var transferInBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
-                        netInflowBase += transferInBase;
-                        grossDepositsBase += transferInBase;
-                    }
-
-                    break;
-                case OperationType.TransferOut:
-                    if (op.InstrumentId != null)
-                    {
-                        if (instrument?.Type == InstrumentType.Currency)
-                        {
-                            AddCash(instrument.CurrencyId, -op.Quantity, cashByCurrency);
-                            break;
-                        }
-
-                        AddPosition(op.InstrumentId.Value, -op.Quantity, positions);
-                    }
-                    else
-                    {
-                        AddCash(op.CurrencyId, -amount, cashByCurrency);
-                        var transferOutBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
-                        netInflowBase -= transferOutBase;
-                        grossWithdrawalsBase += transferOutBase;
-                    }
-
-                    break;
-            }
-
-            if (op.InstrumentId is null || instrument?.Type == InstrumentType.Currency)
-            {
-                continue;
-            }
-
-            var accountingCurrency = InstrumentAccountingCurrencyHelper.Get(op.InstrumentId.Value, accountingCurrencies, instruments, baseCurrency);
-            var priceInAccounting = data.Convert(op.Price, op.CurrencyId, accountingCurrency, op.TradeDate);
-            var feeInAccounting = data.Convert(op.Fee, op.CurrencyId, accountingCurrency, op.TradeDate);
-
-            valuationOperations.Add(new ValuationOperation(
-                op.InstrumentId.Value,
-                op.Type,
-                op.Quantity,
-                priceInAccounting,
-                feeInAccounting,
-                op.TradeDate,
-                op.CreatedAt));
-        }
 
         var valuation = new ValuationService().Evaluate(valuationOperations, valuationMethod, assumeSorted: true);
         var positionCosts = valuation.Positions;
 
-        var cashDtos = new List<CashBalanceDto>();
-        var cashBase = 0m;
-        foreach (var kvp in cashByCurrency)
-        {
-            var amountBase = data.Convert(kvp.Value, kvp.Key, baseCurrency, asOfDate);
-            cashDtos.Add(new CashBalanceDto
-            {
-                CurrencyId = kvp.Key.ToUpperInvariant(),
-                Amount = kvp.Value,
-                AmountInBase = amountBase
-            });
-            cashBase += amountBase;
-        }
+        var (cashDtos, cashBase) = PortfolioLedgerAccumulator.BuildCashBalanceDtos(cashByCurrency, data, baseCurrency, asOfDate);
 
         var positionDtos = new List<PositionHoldingDto>();
         var positionsValueBase = 0m;
@@ -288,12 +93,16 @@ public sealed class PortfolioAnalyticsCalculator
         }
 
         var navBase = cashBase + positionsValueBase;
-        var annualizedReturnPct = MoneyWeightedReturnCalculator.CalculateAnnualizedReturn(
-            operations,
-            data,
-            baseCurrency,
-            navBase,
-            asOfDate);
+        decimal? annualizedReturnPct = null;
+        if (includeAnnualizedReturn)
+        {
+            annualizedReturnPct = MoneyWeightedReturnCalculator.CalculateAnnualizedReturn(
+                operations,
+                data,
+                baseCurrency,
+                navBase,
+                asOfDate);
+        }
 
         return new PortfolioSummaryDto
         {
@@ -347,8 +156,8 @@ public sealed class PortfolioAnalyticsCalculator
             }
 
             var startBoundary = cursor.AddDays(-1);
-            var startSnapshot = CalculateSummary(portfolio, operations, instruments, data, valuationMethod, baseCurrency, startBoundary);
-            var endSnapshot = CalculateSummary(portfolio, operations, instruments, data, valuationMethod, baseCurrency, monthEnd);
+            var startSnapshot = CalculateSummary(portfolio, operations, instruments, data, valuationMethod, baseCurrency, startBoundary, includeAnnualizedReturn: false);
+            var endSnapshot = CalculateSummary(portfolio, operations, instruments, data, valuationMethod, baseCurrency, monthEnd, includeAnnualizedReturn: false);
             var netFlow = ComputeFlows(operations, data, baseCurrency, cursor, monthEnd);
 
             if (endSnapshot.NavBase == 0 && startSnapshot.NavBase == 0 && netFlow == 0)
@@ -418,52 +227,4 @@ public sealed class PortfolioAnalyticsCalculator
 
         return flow;
     }
-
-    private static void AddCash(string currencyId, decimal amount, IDictionary<string, decimal> cashByCurrency)
-    {
-        if (cashByCurrency.TryGetValue(currencyId, out var existing))
-        {
-            cashByCurrency[currencyId] = existing + amount;
-        }
-        else
-        {
-            cashByCurrency[currencyId] = amount;
-        }
-    }
-
-    private static void AddPosition(Guid instrumentId, decimal quantity, IDictionary<Guid, decimal> positions)
-    {
-        if (positions.TryGetValue(instrumentId, out var existing))
-        {
-            positions[instrumentId] = existing + quantity;
-        }
-        else
-        {
-            positions[instrumentId] = quantity;
-        }
-    }
-
-    private static void ApplySplitFactor(
-        Guid instrumentId,
-        decimal factor,
-        IDictionary<Guid, decimal> positions,
-        OperationType operationType,
-        DateTime createdAt)
-    {
-        if (factor <= 0 || !positions.TryGetValue(instrumentId, out var existing))
-        {
-            return;
-        }
-
-        var updated = existing * factor;
-        if (operationType == OperationType.ReverseSplit &&
-            !CorporateActionOperationMetadata.IsSynthetic(createdAt))
-        {
-            // Legacy imported reverse split operations were historically rounded by brokers.
-            updated = decimal.Round(updated, 0, MidpointRounding.AwayFromZero);
-        }
-
-        positions[instrumentId] = updated;
-    }
-
 }

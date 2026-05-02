@@ -35,12 +35,13 @@ public class HistoricalDataLookup
 
     public Price? GetPrice(Guid instrumentId, DateTime asOfDate)
     {
-        if (_pricesByInstrument.TryGetValue(instrumentId, out var list))
+        if (!_pricesByInstrument.TryGetValue(instrumentId, out var list))
         {
-            return list.FirstOrDefault(p => p.Date.Date <= asOfDate.Date);
+            return null;
         }
 
-        return null;
+        var idx = FindFirstIndexDateLeq(list, asOfDate, static p => p.Date);
+        return idx < 0 ? null : list[idx];
     }
 
     public decimal Convert(decimal amount, string fromCurrency, string toCurrency, DateTime asOfDate)
@@ -153,8 +154,34 @@ public class HistoricalDataLookup
 
     private static decimal? FindRate(IReadOnlyList<FxRate> list, DateTime asOfDate)
     {
-        var match = list.FirstOrDefault(r => r.Date.Date <= asOfDate.Date);
-        return match?.Rate;
+        var idx = FindFirstIndexDateLeq(list, asOfDate, static r => r.Date);
+        return idx < 0 ? null : list[idx].Rate;
+    }
+
+    /// <summary>
+    /// Lists are sorted by date descending (then tie-breakers). Returns the smallest index i with date &lt;= as-of (latest row still on or before as-of).
+    /// </summary>
+    private static int FindFirstIndexDateLeq<T>(IReadOnlyList<T> list, DateTime asOfDate, Func<T, DateTime> getDate)
+    {
+        var target = asOfDate.Date;
+        var lo = 0;
+        var hi = list.Count - 1;
+        var result = -1;
+        while (lo <= hi)
+        {
+            var mid = (lo + hi) / 2;
+            if (getDate(list[mid]).Date <= target)
+            {
+                result = mid;
+                hi = mid - 1;
+            }
+            else
+            {
+                lo = mid + 1;
+            }
+        }
+
+        return result;
     }
 
     private static int GetProviderPriority(string? provider)

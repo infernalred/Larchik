@@ -11,6 +11,7 @@ using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Larchik.Application.Tests.TestInfrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -52,7 +53,7 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
             NullLogger<ImportBrokerReportCommandHandler>.Instance);
         _performanceHandler = new GetPortfolioPerformanceQueryHandler(_context, _userAccessor);
         _portfoliosSummaryHandler = new GetPortfoliosSummaryQueryHandler(_context, _userAccessor);
-        _summaryHandler = new GetPortfolioSummaryQueryHandler(_context, _userAccessor);
+        _summaryHandler = new GetPortfolioSummaryQueryHandler(_context, _userAccessor, new MemoryCache(new MemoryCacheOptions()));
 
         SeedReferenceData(TbankReferenceData.Load());
         _instrumentIdByTicker = _context.Instruments
@@ -310,6 +311,7 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
             UpdatedAt = new DateTime(2026, 3, 22, 0, 0, 0, DateTimeKind.Utc)
         }));
 
+        var fxStamp = new DateTime(2026, 3, 22, 0, 0, 0, DateTimeKind.Utc);
         _context.FxRates.AddRange(data.FxRates.Select(x => new FxRate
         {
             Id = Guid.NewGuid(),
@@ -318,7 +320,8 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
             Date = DateTime.SpecifyKind(x.Date, DateTimeKind.Utc),
             Rate = x.Rate,
             Source = x.Source,
-            CreatedAt = new DateTime(2026, 3, 22, 0, 0, 0, DateTimeKind.Utc)
+            CreatedAt = fxStamp,
+            UpdatedAt = fxStamp
         }));
 
         _context.Portfolios.Add(new Portfolio

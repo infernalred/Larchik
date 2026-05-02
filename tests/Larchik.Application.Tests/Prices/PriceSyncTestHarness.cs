@@ -99,7 +99,8 @@ internal sealed class PriceSyncTestHarness : IAsyncDisposable
             Date = date,
             Rate = rate,
             Source = source,
-            CreatedAt = SeedTimestamp
+            CreatedAt = SeedTimestamp,
+            UpdatedAt = SeedTimestamp
         });
     }
 

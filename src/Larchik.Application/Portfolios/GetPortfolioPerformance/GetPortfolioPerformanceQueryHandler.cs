@@ -42,7 +42,8 @@ public class GetPortfolioPerformanceQueryHandler(LarchikContext context, IUserAc
             portfolio.ReportingCurrencyId,
             maxPriceDate,
             additionalCurrencies: null,
-            cancellationToken);
+            cancellationToken,
+            useNarrowPriceHistory: false);
 
         var method = request.Method ?? DefaultValuationMethod;
         var performance = new PortfolioAnalyticsCalculator().CalculatePerformance(

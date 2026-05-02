@@ -4,10 +4,14 @@ using Larchik.Application.Models;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Larchik.Application.Portfolios.GetAggregatePortfolioSummary;
 
-public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IUserAccessor userAccessor)
+public class GetAggregatePortfolioSummaryQueryHandler(
+    LarchikContext context,
+    IUserAccessor userAccessor,
+    IMemoryCache memoryCache)
 {
     private const string DefaultValuationMethod = "adjustingAvg";
 
@@ -33,37 +37,91 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
                 "Portfolios use different reporting currencies. Specify the 'currency' query parameter.");
         }
 
-        var asOfDateTime = DateTime.UtcNow;
+        var method = request.Method ?? DefaultValuationMethod;
         var portfolioIds = portfolios.Select(x => x.Id).ToArray();
+
+        var asOfDateTime = DateTime.UtcNow;
+        var opState = await PortfolioSummaryOperationState.ForPortfoliosAsync(context, portfolioIds, asOfDateTime, cancellationToken);
+        var marketFp = await PortfolioSummaryMarketDataFingerprint.ForPortfoliosAsync(
+            context,
+            portfolioIds,
+            baseCurrency,
+            asOfDateTime,
+            cancellationToken);
+        var cacheKey = PortfolioSummaryCacheKeys.Aggregate(
+            userId,
+            method,
+            baseCurrency,
+            portfolioIds,
+            opState.Count,
+            opState.MaxCreatedTicks,
+            opState.MaxUpdatedTicks,
+            marketFp.MaxPriceDataTicks,
+            marketFp.MaxFxRateDataTicks);
+        if (memoryCache.TryGetValue(cacheKey, out PortfolioSummaryDto? cached) && cached is not null)
+        {
+            return Result<PortfolioSummaryDto>.Success(cached);
+        }
+
         var operations = await context.Operations
             .Where(x => portfolioIds.Contains(x.PortfolioId) && x.TradeDate <= asOfDateTime)
             .OrderBy(x => x.PortfolioId)
             .ThenBy(x => x.TradeDate)
             .ThenBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
-        var method = request.Method ?? DefaultValuationMethod;
+
         var calculator = new PortfolioAnalyticsCalculator();
-        var analytics = await PortfolioAnalyticsQueryHelper.LoadAsync(
+        var pools = await PortfolioAnalyticsQueryHelper.LoadSharedPoolsAsync(
             context,
             operations,
             baseCurrency,
             asOfDateTime,
             additionalCurrencies: null,
-            cancellationToken);
-        var operationsByPortfolio = analytics.Operations
-            .GroupBy(x => x.PortfolioId)
-            .ToDictionary(x => x.Key, x => (IReadOnlyList<Operation>)x.ToList());
+            cancellationToken,
+            useNarrowPriceHistory: true);
 
-        var summaries = portfolios
-            .Select(portfolio => calculator.CalculateSummary(
+        var summaries = new List<PortfolioSummaryDto>(portfolios.Count);
+        var allMergedForMwr = new List<Operation>();
+
+        foreach (var portfolio in portfolios)
+        {
+            var raw = operations
+                .Where(o => o.PortfolioId == portfolio.Id)
+                .OrderBy(o => o.TradeDate)
+                .ThenBy(o => o.CreatedAt)
+                .ToList();
+            var merged = InstrumentCorporateActionOperationMerger.Merge(raw, pools.CorporateActions, pools.Instruments).ToList();
+            allMergedForMwr.AddRange(merged);
+
+            var fromSnapshot = await PortfolioSnapshotSummaryBuilder.TryBuildAsync(
+                context,
                 portfolio,
-                operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [],
-                analytics.Instruments,
-                analytics.Data,
+                merged,
+                pools.Instruments,
+                pools.Data,
                 method,
                 baseCurrency,
-                asOfDateTime))
-            .ToList();
+                asOfDateTime,
+                includeAnnualizedReturn: false,
+                cancellationToken);
+
+            summaries.Add(
+                fromSnapshot ?? calculator.CalculateSummary(
+                    portfolio,
+                    merged,
+                    pools.Instruments,
+                    pools.Data,
+                    method,
+                    baseCurrency,
+                    asOfDateTime,
+                    includeAnnualizedReturn: false));
+        }
+
+        allMergedForMwr.Sort(static (a, b) =>
+        {
+            var c = a.TradeDate.CompareTo(b.TradeDate);
+            return c != 0 ? c : a.CreatedAt.CompareTo(b.CreatedAt);
+        });
 
         var cash = summaries
             .SelectMany(x => x.Cash)
@@ -126,13 +184,13 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
 
         var navBase = summaries.Sum(x => x.NavBase);
         var annualizedReturnPct = MoneyWeightedReturnCalculator.CalculateAnnualizedReturn(
-            analytics.Operations,
-            analytics.Data,
+            allMergedForMwr,
+            pools.Data,
             baseCurrency,
             navBase,
             asOfDateTime);
 
-        return Result<PortfolioSummaryDto>.Success(new PortfolioSummaryDto
+        var dto = new PortfolioSummaryDto
         {
             Id = Guid.Empty,
             Name = "Все счета",
@@ -151,6 +209,9 @@ public class GetAggregatePortfolioSummaryQueryHandler(LarchikContext context, IU
             Cash = cash,
             Positions = positions,
             RealizedByInstrument = realized
-        });
+        };
+
+        memoryCache.Set(cacheKey, dto, PortfolioSummaryCacheKeys.DefaultTtl);
+        return Result<PortfolioSummaryDto>.Success(dto);
     }
 }

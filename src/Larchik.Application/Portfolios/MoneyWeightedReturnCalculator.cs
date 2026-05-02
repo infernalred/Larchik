@@ -29,22 +29,32 @@ internal static class MoneyWeightedReturnCalculator
             }
 
             var amount = op.Price != 0 ? op.Price : op.Quantity;
-            var amountBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
-
             switch (op.Type)
             {
                 case OperationType.Deposit:
+                {
+                    var amountBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
                     cashFlows.Add(new ExternalCashFlow(op.TradeDate.Date, -amountBase));
                     break;
+                }
                 case OperationType.Withdraw:
+                {
+                    var amountBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
                     cashFlows.Add(new ExternalCashFlow(op.TradeDate.Date, amountBase));
                     break;
+                }
                 case OperationType.TransferIn when op.InstrumentId is null:
+                {
+                    var amountBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
                     cashFlows.Add(new ExternalCashFlow(op.TradeDate.Date, -amountBase));
                     break;
+                }
                 case OperationType.TransferOut when op.InstrumentId is null:
+                {
+                    var amountBase = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
                     cashFlows.Add(new ExternalCashFlow(op.TradeDate.Date, amountBase));
                     break;
+                }
             }
         }
 

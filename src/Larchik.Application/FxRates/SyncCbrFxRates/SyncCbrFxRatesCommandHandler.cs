@@ -56,7 +56,7 @@ public class SyncCbrFxRatesCommandHandler(
             }
 
             var ratePerUnit = value / nominal;
-
+            var now = DateTime.UtcNow;
             rates.Add(new FxRate
             {
                 Id = Guid.NewGuid(),
@@ -65,7 +65,8 @@ public class SyncCbrFxRatesCommandHandler(
                 Date = asOfUtc,
                 Rate = ratePerUnit,
                 Source = "CBR",
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = now,
+                UpdatedAt = now
             });
         }
 
@@ -94,6 +95,11 @@ public class SyncCbrFxRatesCommandHandler(
             {
                 existingRate.CreatedAt = DateTime.SpecifyKind(existingRate.CreatedAt, DateTimeKind.Utc);
             }
+
+            if (existingRate.UpdatedAt.Kind != DateTimeKind.Utc)
+            {
+                existingRate.UpdatedAt = DateTime.SpecifyKind(existingRate.UpdatedAt, DateTimeKind.Utc);
+            }
         }
 
         foreach (var rate in rates)
@@ -109,7 +115,7 @@ public class SyncCbrFxRatesCommandHandler(
             else
             {
                 match.Rate = rate.Rate;
-                match.CreatedAt = DateTime.UtcNow;
+                match.UpdatedAt = DateTime.UtcNow;
             }
         }
 

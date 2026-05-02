@@ -10965,7 +10965,8 @@ INSERT INTO fx_rates (
     date,
     rate,
     source,
-    created_at
+    created_at,
+    updated_at
 )
 SELECT
     (
@@ -10980,13 +10981,15 @@ SELECT
     date,
     rate,
     'legacy_export',
+    NOW(),
     NOW()
 FROM stg_fx_ready
 ON CONFLICT (base_currency_id, quote_currency_id, date)
 DO UPDATE
 SET
     rate = EXCLUDED.rate,
-    source = EXCLUDED.source;
+    source = EXCLUDED.source,
+    updated_at = NOW();
 
 SELECT COUNT(*) AS instruments_rows_after_import from instruments;
 SELECT COUNT(*) AS fx_rows_after_import FROM fx_rates;

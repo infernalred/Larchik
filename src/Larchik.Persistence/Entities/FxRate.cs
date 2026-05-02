@@ -9,6 +9,7 @@ public class FxRate
     public decimal Rate { get; set; }
     public string Source { get; set; } = null!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public Currency? BaseCurrency { get; set; }
     public Currency? QuoteCurrency { get; set; }

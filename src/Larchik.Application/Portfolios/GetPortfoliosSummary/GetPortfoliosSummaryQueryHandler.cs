@@ -1,7 +1,6 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
-using Larchik.Application.Portfolios.Valuation;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -44,34 +43,15 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
             .ThenBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        var instrumentIds = operations
-            .Where(x => x.InstrumentId != null)
-            .Select(x => x.InstrumentId!.Value)
-            .Distinct()
-            .ToArray();
+        var pools = await PortfolioAnalyticsQueryHelper.LoadSharedPoolsAsync(
+            context,
+            operations,
+            baseCurrency,
+            asOfDateTime,
+            additionalCurrencies: null,
+            cancellationToken,
+            useNarrowPriceHistory: true);
 
-        var instruments = await context.Instruments
-            .Where(x => instrumentIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, cancellationToken);
-        var corporateActions = await InstrumentCorporateActionOperationMerger.LoadAsync(context, instrumentIds, cancellationToken);
-
-        var prices = await context.Prices
-            .Where(x => instrumentIds.Contains(x.InstrumentId) && x.Date <= asOfDateTime)
-            .ToListAsync(cancellationToken);
-
-        var neededCurrencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { baseCurrency };
-        foreach (var op in operations)
-        {
-            neededCurrencies.Add(op.CurrencyId);
-        }
-
-        foreach (var instrument in instruments.Values)
-        {
-            neededCurrencies.Add(instrument.CurrencyId);
-        }
-
-        var fxRates = await MarketFxRateLoader.LoadAsync(context, neededCurrencies, cancellationToken);
-        var data = new HistoricalDataLookup(prices, fxRates);
         var operationsByPortfolio = operations
             .GroupBy(x => x.PortfolioId)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<Operation>)g.ToList());
@@ -90,15 +70,19 @@ public class GetPortfoliosSummaryQueryHandler(LarchikContext context, IUserAcces
         foreach (var portfolio in portfolios)
         {
             var portfolioOperations = operationsByPortfolio.GetValueOrDefault(portfolio.Id) ?? [];
-            var mergedOperations = InstrumentCorporateActionOperationMerger.Merge(portfolioOperations, corporateActions, instruments);
+            var mergedOperations = InstrumentCorporateActionOperationMerger.Merge(
+                portfolioOperations,
+                pools.CorporateActions,
+                pools.Instruments);
             var summary = calculator.CalculateSummary(
                 portfolio,
                 mergedOperations,
-                instruments,
-                data,
+                pools.Instruments,
+                pools.Data,
                 method,
                 baseCurrency,
-                asOfDateTime);
+                asOfDateTime,
+                includeAnnualizedReturn: false);
 
             totalNetInflowBase += summary.NetInflowBase;
             totalGrossDepositsBase += summary.GrossDepositsBase;

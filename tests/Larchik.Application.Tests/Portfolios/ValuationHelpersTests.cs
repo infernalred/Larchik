@@ -1,5 +1,6 @@
 using Larchik.Application.Helpers;
 using Larchik.Application.Portfolios.Valuation;
+using Larchik.Application.Tests.TestInfrastructure;
 using Larchik.Persistence.Entities;
 using Xunit;
 
@@ -245,6 +246,91 @@ public sealed class ValuationHelpersTests
         Assert.Equal("USD", rates[0].BaseCurrencyId);
         Assert.Equal("RUB", rates[0].QuoteCurrencyId);
         Assert.Equal("MARKET_MOEX", rates[0].Source);
+    }
+
+    [Fact]
+    public async Task MarketFxRateLoader_LoadAsync_MaxRateDate_ExcludesRowsAfterBound()
+    {
+        await using var db = SqliteTestContextFactory.Create();
+        var ctx = db.Context;
+        var d0 = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var d1 = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        ctx.FxRates.Add(new FxRate
+        {
+            Id = Guid.NewGuid(),
+            BaseCurrencyId = "USD",
+            QuoteCurrencyId = "RUB",
+            Date = d0,
+            Rate = 50m,
+            Source = "CBR",
+            CreatedAt = d0,
+            UpdatedAt = d0
+        });
+        ctx.FxRates.Add(new FxRate
+        {
+            Id = Guid.NewGuid(),
+            BaseCurrencyId = "USD",
+            QuoteCurrencyId = "RUB",
+            Date = d1,
+            Rate = 100m,
+            Source = "CBR",
+            CreatedAt = d1,
+            UpdatedAt = d1
+        });
+        await ctx.SaveChangesAsync();
+
+        var rates = await MarketFxRateLoader.LoadAsync(
+            ctx,
+            ["USD", "RUB"],
+            CancellationToken.None,
+            minRateDate: null,
+            maxRateDate: new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc));
+
+        Assert.Single(rates);
+        Assert.Equal(d0, rates[0].Date);
+        Assert.Equal(50m, rates[0].Rate);
+    }
+
+    [Fact]
+    public async Task MarketFxRateLoader_LoadAsync_MinRateDate_ExcludesOlderRates()
+    {
+        await using var db = SqliteTestContextFactory.Create();
+        var ctx = db.Context;
+        var oldD = new DateTime(2010, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var newD = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
+        ctx.FxRates.Add(new FxRate
+        {
+            Id = Guid.NewGuid(),
+            BaseCurrencyId = "USD",
+            QuoteCurrencyId = "RUB",
+            Date = oldD,
+            Rate = 30m,
+            Source = "CBR",
+            CreatedAt = oldD,
+            UpdatedAt = oldD
+        });
+        ctx.FxRates.Add(new FxRate
+        {
+            Id = Guid.NewGuid(),
+            BaseCurrencyId = "USD",
+            QuoteCurrencyId = "RUB",
+            Date = newD,
+            Rate = 90m,
+            Source = "CBR",
+            CreatedAt = newD,
+            UpdatedAt = newD
+        });
+        await ctx.SaveChangesAsync();
+
+        var rates = await MarketFxRateLoader.LoadAsync(
+            ctx,
+            ["USD", "RUB"],
+            CancellationToken.None,
+            minRateDate: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            maxRateDate: new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+
+        Assert.Single(rates);
+        Assert.Equal(90m, rates[0].Rate);
     }
 
     [Fact]

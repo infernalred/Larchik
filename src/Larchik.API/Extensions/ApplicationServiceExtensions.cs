@@ -23,6 +23,7 @@ public static class ApplicationServiceExtensions
     {
         var importOptions = configuration.GetSection(ImportOptions.SectionName).Get<ImportOptions>() ?? new ImportOptions();
 
+        services.AddMemoryCache();
         services.AddDbContext<LarchikContext>(opt =>
         {
             opt.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),
