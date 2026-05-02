@@ -340,8 +340,9 @@ ASALocalRun/
 # Rider
 .idea/
 
-# Vscode
-.vscode
+# Editor / IDE (local only)
+.vscode/
+.cursor/
 
 # dependencies
 /node_modules
