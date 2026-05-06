@@ -160,7 +160,7 @@ public sealed class PortfolioAnalyticsCalculator
             var startBoundary = cursor.AddDays(-1);
             var startSnapshot = CalculateSummary(portfolio, operations, instruments, data, valuationMethod, baseCurrency, startBoundary, includeAnnualizedReturn: false);
             var endSnapshot = CalculateSummary(portfolio, operations, instruments, data, valuationMethod, baseCurrency, monthEnd, includeAnnualizedReturn: false);
-            var netFlow = ComputeFlows(operations, data, baseCurrency, cursor, monthEnd);
+            var (netFlow, weightedFlowBase) = ComputeFlowMetrics(operations, data, baseCurrency, cursor, monthEnd);
 
             if (endSnapshot.NavBase == 0 && startSnapshot.NavBase == 0 && netFlow == 0)
             {
@@ -169,7 +169,8 @@ public sealed class PortfolioAnalyticsCalculator
             }
 
             var pnl = endSnapshot.NavBase - startSnapshot.NavBase - netFlow;
-            var returnPct = startSnapshot.NavBase != 0 ? pnl / startSnapshot.NavBase : 0m;
+            var returnBase = startSnapshot.NavBase + weightedFlowBase;
+            var returnPct = returnBase != 0 ? pnl / returnBase : 0m;
 
             results.Add(new PortfolioPerformanceDto
             {
@@ -193,7 +194,7 @@ public sealed class PortfolioAnalyticsCalculator
         return results;
     }
 
-    private static decimal ComputeFlows(
+    private static (decimal NetFlowBase, decimal WeightedFlowBase) ComputeFlowMetrics(
         IEnumerable<Operation> operations,
         HistoricalDataLookup data,
         string baseCurrency,
@@ -201,6 +202,8 @@ public sealed class PortfolioAnalyticsCalculator
         DateTime toInclusive)
     {
         var flow = 0m;
+        var weightedFlow = 0m;
+        var periodDays = Math.Max((toInclusive.Date - fromInclusive.Date).Days + 1, 1);
         foreach (var op in operations)
         {
             var date = op.TradeDate.Date;
@@ -210,23 +213,30 @@ public sealed class PortfolioAnalyticsCalculator
             }
 
             var amount = op.Price != 0 ? op.Price : op.Quantity;
+            decimal signedFlow;
             switch (op.Type)
             {
                 case OperationType.Deposit:
-                    flow += data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                    signedFlow = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
                     break;
                 case OperationType.Withdraw:
-                    flow -= data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                    signedFlow = -data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
                     break;
                 case OperationType.TransferIn when op.InstrumentId == null:
-                    flow += data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                    signedFlow = data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
                     break;
                 case OperationType.TransferOut when op.InstrumentId == null:
-                    flow -= data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
+                    signedFlow = -data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate);
                     break;
+                default:
+                    continue;
             }
+
+            flow += signedFlow;
+            var daysHeld = (toInclusive.Date - date).Days + 1;
+            weightedFlow += signedFlow * daysHeld / periodDays;
         }
 
-        return flow;
+        return (flow, weightedFlow);
     }
 }

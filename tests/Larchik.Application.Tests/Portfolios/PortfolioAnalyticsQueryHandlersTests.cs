@@ -87,6 +87,38 @@ public sealed class PortfolioAnalyticsQueryHandlersTests
     }
 
     [Fact]
+    public async Task PortfolioPerformance_UsesWeightedFlows_ForMonthlyReturn()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var portfolioId = harness.AddPortfolio("Main", "RUB");
+        var instrumentId = harness.AddInstrument("SBER", "RUB");
+        var start = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        harness.AddOperation(portfolioId, Larchik.Persistence.Entities.OperationType.Deposit, "RUB", start.AddMonths(-1), price: 1m);
+        harness.AddOperation(portfolioId, Larchik.Persistence.Entities.OperationType.Deposit, "RUB", start.AddDays(14), price: 1000m);
+        harness.AddOperation(
+            portfolioId,
+            Larchik.Persistence.Entities.OperationType.Buy,
+            "RUB",
+            start.AddDays(14),
+            instrumentId,
+            quantity: 10m,
+            price: 100m);
+        harness.AddPrice(instrumentId, "RUB", new DateTime(2026, 2, 28, 0, 0, 0, DateTimeKind.Utc), 110m);
+        await harness.SaveChangesAsync();
+
+        var series = await harness.GetPortfolioPerformanceAsync(
+            portfolioId,
+            from: start,
+            to: new DateTime(2026, 2, 28, 0, 0, 0, DateTimeKind.Utc));
+        var february = Assert.Single(series);
+
+        Assert.Equal(100m, february.PnlBase);
+        Assert.Equal(1000m, february.NetInflowBase);
+        Assert.Equal(100m / 501m, february.ReturnPct);
+    }
+
+    [Fact]
     public async Task AggregatePerformance_AggregatesPerPortfolioMonthlySeries()
     {
         await using var harness = new PortfolioAnalyticsTestHarness();

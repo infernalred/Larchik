@@ -349,7 +349,7 @@ function PortfolioValueChart({
   const width = 760;
   const height = 300;
   const isAllTime = range === 'all';
-  const padding = { top: isAllTime ? 42 : 18, right: 18, bottom: isAllTime ? 18 : 44, left: 18 };
+  const padding = { top: isAllTime ? 58 : 18, right: 18, bottom: isAllTime ? 18 : 44, left: 18 };
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
   const values = points.map((point) => point.endNavBase);
@@ -400,7 +400,7 @@ function PortfolioValueChart({
             />
             <text
               x={Math.min(x + 4, width - padding.right - 24)}
-              y={padding.top - 10}
+              y={padding.top - 28}
               fill="rgba(148,163,184,0.78)"
               fontSize="12"
               textAnchor="start"
@@ -424,7 +424,7 @@ function PortfolioValueChart({
               stroke={index === 3 ? 'rgba(148,163,184,0.28)' : 'rgba(148,163,184,0.15)'}
               strokeDasharray={isAllTime ? '4 5' : undefined}
             />
-            <text x={width - padding.right} y={y - 6} fill="rgba(148,163,184,0.88)" fontSize="12" textAnchor="end">
+            <text x={width - padding.right} y={index === 0 ? y + 14 : y - 6} fill="rgba(148,163,184,0.88)" fontSize="12" textAnchor="end">
               {`${formatMoney(value)} ${currency}`}
             </text>
           </g>

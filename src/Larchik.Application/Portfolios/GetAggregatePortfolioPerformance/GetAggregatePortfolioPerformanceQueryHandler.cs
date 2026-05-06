@@ -75,6 +75,10 @@ public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context
             {
                 var startNav = group.Sum(x => x.StartNavBase);
                 var pnl = group.Sum(x => x.PnlBase);
+                var netInflow = group.Sum(x => x.NetInflowBase);
+                var returnBase = group.Sum(x => x.PnlBase != 0 && x.ReturnPct != 0
+                    ? x.PnlBase / x.ReturnPct
+                    : x.StartNavBase + x.NetInflowBase);
                 return new PortfolioPerformanceDto
                 {
                     Period = group.Key,
@@ -84,9 +88,9 @@ public class GetAggregatePortfolioPerformanceQueryHandler(LarchikContext context
                     ValuationMethod = method,
                     StartNavBase = startNav,
                     EndNavBase = group.Sum(x => x.EndNavBase),
-                    NetInflowBase = group.Sum(x => x.NetInflowBase),
+                    NetInflowBase = netInflow,
                     PnlBase = pnl,
-                    ReturnPct = startNav != 0 ? pnl / startNav : 0m,
+                    ReturnPct = returnBase != 0 ? pnl / returnBase : 0m,
                     RealizedBase = group.Sum(x => x.RealizedBase),
                     UnrealizedBase = group.Sum(x => x.UnrealizedBase)
                 };
