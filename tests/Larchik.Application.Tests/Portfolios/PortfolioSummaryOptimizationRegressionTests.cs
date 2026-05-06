@@ -265,4 +265,81 @@ public sealed class PortfolioSummaryOptimizationRegressionTests
         Assert.Equal(liveCash.Select(x => x.Amount), snapCash.Select(x => x.Amount));
         Assert.Equal(liveCash.Select(x => x.AmountInBase), snapCash.Select(x => x.AmountInBase));
     }
+
+    [Fact]
+    public async Task PortfolioSnapshotSummary_ExcludesClosedPositions_WithRealizedPnl()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var portfolioId = harness.AddPortfolio("Main", "RUB");
+        var openInstrumentId = harness.AddInstrument("OPEN", "RUB");
+        var closedInstrumentId = harness.AddInstrument("CLOSED", "RUB");
+        var day = new DateTime(2026, 5, 5, 0, 0, 0, DateTimeKind.Utc);
+        harness.AddPrice(openInstrumentId, "RUB", day, 110m);
+        harness.Context.PortfolioSnapshots.Add(new PortfolioSnapshot
+        {
+            Id = Guid.NewGuid(),
+            PortfolioId = portfolioId,
+            Date = day,
+            NavBase = 1100m,
+            PnlDayBase = 0,
+            PnlMonthBase = 0,
+            PnlYearBase = 0,
+            CashBase = 0
+        });
+        harness.Context.PositionSnapshots.AddRange(
+            new PositionSnapshot
+            {
+                Id = Guid.NewGuid(),
+                PortfolioId = portfolioId,
+                InstrumentId = openInstrumentId,
+                Date = day,
+                Quantity = 10m,
+                CostBase = 1000m,
+                MarketValueBase = 1100m,
+                UnrealizedBase = 100m,
+                RealizedBase = 0m
+            },
+            new PositionSnapshot
+            {
+                Id = Guid.NewGuid(),
+                PortfolioId = portfolioId,
+                InstrumentId = closedInstrumentId,
+                Date = day,
+                Quantity = 0m,
+                CostBase = 0m,
+                MarketValueBase = 0m,
+                UnrealizedBase = 0m,
+                RealizedBase = 125m
+            });
+        await harness.SaveChangesAsync();
+
+        var portfolio = await harness.Context.Portfolios
+            .Include(x => x.Broker)
+            .FirstAsync(x => x.Id == portfolioId);
+        var instruments = await harness.Context.Instruments
+            .Where(x => x.Id == openInstrumentId || x.Id == closedInstrumentId)
+            .ToDictionaryAsync(x => x.Id);
+        var data = new HistoricalDataLookup(
+            await harness.Context.Prices.ToListAsync(),
+            await harness.Context.FxRates.ToListAsync());
+
+        var result = await PortfolioSnapshotSummaryBuilder.TryBuildAsync(
+            harness.Context,
+            portfolio,
+            [],
+            instruments,
+            data,
+            "adjustingAvg",
+            "RUB",
+            day.AddHours(18),
+            includeAnnualizedReturn: false,
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.DoesNotContain(result!.Positions, x => x.InstrumentId == closedInstrumentId);
+        Assert.Contains(result.Positions, x => x.InstrumentId == openInstrumentId);
+        Assert.Equal(1100m, result.PositionsValueBase);
+        Assert.Equal(125m, result.RealizedBase);
+        Assert.Contains(result.RealizedByInstrument, x => x.InstrumentId == closedInstrumentId && x.RealizedBase == 125m);
+    }
 }

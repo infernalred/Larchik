@@ -97,7 +97,7 @@ public static class PortfolioSnapshotSummaryBuilder
 
         foreach (var snap in positionSnaps)
         {
-            if (snap.Quantity == 0 && snap.MarketValueBase == 0 && snap.RealizedBase == 0)
+            if (snap.Quantity == 0)
             {
                 continue;
             }
