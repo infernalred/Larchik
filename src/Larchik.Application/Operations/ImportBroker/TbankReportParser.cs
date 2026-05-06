@@ -859,7 +859,17 @@ public class TbankReportParser(ILogger<TbankReportParser> logger) : IBrokerRepor
             return new CashMapping(OperationType.Deposit, decimal.Abs(signedAmount), false, string.Empty);
         }
 
+        if (normalized.Contains("перевод зачисление"))
+        {
+            return new CashMapping(OperationType.Deposit, decimal.Abs(signedAmount), false, string.Empty);
+        }
+
         if (normalized.Contains("снятие") || normalized.Contains("вывод"))
+        {
+            return new CashMapping(OperationType.Withdraw, decimal.Abs(signedAmount), false, string.Empty);
+        }
+
+        if (normalized.Contains("перевод списание"))
         {
             return new CashMapping(OperationType.Withdraw, decimal.Abs(signedAmount), false, string.Empty);
         }

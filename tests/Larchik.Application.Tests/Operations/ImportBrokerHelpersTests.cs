@@ -1,5 +1,6 @@
 using Larchik.Application.Operations.ImportBroker;
 using Larchik.Persistence.Entities;
+using System.Reflection;
 using Xunit;
 
 namespace Larchik.Application.Tests.Operations;
@@ -101,6 +102,36 @@ public sealed class ImportBrokerHelpersTests
         var hash2 = BrokerOperationKeyBuilder.BuildBaseHash(unspecified, "US0000000001");
 
         Assert.Equal(hash1, hash2);
+    }
+
+    [Theory]
+    [InlineData("Перевод зачисление", 123.45, OperationType.Deposit, 123.45, false)]
+    [InlineData("Перевод списание", -123.45, OperationType.Withdraw, 123.45, false)]
+    public void TbankReportParser_MapsCashTransfers_AsExternalFlows(
+        string value,
+        decimal signedAmount,
+        OperationType expectedType,
+        decimal expectedAmount,
+        bool expectedFallback)
+    {
+        var method = typeof(TbankReportParser).GetMethod(
+            "MapCashOperation",
+            BindingFlags.NonPublic | BindingFlags.Static);
+
+        Assert.NotNull(method);
+        var mapping = method!.Invoke(null, [value, signedAmount, 42]);
+
+        Assert.NotNull(mapping);
+        Assert.Equal(expectedType, GetProperty<OperationType>(mapping!, "Type"));
+        Assert.Equal(expectedAmount, GetProperty<decimal>(mapping!, "Amount"));
+        Assert.Equal(expectedFallback, GetProperty<bool>(mapping!, "IsFallback"));
+    }
+
+    private static T GetProperty<T>(object target, string name)
+    {
+        var property = target.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+        Assert.NotNull(property);
+        return Assert.IsType<T>(property!.GetValue(target));
     }
 
     [Fact]
