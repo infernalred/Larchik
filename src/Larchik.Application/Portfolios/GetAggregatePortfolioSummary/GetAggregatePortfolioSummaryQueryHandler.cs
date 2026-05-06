@@ -161,8 +161,8 @@ public class GetAggregatePortfolioSummaryQueryHandler(
                     AverageCost = weightedCost
                 };
             })
-            .OrderByDescending(x => x.MarketValueBase)
             .ToList();
+        PositionHoldingSortHelper.SortByAssetClass(positions);
 
         var realized = summaries
             .SelectMany(x => x.RealizedByInstrument)

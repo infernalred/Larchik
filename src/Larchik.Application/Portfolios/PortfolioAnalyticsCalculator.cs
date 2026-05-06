@@ -71,6 +71,8 @@ public sealed class PortfolioAnalyticsCalculator
             costBasisBase += costBase;
         }
 
+        PositionHoldingSortHelper.SortByAssetClass(positionDtos);
+
         var realizedBase = 0m;
         var realizedDtos = new List<RealizedPnlDto>();
         foreach (var kvp in valuation.RealizedByInstrument)

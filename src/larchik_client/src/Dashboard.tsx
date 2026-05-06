@@ -67,8 +67,8 @@ const CASH_LABELS: Record<string, string> = {
 };
 const POSITION_TYPE_ORDER: Record<string, number> = {
   Equity: 0,
-  Etf: 1,
-  Bond: 2,
+  Bond: 1,
+  Etf: 2,
   Currency: 3,
   Commodity: 4,
   Crypto: 5,

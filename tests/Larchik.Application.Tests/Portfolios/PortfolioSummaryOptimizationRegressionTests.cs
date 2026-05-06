@@ -342,4 +342,93 @@ public sealed class PortfolioSummaryOptimizationRegressionTests
         Assert.Equal(125m, result.RealizedBase);
         Assert.Contains(result.RealizedByInstrument, x => x.InstrumentId == closedInstrumentId && x.RealizedBase == 125m);
     }
+
+    [Fact]
+    public async Task PortfolioSnapshotSummary_OrdersPositions_ByAssetClass()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var portfolioId = harness.AddPortfolio("Main", "RUB");
+        var etfId = harness.AddInstrument("ETF", "RUB");
+        var bondId = harness.AddInstrument("BOND", "RUB");
+        var equityId = harness.AddInstrument("EQUITY", "RUB");
+        var day = new DateTime(2026, 5, 5, 0, 0, 0, DateTimeKind.Utc);
+
+        harness.Context.Instruments.Local.First(x => x.Id == etfId).Type = InstrumentType.Etf;
+        harness.Context.Instruments.Local.First(x => x.Id == bondId).Type = InstrumentType.Bond;
+        harness.Context.Instruments.Local.First(x => x.Id == equityId).Type = InstrumentType.Equity;
+
+        harness.AddPrice(etfId, "RUB", day, 100m);
+        harness.AddPrice(bondId, "RUB", day, 100m);
+        harness.AddPrice(equityId, "RUB", day, 100m);
+        harness.Context.PortfolioSnapshots.Add(new PortfolioSnapshot
+        {
+            Id = Guid.NewGuid(),
+            PortfolioId = portfolioId,
+            Date = day,
+            NavBase = 600m,
+            PnlDayBase = 0,
+            PnlMonthBase = 0,
+            PnlYearBase = 0,
+            CashBase = 0
+        });
+        harness.Context.PositionSnapshots.AddRange(
+            new PositionSnapshot
+            {
+                Id = Guid.NewGuid(),
+                PortfolioId = portfolioId,
+                InstrumentId = etfId,
+                Date = day,
+                Quantity = 3m,
+                CostBase = 300m,
+                MarketValueBase = 300m
+            },
+            new PositionSnapshot
+            {
+                Id = Guid.NewGuid(),
+                PortfolioId = portfolioId,
+                InstrumentId = bondId,
+                Date = day,
+                Quantity = 2m,
+                CostBase = 200m,
+                MarketValueBase = 200m
+            },
+            new PositionSnapshot
+            {
+                Id = Guid.NewGuid(),
+                PortfolioId = portfolioId,
+                InstrumentId = equityId,
+                Date = day,
+                Quantity = 1m,
+                CostBase = 100m,
+                MarketValueBase = 100m
+            });
+        await harness.SaveChangesAsync();
+
+        var portfolio = await harness.Context.Portfolios
+            .Include(x => x.Broker)
+            .FirstAsync(x => x.Id == portfolioId);
+        var instruments = await harness.Context.Instruments
+            .Where(x => x.Id == etfId || x.Id == bondId || x.Id == equityId)
+            .ToDictionaryAsync(x => x.Id);
+        var data = new HistoricalDataLookup(
+            await harness.Context.Prices.ToListAsync(),
+            await harness.Context.FxRates.ToListAsync());
+
+        var result = await PortfolioSnapshotSummaryBuilder.TryBuildAsync(
+            harness.Context,
+            portfolio,
+            [],
+            instruments,
+            data,
+            "adjustingAvg",
+            "RUB",
+            day.AddHours(18),
+            includeAnnualizedReturn: false,
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(
+            [equityId, bondId, etfId],
+            result!.Positions.Select(x => x.InstrumentId).ToArray());
+    }
 }

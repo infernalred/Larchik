@@ -145,7 +145,7 @@ public static class PortfolioSnapshotSummaryBuilder
             costBasisBase += costBase;
         }
 
-        positionDtos.Sort(static (a, b) => b.MarketValueBase.CompareTo(a.MarketValueBase));
+        PositionHoldingSortHelper.SortByAssetClass(positionDtos);
 
         var navBase = cashBase + positionsValueBase;
         var unrealizedBase = positionsValueBase - costBasisBase;
