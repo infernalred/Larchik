@@ -1,5 +1,6 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
+using Larchik.Application.Portfolios;
 using Larchik.Application.Portfolios.Valuation;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
@@ -145,10 +146,16 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
                 var price = data.GetPrice(instrumentId, date);
                 var lastPrice = price?.Value;
                 var quoteCurrency = price?.CurrencyId ?? instrumentCurrency;
-                var marketValueBase = lastPrice.HasValue
-                    ? data.Convert(qty * lastPrice.Value, quoteCurrency, baseCurrency, date)
-                    : 0m;
                 var avgCost = position.AverageCost;
+                var marketValueBase = PositionMarketValueHelper.CalculateMarketValueBase(
+                    qty,
+                    lastPrice,
+                    quoteCurrency,
+                    avgCost,
+                    instrumentCurrency,
+                    data,
+                    baseCurrency,
+                    date);
                 var costBase = data.Convert(avgCost * qty, instrumentCurrency, baseCurrency, date);
                 var realizedBase = valuation.RealizedByInstrument.TryGetValue(instrumentId, out var realized)
                     ? data.Convert(realized, instrumentCurrency, baseCurrency, date)

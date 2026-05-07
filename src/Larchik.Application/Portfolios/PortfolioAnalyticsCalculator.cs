@@ -46,10 +46,16 @@ public sealed class PortfolioAnalyticsCalculator
             var lastPrice = price?.Value;
             var quoteCurrency = price?.CurrencyId ?? instrument.CurrencyId;
             var accountingCurrency = InstrumentAccountingCurrencyHelper.Get(kvp.Key, accountingCurrencies, instruments, baseCurrency);
-            var marketValueBase = lastPrice.HasValue
-                ? data.Convert(kvp.Value * lastPrice.Value, quoteCurrency, baseCurrency, asOfDate)
-                : 0;
             var avgCost = cost?.AverageCost ?? 0;
+            var marketValueBase = PositionMarketValueHelper.CalculateMarketValueBase(
+                kvp.Value,
+                lastPrice,
+                quoteCurrency,
+                avgCost,
+                accountingCurrency,
+                data,
+                baseCurrency,
+                asOfDate);
             var costBase = data.Convert(avgCost * kvp.Value, accountingCurrency, baseCurrency, asOfDate);
 
             positionDtos.Add(new PositionHoldingDto

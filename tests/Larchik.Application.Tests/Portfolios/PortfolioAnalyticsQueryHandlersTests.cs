@@ -119,6 +119,41 @@ public sealed class PortfolioAnalyticsQueryHandlersTests
     }
 
     [Fact]
+    public async Task PortfolioPerformance_UsesCostFallback_WhenPriceIsMissing()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var portfolioId = harness.AddPortfolio("Main", "RUB");
+        var instrumentId = harness.AddInstrument("MSFT", "RUB");
+        var january = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        harness.AddOperation(portfolioId, Larchik.Persistence.Entities.OperationType.Deposit, "RUB", january, price: 1000m);
+        harness.AddOperation(
+            portfolioId,
+            Larchik.Persistence.Entities.OperationType.Buy,
+            "RUB",
+            january,
+            instrumentId,
+            quantity: 10m,
+            price: 100m);
+        harness.AddPrice(instrumentId, "RUB", new DateTime(2026, 2, 28, 0, 0, 0, DateTimeKind.Utc), 110m);
+        await harness.SaveChangesAsync();
+
+        var series = await harness.GetPortfolioPerformanceAsync(
+            portfolioId,
+            from: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            to: new DateTime(2026, 2, 28, 0, 0, 0, DateTimeKind.Utc));
+        var januaryPoint = series.Single(x => x.Period == "2026-01");
+        var februaryPoint = series.Single(x => x.Period == "2026-02");
+
+        Assert.Equal(1000m, januaryPoint.EndNavBase);
+        Assert.Equal(0m, januaryPoint.PnlBase);
+        Assert.Equal(0m, januaryPoint.ReturnPct);
+        Assert.Equal(1000m, februaryPoint.StartNavBase);
+        Assert.Equal(1100m, februaryPoint.EndNavBase);
+        Assert.Equal(100m, februaryPoint.PnlBase);
+    }
+
+    [Fact]
     public async Task AggregatePerformance_AggregatesPerPortfolioMonthlySeries()
     {
         await using var harness = new PortfolioAnalyticsTestHarness();

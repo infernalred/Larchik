@@ -115,6 +115,7 @@ fi
   --sql-dir "${SCRIPT_DIR}/tbank_history/sql"
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "${SCRIPT_DIR}/fix_tusd_moex_price_currency.sql"
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "${SCRIPT_DIR}/fix_veon_tbank_presplit_prices.sql"
 
 read -r ACTUAL_MOEX ACTUAL_TBANK ACTUAL_TOTAL <<<"$(psql "$DATABASE_URL" -X -A -t -F ' ' -v ON_ERROR_STOP=1 -c "
 with scoped as (

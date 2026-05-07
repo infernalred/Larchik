@@ -119,7 +119,7 @@ public static class PortfolioSnapshotSummaryBuilder
 
             var marketValueBase = lastPrice.HasValue && snap.Quantity != 0
                 ? data.Convert(snap.Quantity * lastPrice.Value, quoteCurrency, baseCurrency, asOfDateTime)
-                : 0;
+                : snap.CostBase;
 
             var costBase = snap.CostBase;
             var avgCost = snap.Quantity != 0
