@@ -253,7 +253,11 @@ resolved AS (
             )::numeric(18,4)
             ELSE rb.raw_price::numeric(18,4)
         END AS price,
-        rb.currency_id,
+        CASE
+            WHEN rb.instrument_type = 2 THEN rb.currency_id
+            ELSE rb.trade_currency_id
+        END AS currency_id,
+        rb.trade_currency_id AS source_currency_id,
         rb.hash_key
     FROM resolved_base rb
     LEFT JOIN LATERAL (
@@ -298,11 +302,12 @@ SELECT
     trade_date,
     price,
     currency_id,
+    source_currency_id,
     hash_key
 FROM resolved;
 
 WITH upserted AS (
-    INSERT INTO prices (id, instrument_id, date, value, currency_id, provider, created_at, updated_at)
+    INSERT INTO prices (id, instrument_id, date, value, currency_id, source_currency_id, provider, created_at, updated_at)
     SELECT
         (
             substr(hash_key, 1, 8) || '-' ||
@@ -315,6 +320,7 @@ WITH upserted AS (
         (trade_date::timestamp AT TIME ZONE 'UTC'),
         price,
         currency_id,
+        source_currency_id,
         '${PROVIDER}',
         now(),
         now()
@@ -323,6 +329,7 @@ WITH upserted AS (
     DO UPDATE
     SET value = EXCLUDED.value,
         currency_id = EXCLUDED.currency_id,
+        source_currency_id = EXCLUDED.source_currency_id,
         updated_at = now()
     RETURNING instrument_id
 )
