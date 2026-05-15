@@ -9,6 +9,7 @@ using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Larchik.Application.Tests.Jobs;
@@ -50,5 +51,35 @@ public sealed class JobsHostCompositionTests
         Assert.Contains(services, x => x.ServiceType == typeof(DbContextOptions<LarchikContext>));
         Assert.Contains(services, x => x.ServiceType == typeof(IBackgroundJobHandler));
         Assert.Contains(services, x => x.ServiceType == typeof(IJobRunPlanner));
+    }
+
+    [Fact]
+    public void ProductionConfig_DoesNotExcludeRussianTbankPriceSourceInstruments()
+    {
+        var repoRoot = FindRepoRoot();
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(repoRoot)
+            .AddJsonFile(Path.Combine("src", "Larchik.Jobs", "appsettings.json"))
+            .AddJsonFile(Path.Combine("src", "Larchik.Jobs", "appsettings.Production.json"))
+            .Build();
+        var services = new ServiceCollection();
+
+        services.Configure<BackgroundJobsOptions>(configuration.GetSection("BackgroundJobs"));
+
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<BackgroundJobsOptions>>().Value;
+
+        Assert.DoesNotContain("RU", options.TbankPricesDaily.CountryExclusions, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Larchik.sln")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("Repository root was not found.");
     }
 }
