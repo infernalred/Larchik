@@ -11,13 +11,13 @@
     "unrealizedBase": 1721997.20,
     "netInflowBase": 1037.97,
     "breakdown": {
-      "Buy": 2,
-      "Fee": 2,
-      "Deposit": 2,
-      "CashAdjustment": 1
+      "buy": 2,
+      "fee": 2,
+      "deposit": 2,
+      "cashAdjustment": 1
     },
     "cash": {
-      "RUB": 2.82
+      "rub": 2.82
     },
     "positions": [
       {
@@ -39,21 +39,21 @@
     "skippedOperations": 0,
     "totalOperationsInDb": 25,
     "cashBase": 32.73,
-    "positionsValueBase": 1863127.80,
-    "navBase": 1863160.52,
+    "positionsValueBase": 1864179.11,
+    "navBase": 1864211.83,
     "realizedBase": 0,
-    "unrealizedBase": 1858780.98,
+    "unrealizedBase": 1859832.29,
     "netInflowBase": 5006.54,
     "breakdown": {
-      "Buy": 7,
-      "Dividend": 1,
-      "Fee": 4,
-      "Deposit": 7,
-      "CashAdjustment": 6
+      "buy": 7,
+      "dividend": 1,
+      "fee": 4,
+      "deposit": 7,
+      "cashAdjustment": 6
     },
     "cash": {
-      "RUB": 21.09,
-      "USD": 0.14
+      "rub": 21.09,
+      "usd": 0.14
     },
     "positions": [
       {
@@ -61,7 +61,7 @@
         "instrumentName": "American Airlines Group",
         "quantity": 1.0,
         "lastPrice": null,
-        "marketValueBase": 0,
+        "marketValueBase": 1051.31,
         "averageCost": 12.65,
         "currencyId": "USD",
         "priceCurrencyId": "USD",
@@ -108,23 +108,23 @@
     "skippedOperations": 0,
     "totalOperationsInDb": 150,
     "cashBase": 130.97,
-    "positionsValueBase": 3586499.76,
-    "navBase": 3586630.73,
+    "positionsValueBase": 3598287.77,
+    "navBase": 3598418.74,
     "realizedBase": 699.88,
-    "unrealizedBase": 3447590.32,
+    "unrealizedBase": 3459378.34,
     "netInflowBase": 136042.99,
     "breakdown": {
-      "Buy": 68,
-      "Sell": 2,
-      "Dividend": 8,
-      "Fee": 17,
-      "Deposit": 31,
-      "Withdraw": 2,
-      "CashAdjustment": 22
+      "buy": 68,
+      "sell": 2,
+      "dividend": 8,
+      "fee": 17,
+      "deposit": 31,
+      "withdraw": 2,
+      "cashAdjustment": 22
     },
     "cash": {
-      "RUB": 0.49,
-      "USD": 1.57
+      "rub": 0.49,
+      "usd": 1.57
     },
     "positions": [
       {
@@ -132,7 +132,7 @@
         "instrumentName": "American Airlines Group",
         "quantity": 1.0,
         "lastPrice": null,
-        "marketValueBase": 0,
+        "marketValueBase": 1051.31,
         "averageCost": 12.65,
         "currencyId": "USD",
         "priceCurrencyId": "USD",
@@ -143,7 +143,7 @@
         "instrumentName": "Apple",
         "quantity": 1.0,
         "lastPrice": null,
-        "marketValueBase": 0,
+        "marketValueBase": 10736.70,
         "averageCost": 129.19,
         "currencyId": "USD",
         "priceCurrencyId": "USD",
@@ -273,18 +273,18 @@
     "unrealizedBase": 3503352.92,
     "netInflowBase": 272576.78,
     "breakdown": {
-      "Buy": 133,
-      "Sell": 13,
-      "Dividend": 12,
-      "Fee": 68,
-      "Deposit": 59,
-      "Withdraw": 13,
-      "CashAdjustment": 93
+      "buy": 133,
+      "sell": 13,
+      "dividend": 12,
+      "fee": 68,
+      "deposit": 59,
+      "withdraw": 13,
+      "cashAdjustment": 93
     },
     "cash": {
-      "EUR": 0.02,
-      "RUB": 294.10,
-      "USD": 0.36
+      "eur": 0.02,
+      "rub": 294.10,
+      "usd": 0.36
     },
     "positions": [
       {
@@ -471,25 +471,25 @@
     "skippedOperations": 0,
     "totalOperationsInDb": 684,
     "cashBase": 21679.79,
-    "positionsValueBase": 4039434.02,
-    "navBase": 4061113.80,
+    "positionsValueBase": 4049107.96,
+    "navBase": 4070787.74,
     "realizedBase": -4229.70,
-    "unrealizedBase": 3404309.23,
+    "unrealizedBase": 3413983.17,
     "netInflowBase": 592614.49,
     "breakdown": {
-      "Buy": 196,
-      "Sell": 21,
-      "Dividend": 70,
-      "Fee": 140,
-      "Deposit": 99,
-      "Withdraw": 13,
-      "BondPartialRedemption": 2,
-      "CashAdjustment": 143
+      "buy": 196,
+      "sell": 21,
+      "dividend": 70,
+      "fee": 140,
+      "deposit": 99,
+      "withdraw": 13,
+      "bondPartialRedemption": 2,
+      "cashAdjustment": 143
     },
     "cash": {
-      "EUR": 0.02,
-      "RUB": 21486.80,
-      "USD": 2.30
+      "eur": 0.02,
+      "rub": 21486.80,
+      "usd": 2.30
     },
     "positions": [
       {
@@ -607,7 +607,7 @@
         "instrumentName": "Yandex clA",
         "quantity": 5.0,
         "lastPrice": null,
-        "marketValueBase": 0,
+        "marketValueBase": 9673.94,
         "averageCost": 1934.79,
         "currencyId": "RUB",
         "priceCurrencyId": "RUB",
@@ -878,22 +878,22 @@
     "navBase": 115348.84,
     "realizedBase": 32201.84,
     "unrealizedBase": 12186.77,
-    "netInflowBase": -44840.52,
+    "netInflowBase": -43926.13,
     "breakdown": {
-      "Buy": 271,
-      "Sell": 144,
-      "Dividend": 300,
-      "Fee": 255,
-      "Deposit": 187,
-      "Withdraw": 32,
-      "BondPartialRedemption": 17,
-      "BondMaturity": 1,
-      "CashAdjustment": 218
+      "buy": 271,
+      "sell": 144,
+      "dividend": 300,
+      "fee": 255,
+      "deposit": 188,
+      "withdraw": 32,
+      "bondPartialRedemption": 17,
+      "bondMaturity": 1,
+      "cashAdjustment": 217
     },
     "cash": {
-      "EUR": 0.02,
-      "RUB": 22.97,
-      "USD": 2.30
+      "eur": 0.02,
+      "rub": 22.97,
+      "usd": 2.30
     },
     "positions": [
       {
@@ -1084,22 +1084,22 @@
     "navBase": 962648.03,
     "realizedBase": 20329.49,
     "unrealizedBase": 30746.53,
-    "netInflowBase": 650854.73,
+    "netInflowBase": 729053.81,
     "breakdown": {
-      "Buy": 437,
-      "Sell": 155,
-      "Dividend": 516,
-      "Fee": 344,
-      "Deposit": 270,
-      "Withdraw": 32,
-      "BondPartialRedemption": 28,
-      "BondMaturity": 2,
-      "CashAdjustment": 311
+      "buy": 437,
+      "sell": 155,
+      "dividend": 516,
+      "fee": 344,
+      "deposit": 277,
+      "withdraw": 32,
+      "bondPartialRedemption": 28,
+      "bondMaturity": 2,
+      "cashAdjustment": 304
     },
     "cash": {
-      "EUR": 0.02,
-      "RUB": 30468.56,
-      "USD": 2.30
+      "eur": 0.02,
+      "rub": 30468.56,
+      "usd": 2.30
     },
     "positions": [
       {
@@ -1884,22 +1884,22 @@
     "navBase": 1172147.68,
     "realizedBase": 20299.00,
     "unrealizedBase": 32109.20,
-    "netInflowBase": 813623.41,
+    "netInflowBase": 891822.49,
     "breakdown": {
-      "Buy": 542,
-      "Sell": 163,
-      "Dividend": 603,
-      "Fee": 375,
-      "Deposit": 285,
-      "Withdraw": 32,
-      "BondPartialRedemption": 29,
-      "BondMaturity": 2,
-      "CashAdjustment": 341
+      "buy": 542,
+      "sell": 163,
+      "dividend": 603,
+      "fee": 375,
+      "deposit": 292,
+      "withdraw": 32,
+      "bondPartialRedemption": 29,
+      "bondMaturity": 2,
+      "cashAdjustment": 334
     },
     "cash": {
-      "EUR": 0.02,
-      "RUB": 11716.92,
-      "USD": 2.30
+      "eur": 0.02,
+      "rub": 11716.92,
+      "usd": 2.30
     },
     "positions": [
       {
@@ -2805,22 +2805,22 @@
     "navBase": 1161420.23,
     "realizedBase": 20299.00,
     "unrealizedBase": 32109.20,
-    "netInflowBase": 836824.85,
+    "netInflowBase": 915023.93,
     "breakdown": {
-      "Buy": 542,
-      "Sell": 163,
-      "Dividend": 611,
-      "Fee": 376,
-      "Deposit": 287,
-      "Withdraw": 32,
-      "BondPartialRedemption": 29,
-      "BondMaturity": 2,
-      "CashAdjustment": 345
+      "buy": 542,
+      "sell": 163,
+      "dividend": 611,
+      "fee": 376,
+      "deposit": 294,
+      "withdraw": 32,
+      "bondPartialRedemption": 29,
+      "bondMaturity": 2,
+      "cashAdjustment": 338
     },
     "cash": {
-      "EUR": 0.02,
-      "RUB": 989.47,
-      "USD": 2.30
+      "eur": 0.02,
+      "rub": 989.47,
+      "usd": 2.30
     },
     "positions": [
       {

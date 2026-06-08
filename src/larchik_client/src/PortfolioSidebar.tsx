@@ -1,5 +1,6 @@
 import { Button, Divider, IconButton, List, ListItem, ListItemButton, ListItemText, Stack, Tooltip, Typography } from '@mui/material';
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
+import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -13,8 +14,10 @@ interface Props {
   onShowAllSummary: () => void;
   showAllSelected?: boolean;
   isAdmin?: boolean;
-  adminSelected?: boolean;
+  adminInstrumentsSelected?: boolean;
+  adminCurrenciesSelected?: boolean;
   onShowAdminInstruments?: () => void;
+  onShowAdminCurrencies?: () => void;
   onChangePassword: () => void;
   onLogout: () => void;
   mobile?: boolean;
@@ -28,8 +31,10 @@ export function PortfolioSidebar({
   onShowAllSummary,
   showAllSelected = false,
   isAdmin = false,
-  adminSelected = false,
+  adminInstrumentsSelected = false,
+  adminCurrenciesSelected = false,
   onShowAdminInstruments,
+  onShowAdminCurrencies,
   onChangePassword,
   onLogout,
   mobile = false,
@@ -106,21 +111,34 @@ export function PortfolioSidebar({
         Показать инфу по всем счетам
       </Button>
 
-      {isAdmin && onShowAdminInstruments && (
+      {isAdmin && (onShowAdminInstruments || onShowAdminCurrencies) && (
         <>
           <Divider flexItem />
           <Typography variant="overline" color="text.secondary">
             Администрирование
           </Typography>
-          <Button
-            variant={adminSelected ? 'contained' : 'outlined'}
-            startIcon={<Inventory2OutlinedIcon />}
-            onClick={onShowAdminInstruments}
-            sx={{ textTransform: 'none' }}
-            fullWidth
-          >
-            Инструменты
-          </Button>
+          {onShowAdminInstruments && (
+            <Button
+              variant={adminInstrumentsSelected ? 'contained' : 'outlined'}
+              startIcon={<Inventory2OutlinedIcon />}
+              onClick={onShowAdminInstruments}
+              sx={{ textTransform: 'none' }}
+              fullWidth
+            >
+              Инструменты
+            </Button>
+          )}
+          {onShowAdminCurrencies && (
+            <Button
+              variant={adminCurrenciesSelected ? 'contained' : 'outlined'}
+              startIcon={<AttachMoneyOutlinedIcon />}
+              onClick={onShowAdminCurrencies}
+              sx={{ textTransform: 'none' }}
+              fullWidth
+            >
+              Валюты
+            </Button>
+          )}
         </>
       )}
     </Stack>

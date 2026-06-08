@@ -34,6 +34,15 @@ export interface Currency {
   name: string;
 }
 
+export interface CurrencyModel {
+  id: string;
+  name: string;
+}
+
+export interface UpdateCurrencyModel {
+  name: string;
+}
+
 export interface ReferenceItem {
   id: string;
   name: string;

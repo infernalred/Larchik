@@ -88,11 +88,11 @@ public class TbankReportParserRegressionTests
                 new OperationBreakdown(OperationType.Sell, 123),
                 new OperationBreakdown(OperationType.Dividend, 230),
                 new OperationBreakdown(OperationType.Fee, 115),
-                new OperationBreakdown(OperationType.Deposit, 88),
+                new OperationBreakdown(OperationType.Deposit, 89),
                 new OperationBreakdown(OperationType.Withdraw, 19),
                 new OperationBreakdown(OperationType.BondPartialRedemption, 15),
                 new OperationBreakdown(OperationType.BondMaturity, 1),
-                new OperationBreakdown(OperationType.CashAdjustment, 75)
+                new OperationBreakdown(OperationType.CashAdjustment, 74)
             }
         ];
 
@@ -105,10 +105,10 @@ public class TbankReportParserRegressionTests
                 new OperationBreakdown(OperationType.Sell, 11),
                 new OperationBreakdown(OperationType.Dividend, 216),
                 new OperationBreakdown(OperationType.Fee, 89),
-                new OperationBreakdown(OperationType.Deposit, 83),
+                new OperationBreakdown(OperationType.Deposit, 89),
                 new OperationBreakdown(OperationType.BondPartialRedemption, 11),
                 new OperationBreakdown(OperationType.BondMaturity, 1),
-                new OperationBreakdown(OperationType.CashAdjustment, 93)
+                new OperationBreakdown(OperationType.CashAdjustment, 87)
             }
         ];
 

@@ -220,7 +220,7 @@ public sealed class InstrumentCorporateActionsCrudHandlersTests
 
         if (!await context.Currencies.AnyAsync(x => x.Id == currencyId))
         {
-            context.Currencies.Add(new Currency { Id = currencyId });
+            context.Currencies.Add(CurrencyTestData.Create(currencyId));
         }
 
         if (!await context.Categories.AnyAsync(x => x.Id == categoryId))

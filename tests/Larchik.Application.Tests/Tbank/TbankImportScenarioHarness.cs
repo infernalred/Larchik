@@ -255,7 +255,7 @@ public sealed class TbankImportScenarioHarness : IAsyncDisposable
 
         _context.Currencies.AddRange(data.Currencies
             .Where(x => !existingCurrencyIds.Contains(x.Id))
-            .Select(x => new Currency { Id = x.Id }));
+            .Select(x => CurrencyTestData.Create(x.Id)));
 
         _context.Categories.AddRange(data.Categories
             .Where(x => !existingCategoryIds.Contains(x.Id))

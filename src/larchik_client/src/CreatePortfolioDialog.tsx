@@ -109,7 +109,7 @@ export function CreatePortfolioDialog({ open, brokers, currencies, submitting, e
           >
             {currencies.map((currency) => (
               <MenuItem key={currency.id} value={currency.id}>
-                {currency.id}
+                {currency.name ? `${currency.id} — ${currency.name}` : currency.id}
               </MenuItem>
             ))}
           </TextField>

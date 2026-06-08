@@ -70,7 +70,7 @@ public sealed class InstrumentCorporateActionWriteHelperTests
 
         if (!await context.Currencies.AnyAsync(x => x.Id == "USD"))
         {
-            context.Currencies.Add(new Currency { Id = "USD" });
+            context.Currencies.Add(CurrencyTestData.Usd);
         }
 
         var categoryId = await context.Categories

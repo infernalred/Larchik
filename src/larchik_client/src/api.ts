@@ -3,6 +3,8 @@ import {
   Category,
   ClearPortfolioDataResult,
   Currency,
+  CurrencyModel,
+  UpdateCurrencyModel,
   ImportResult,
   Instrument,
   InstrumentCorporateAction,
@@ -168,6 +170,20 @@ export const api = {
 
   async listCurrencies(): Promise<Currency[]> {
     return request<Currency[]>('/currencies');
+  },
+
+  async createCurrency(model: CurrencyModel): Promise<void> {
+    return request<void>('/currencies', {
+      method: 'POST',
+      body: JSON.stringify(model),
+    });
+  },
+
+  async updateCurrency(id: string, model: UpdateCurrencyModel): Promise<void> {
+    return request<void>(`/currencies/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(model),
+    });
   },
 
   async listCategories(): Promise<Category[]> {

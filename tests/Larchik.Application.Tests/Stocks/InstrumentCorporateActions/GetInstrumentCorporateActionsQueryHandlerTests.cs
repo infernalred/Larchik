@@ -22,7 +22,7 @@ public sealed class GetInstrumentCorporateActionsQueryHandlerTests
             .FirstOrDefaultAsync() ?? "USD";
         if (!await context.Currencies.AnyAsync(x => x.Id == currencyId))
         {
-            context.Currencies.Add(new Currency { Id = currencyId });
+            context.Currencies.Add(CurrencyTestData.Create(currencyId));
         }
 
         var categoryId = await context.Categories

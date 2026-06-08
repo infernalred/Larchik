@@ -89,7 +89,7 @@ public sealed class PortfolioReconciliationDailyJobHandlerTests
         }
         if (!await database.Context.Currencies.AnyAsync(x => x.Id == "RUB"))
         {
-            database.Context.Currencies.Add(new Currency { Id = "RUB" });
+            database.Context.Currencies.Add(CurrencyTestData.Rub);
         }
         database.Context.Users.Add(new AppUser { Id = userId, UserName = "pipeline-user", NormalizedUserName = "PIPELINE-USER" });
         database.Context.Portfolios.Add(new Portfolio

@@ -194,9 +194,7 @@ public sealed class InstrumentWriteHandlersTests
                 return;
             }
 
-            Context.Currencies.AddRange(
-                new Currency { Id = "RUB" },
-                new Currency { Id = "USD" });
+            Context.Currencies.AddRange(CurrencyTestData.Rub, CurrencyTestData.Usd);
             Context.SaveChanges();
         }
     }

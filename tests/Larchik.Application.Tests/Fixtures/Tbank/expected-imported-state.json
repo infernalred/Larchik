@@ -5,22 +5,22 @@
   "navBase": 1161420.23,
   "realizedBase": 20299.00,
   "unrealizedBase": 32109.20,
-  "netInflowBase": 836824.85,
+  "netInflowBase": 915023.93,
   "breakdown": {
-    "Buy": 542,
-    "Sell": 163,
-    "Dividend": 611,
-    "Fee": 376,
-    "Deposit": 287,
-    "Withdraw": 32,
-    "BondPartialRedemption": 29,
-    "BondMaturity": 2,
-    "CashAdjustment": 345
+    "buy": 542,
+    "sell": 163,
+    "dividend": 611,
+    "fee": 376,
+    "deposit": 294,
+    "withdraw": 32,
+    "bondPartialRedemption": 29,
+    "bondMaturity": 2,
+    "cashAdjustment": 338
   },
   "cash": {
-    "EUR": 0.02,
-    "RUB": 989.47,
-    "USD": 2.30
+    "eur": 0.02,
+    "rub": 989.47,
+    "usd": 2.30
   },
   "positions": [
     {

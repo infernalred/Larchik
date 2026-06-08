@@ -34,11 +34,15 @@ public class TbankImportDatabaseRegressionTests
             Assert.Equal(expected.TotalOperationsInDb, await harness.CountOperationsAsync());
 
             Assert.Equal(expected.CashBase, Round2(summary.CashBase));
-            Assert.Equal(expected.PositionsValueBase, Round2(summary.PositionsValueBase));
+            Assert.True(
+                expected.PositionsValueBase == Round2(summary.PositionsValueBase),
+                $"PositionsValueBase mismatch after importing {expected.FileName}. Expected: {expected.PositionsValueBase}, actual: {Round2(summary.PositionsValueBase)}");
             Assert.Equal(expected.NavBase, Round2(summary.NavBase));
             Assert.Equal(expected.RealizedBase, Round2(summary.RealizedBase));
             Assert.Equal(expected.UnrealizedBase, Round2(summary.UnrealizedBase));
-            Assert.Equal(expected.NetInflowBase, Round2(summary.NetInflowBase));
+            Assert.True(
+                expected.NetInflowBase == Round2(summary.NetInflowBase),
+                $"NetInflowBase mismatch after importing {expected.FileName}. Expected: {expected.NetInflowBase}, actual: {Round2(summary.NetInflowBase)}");
 
             await AssertExpectedStateAsync(harness, expected.Cash, expected.Positions);
 
@@ -80,7 +84,9 @@ public class TbankImportDatabaseRegressionTests
         foreach (var item in expectedState.Breakdown)
         {
             Assert.True(breakdown.TryGetValue(item.Key, out var actualCount));
-            Assert.Equal(item.Value, actualCount);
+            Assert.True(
+                item.Value == actualCount,
+                $"Breakdown mismatch for '{item.Key}'. Expected: {item.Value}, actual: {actualCount}");
         }
     }
 

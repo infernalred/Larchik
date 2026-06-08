@@ -44,7 +44,11 @@ import { OperationsPanel } from './OperationsPanel';
 import { CreatePortfolioDialog } from './CreatePortfolioDialog';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 
-type PortfolioRoute = 'overview' | 'operations' | 'analytics' | 'instruments';
+type PortfolioRoute = 'overview' | 'operations' | 'analytics' | 'instruments' | 'currencies';
+
+function isAdminReferencePage(route: PortfolioRoute): boolean {
+  return route === 'instruments' || route === 'currencies';
+}
 
 const VALUATION_METHODS = [
   { value: 'adjustingAvg', label: 'Adjusting Avg' },
@@ -76,6 +80,10 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
 const AdminInstrumentsPage = lazy(async () => {
   const module = await import('./AdminInstrumentsPage');
   return { default: module.AdminInstrumentsPage };
+});
+const AdminCurrenciesPage = lazy(async () => {
+  const module = await import('./AdminCurrenciesPage');
+  return { default: module.AdminCurrenciesPage };
 });
 
 function formatPercent(value: number): string {
@@ -173,7 +181,7 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
     setOperations([]);
     setOperationsTotalCount(0);
     setOperationsPage(1);
-    if (route !== 'instruments') {
+    if (!isAdminReferencePage(route)) {
       onRouteChange('overview');
     }
     setViewMode('portfolio');
@@ -521,6 +529,12 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
     setSidebarOpen(false);
   }
 
+  function handleShowAdminCurrencies() {
+    if (!user.isAdmin) return;
+    onRouteChange('currencies');
+    setSidebarOpen(false);
+  }
+
   const activeBroker = brokers.find((x) => x.id === activePortfolio?.brokerId) ?? null;
   const canImportOperations = Boolean(activeBroker?.supportsImport && activeBroker.code);
   const performanceCurrency = performance[0]?.reportingCurrencyId;
@@ -552,8 +566,10 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
             onShowAllSummary={handleShowAllSummary}
             showAllSelected={viewMode === 'all'}
             isAdmin={user.isAdmin}
-            adminSelected={portfolioPage === 'instruments'}
+            adminInstrumentsSelected={portfolioPage === 'instruments'}
+            adminCurrenciesSelected={portfolioPage === 'currencies'}
             onShowAdminInstruments={handleShowAdminInstruments}
+            onShowAdminCurrencies={handleShowAdminCurrencies}
             onChangePassword={handleOpenChangePassword}
             onLogout={onLogout}
           />
@@ -581,8 +597,10 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
           onShowAllSummary={handleShowAllSummary}
           showAllSelected={viewMode === 'all'}
           isAdmin={user.isAdmin}
-          adminSelected={portfolioPage === 'instruments'}
+          adminInstrumentsSelected={portfolioPage === 'instruments'}
+          adminCurrenciesSelected={portfolioPage === 'currencies'}
           onShowAdminInstruments={handleShowAdminInstruments}
+          onShowAdminCurrencies={handleShowAdminCurrencies}
           onChangePassword={handleOpenChangePassword}
           onLogout={onLogout}
           mobile
@@ -628,7 +646,7 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
             >
               <Stack spacing={0.5}>
                 <Typography variant="overline" color="text.secondary">
-                  {portfolioPage === 'instruments'
+                  {isAdminReferencePage(portfolioPage)
                     ? 'Администрирование'
                     : viewMode === 'all'
                       ? 'Режим просмотра'
@@ -639,16 +657,18 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
                 <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, fontWeight: 700 }}>
                   {portfolioPage === 'instruments'
                     ? 'Справочник инструментов'
+                    : portfolioPage === 'currencies'
+                      ? 'Справочник валют'
                     : viewMode === 'all'
                       ? 'Все счета'
                       : activePortfolio?.name ?? 'Выберите портфель'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {portfolioPage === 'instruments'
+                  {isAdminReferencePage(portfolioPage)
                     ? 'Создание и редактирование доступно только администраторам.'
                     : `Валюта отчета: ${currency}`}
                 </Typography>
-                {portfolioPage !== 'instruments' && (
+                {!isAdminReferencePage(portfolioPage) && (
                   <Typography variant="body2" color="text.secondary">
                     {annualizedReturnLabel}
                   </Typography>
@@ -725,7 +745,7 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
                     </Button>
                   </Stack>
                 )}
-                {portfolioPage !== 'instruments' && (
+                {!isAdminReferencePage(portfolioPage) && (
                   <Stack
                     direction={{ xs: 'column', sm: 'row' }}
                     spacing={1}
@@ -781,6 +801,18 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
               }
             >
               <AdminInstrumentsPage />
+            </Suspense>
+          )}
+
+          {portfolioPage === 'currencies' && user.isAdmin && (
+            <Suspense
+              fallback={
+                <Stack sx={{ py: 4, alignItems: 'center' }}>
+                  <CircularProgress />
+                </Stack>
+              }
+            >
+              <AdminCurrenciesPage />
             </Suspense>
           )}
 

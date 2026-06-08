@@ -6,12 +6,16 @@ import { AuthForm } from './AuthForm';
 import { Dashboard } from './Dashboard';
 import { User } from './types';
 
-type DashboardRoute = 'overview' | 'operations' | 'analytics' | 'instruments';
+type DashboardRoute = 'overview' | 'operations' | 'analytics' | 'instruments' | 'currencies';
 const SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 const resolveRoute = (pathname: string): DashboardRoute => {
   if (pathname === '/admin/instruments' || pathname.startsWith('/admin/instruments/')) {
     return 'instruments';
+  }
+
+  if (pathname === '/admin/currencies' || pathname.startsWith('/admin/currencies/')) {
+    return 'currencies';
   }
 
   if (pathname === '/operations' || pathname.startsWith('/operations/')) {
@@ -155,7 +159,7 @@ export function App() {
   }, [applyRouteFromLocation]);
 
   useEffect(() => {
-    if (!user?.isAdmin && route === 'instruments') {
+    if (!user?.isAdmin && (route === 'instruments' || route === 'currencies')) {
       window.history.replaceState({}, '', '/');
       setRoute('overview');
     }
@@ -192,7 +196,9 @@ export function App() {
           ? '/analytics'
           : nextRoute === 'instruments'
             ? '/admin/instruments'
-            : '/';
+            : nextRoute === 'currencies'
+              ? '/admin/currencies'
+              : '/';
     if (window.location.pathname !== nextPath) {
       window.history.pushState({}, '', nextPath);
     }

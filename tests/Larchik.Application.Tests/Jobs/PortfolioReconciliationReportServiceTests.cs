@@ -288,7 +288,7 @@ public sealed class PortfolioReconciliationReportServiceTests
         }
         if (!await context.Currencies.AnyAsync(x => x.Id == "RUB"))
         {
-            context.Currencies.Add(new Currency { Id = "RUB" });
+            context.Currencies.Add(CurrencyTestData.Rub);
         }
 
         if (!await context.Categories.AnyAsync(x => x.Id == 1))
@@ -382,7 +382,7 @@ public sealed class PortfolioReconciliationReportServiceTests
         {
             if (!await context.Currencies.AnyAsync(x => x.Id == "USD"))
             {
-                context.Currencies.Add(new Currency { Id = "USD" });
+                context.Currencies.Add(CurrencyTestData.Usd);
             }
 
             var currencyInstrumentId = Guid.NewGuid();

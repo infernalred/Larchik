@@ -64,8 +64,8 @@ public sealed class ReferenceDataQueryHandlersTests
     {
         await using var harness = new ReferenceDataHarness();
         harness.Context.Currencies.AddRange(
-            new Currency { Id = "JPY" },
-            new Currency { Id = "AUD" });
+            CurrencyTestData.Create("JPY", "Japanese Yen"),
+            CurrencyTestData.Create("AUD", "Australian Dollar"));
         await harness.Context.SaveChangesAsync();
 
         var handler = new GetCurrenciesQueryHandler(harness.Context);

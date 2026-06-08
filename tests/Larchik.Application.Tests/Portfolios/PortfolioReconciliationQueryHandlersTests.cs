@@ -184,7 +184,7 @@ public sealed class PortfolioReconciliationQueryHandlersTests
             }
             if (!await Context.Currencies.AnyAsync(x => x.Id == "RUB"))
             {
-                Context.Currencies.Add(new Currency { Id = "RUB" });
+                Context.Currencies.Add(CurrencyTestData.Rub);
             }
             Context.Portfolios.AddRange(
                 new Portfolio

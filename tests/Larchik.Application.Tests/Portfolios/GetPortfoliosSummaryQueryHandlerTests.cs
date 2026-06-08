@@ -125,7 +125,7 @@ public sealed class GetPortfoliosSummaryQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_KeepsPositionWithZeroMarketValue_WhenAsOfPriceIsMissing()
+    public async Task Handle_UsesCostBasisForPositionValue_WhenAsOfPriceIsMissing()
     {
         await using var harness = new PortfolioAnalyticsTestHarness();
         var portfolioId = harness.AddPortfolio("No Price", "RUB");
@@ -139,8 +139,8 @@ public sealed class GetPortfoliosSummaryQueryHandlerTests
         var result = await harness.GetPortfoliosSummaryAsync();
 
         Assert.Equal(500m, result.CashBase);
-        Assert.Equal(0m, result.PositionsValueBase);
-        Assert.Equal(-500m, result.UnrealizedBase);
-        Assert.Equal(-500m, result.PnlBase);
+        Assert.Equal(500m, result.PositionsValueBase);
+        Assert.Equal(0m, result.UnrealizedBase);
+        Assert.Equal(0m, result.PnlBase);
     }
 }

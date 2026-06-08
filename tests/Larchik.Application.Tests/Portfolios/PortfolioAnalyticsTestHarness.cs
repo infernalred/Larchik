@@ -252,17 +252,17 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
 
         if (!context.Currencies.Any(x => x.Id == "RUB"))
         {
-            context.Currencies.Add(new Currency { Id = "RUB" });
+            context.Currencies.Add(CurrencyTestData.Rub);
         }
 
         if (!context.Currencies.Any(x => x.Id == "USD"))
         {
-            context.Currencies.Add(new Currency { Id = "USD" });
+            context.Currencies.Add(CurrencyTestData.Usd);
         }
 
         if (!context.Currencies.Any(x => x.Id == "EUR"))
         {
-            context.Currencies.Add(new Currency { Id = "EUR" });
+            context.Currencies.Add(CurrencyTestData.Eur);
         }
 
         if (!context.Categories.Any(x => x.Id == 1))

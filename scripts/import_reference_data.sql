@@ -10690,12 +10690,13 @@ BEGIN
     END IF;
 END $$;
 
-INSERT INTO currencies (id)
+INSERT INTO currencies (id, name)
 VALUES
-    ('RUB'),
-    ('USD'),
-    ('EUR')
-ON CONFLICT (id) DO NOTHING;
+    ('RUB', 'Российский рубль'),
+    ('USD', 'Доллар США'),
+    ('EUR', 'Евро')
+ON CONFLICT (id) DO UPDATE
+SET name = EXCLUDED.name;
 
 INSERT INTO countries (id, name)
 VALUES
@@ -10777,8 +10778,8 @@ SET
     name = EXCLUDED.name,
     country = EXCLUDED.country;
 
-INSERT INTO currencies (id)
-SELECT src.ccy
+INSERT INTO currencies (id, name)
+SELECT src.ccy, src.ccy
 FROM (
     SELECT DISTINCT currency_id AS ccy
     FROM stg_stocks_norm

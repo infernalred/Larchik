@@ -5,8 +5,8 @@ BEGIN;
 -- RU000A10EYG7 = Polyus PBO-06, board TQCB, nominal currency CNY, listing start 2026-04-27.
 -- RU000A10EYY0 = Medscan 001P-02, board TQCB, nominal currency RUB, listing start 2026-04-28.
 
-INSERT INTO currencies (id)
-VALUES ('CNY')
+INSERT INTO currencies (id, name)
+VALUES ('CNY', 'CNY')
 ON CONFLICT (id) DO NOTHING;
 
 WITH actor AS (
