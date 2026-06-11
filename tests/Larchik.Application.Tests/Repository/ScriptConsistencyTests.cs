@@ -33,6 +33,16 @@ public sealed class ScriptConsistencyTests
         Assert.DoesNotMatch(new Regex(@"insert\s+into\s+instruments\s*\((?:[^()]|\r|\n)*\bprice\b(?:[^()]|\r|\n)*\)\s*(select|values)", RegexOptions.IgnoreCase), script);
     }
 
+    [Theory]
+    [InlineData("RU000A10F850")]
+    [InlineData("RU000A10FA72")]
+    public void ImportReferenceData_IncludesLatestMoexBonds(string isin)
+    {
+        var script = File.ReadAllText(Path.Combine(RepoRoot, "scripts", "import_reference_data.sql"));
+
+        Assert.Contains(isin, script, StringComparison.Ordinal);
+    }
+
     private static string ResolveRepoRoot()
     {
         for (var current = new DirectoryInfo(AppContext.BaseDirectory); current is not null; current = current.Parent)
