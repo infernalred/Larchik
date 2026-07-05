@@ -125,8 +125,16 @@ public class SyncTbankPricesCommandHandler(
         ISet<string> excludedCountries,
         CancellationToken cancellationToken)
     {
+        var positionDate = ToUtcDateTime(date).Date.AddDays(1).AddTicks(-1);
+        var openInstrumentIds = await LoadOpenPositionInstrumentIdsAsync(positionDate, cancellationToken);
+        if (openInstrumentIds.Count == 0)
+        {
+            return new TbankInstrumentLoadResult([], [], new Dictionary<Guid, IReadOnlyList<InstrumentListingHistory>>());
+        }
+
         var instrumentsQuery = context.Instruments
             .Where(x =>
+                openInstrumentIds.Contains(x.Id) &&
                 (x.Type == InstrumentType.Equity || x.Type == InstrumentType.Bond || x.Type == InstrumentType.Etf || x.Type == InstrumentType.Currency) &&
                 x.IsTrading &&
                 x.PriceSource == Persistence.Entities.PriceSource.TBANK &&
@@ -164,6 +172,34 @@ public class SyncTbankPricesCommandHandler(
             .ToList();
 
         return new TbankInstrumentLoadResult(instrumentStates, candidates, listingHistories);
+    }
+
+    private async Task<HashSet<Guid>> LoadOpenPositionInstrumentIdsAsync(DateTime asOfDate, CancellationToken cancellationToken)
+    {
+        var positionDeltas = await context.Operations
+            .Where(x => x.InstrumentId != null && x.TradeDate <= asOfDate)
+            .Where(x =>
+                x.Type == OperationType.Buy ||
+                x.Type == OperationType.Sell ||
+                x.Type == OperationType.TransferIn ||
+                x.Type == OperationType.TransferOut ||
+                x.Type == OperationType.BondMaturity)
+            .GroupBy(x => x.InstrumentId!.Value)
+            .Select(x => new
+            {
+                InstrumentId = x.Key,
+                Quantity = x.Sum(operation =>
+                    operation.Type == OperationType.Buy ||
+                    operation.Type == OperationType.TransferIn
+                        ? operation.Quantity
+                        : -operation.Quantity)
+            })
+            .Where(x => x.Quantity != 0)
+            .ToListAsync(cancellationToken);
+
+        return positionDeltas
+            .Select(x => x.InstrumentId)
+            .ToHashSet();
     }
 
     private async Task<TbankPointLoadResult> LoadPricePointsAsync(

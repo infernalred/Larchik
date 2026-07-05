@@ -43,6 +43,34 @@ public sealed class ScriptConsistencyTests
         Assert.Contains(isin, script, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("SU26246RMFS7", "RU000A108EE1")]
+    [InlineData("SU26250RMFS9", "RU000A10BVH7")]
+    [InlineData("SU26253RMFS3", "RU000A10D517")]
+    [InlineData("SU26254RMFS1", "RU000A10D533")]
+    [InlineData("SU29015RMFS3", "RU000A1025A7")]
+    [InlineData("TGLD@", "RU000A101X50")]
+    public void ImportReferenceData_IncludesBrokerStatementAliases(string alias, string ticker)
+    {
+        var script = File.ReadAllText(Path.Combine(RepoRoot, "scripts", "import_reference_data.sql"));
+
+        Assert.Contains($"'{alias}', '{alias}', '{ticker}'", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TTechnologiesPriceSourceFix_DoesNotMatchByAmbiguousTicker()
+    {
+        var script = File.ReadAllText(Path.Combine(RepoRoot, "scripts", "fix_t_technologies_price_source.sql"));
+
+        Assert.Contains("RU000A107UL4", script, StringComparison.Ordinal);
+        Assert.Contains("BBG000BSJK37", script, StringComparison.Ordinal);
+        Assert.Contains("ticker = 'T-US'", script, StringComparison.Ordinal);
+        Assert.Contains("'T@US'", script, StringComparison.Ordinal);
+        Assert.Contains("price_source = 'MOEX'", script, StringComparison.Ordinal);
+        Assert.Contains("price_source = 'TBANK'", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("WHERE upper(coalesce(ticker, '')) = 'T'", script, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string ResolveRepoRoot()
     {
         for (var current = new DirectoryInfo(AppContext.BaseDirectory); current is not null; current = current.Parent)

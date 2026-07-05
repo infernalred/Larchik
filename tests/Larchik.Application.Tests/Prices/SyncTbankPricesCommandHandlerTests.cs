@@ -30,6 +30,7 @@ public sealed class SyncTbankPricesCommandHandlerTests
     {
         await using var harness = new PriceSyncTestHarness();
         var instrumentId = harness.AddInstrument("AAPL", currencyId: "USD", figi: "FIGI123", priceSource: Larchik.Persistence.Entities.PriceSource.TBANK);
+        harness.AddOperation(instrumentId);
         await harness.Context.SaveChangesAsync();
 
         var factory = new FakeHttpClientFactory(async (request, cancellationToken) =>
@@ -75,6 +76,7 @@ public sealed class SyncTbankPricesCommandHandlerTests
     {
         await using var harness = new PriceSyncTestHarness();
         var instrumentId = harness.AddInstrument("AAPL", currencyId: "USD", figi: "FIGI123", priceSource: Larchik.Persistence.Entities.PriceSource.TBANK);
+        harness.AddOperation(instrumentId);
         var date = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc);
         harness.AddPrice(instrumentId, date, 99m, "USD", "TBANK", "USD");
         await harness.Context.SaveChangesAsync();
@@ -111,6 +113,7 @@ public sealed class SyncTbankPricesCommandHandlerTests
     {
         await using var harness = new PriceSyncTestHarness();
         var instrumentId = harness.AddInstrument("AAPL", currencyId: "USD", figi: "CURRENT_FIGI", priceSource: Larchik.Persistence.Entities.PriceSource.TBANK);
+        harness.AddOperation(instrumentId);
         var date = new DateOnly(2026, 4, 20);
         var effectiveFrom = date.AddDays(-10).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
         harness.AddListingHistory(instrumentId, "AAPL", "USD", effectiveFrom, figi: "HISTORICAL_FIGI");
@@ -147,10 +150,44 @@ public sealed class SyncTbankPricesCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_SkipsInstrument_WhenThereIsNoOpenPosition()
+    {
+        await using var harness = new PriceSyncTestHarness();
+        harness.AddInstrument("AAPL", currencyId: "USD", figi: "FIGI123", priceSource: Larchik.Persistence.Entities.PriceSource.TBANK);
+        await harness.Context.SaveChangesAsync();
+
+        var callCount = 0;
+        var factory = new FakeHttpClientFactory((_, _) =>
+        {
+            callCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                { "candles": [{ "time": "2026-04-20T20:00:00Z", "close": { "units": "101", "nano": "0" } }] }
+                """, Encoding.UTF8, "application/json")
+            });
+        });
+
+        var handler = new SyncTbankPricesCommandHandler(
+            harness.Context,
+            factory,
+            NullLogger<SyncTbankPricesCommandHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SyncTbankPricesCommand(new DateOnly(2026, 4, 20), Token: "secret", BaseUrl: "https://tbank.test"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(0, callCount);
+        Assert.Empty(await harness.Context.Prices.ToListAsync());
+    }
+
+    [Fact]
     public async Task Handle_SkipsInstrument_WhenPriceSourceIsNotTbank()
     {
         await using var harness = new PriceSyncTestHarness();
-        harness.AddInstrument("AAPL", currencyId: "USD", figi: "FIGI123", priceSource: Larchik.Persistence.Entities.PriceSource.MOEX);
+        var instrumentId = harness.AddInstrument("AAPL", currencyId: "USD", figi: "FIGI123", priceSource: Larchik.Persistence.Entities.PriceSource.MOEX);
+        harness.AddOperation(instrumentId);
         await harness.Context.SaveChangesAsync();
 
         var callCount = 0;
@@ -183,7 +220,8 @@ public sealed class SyncTbankPricesCommandHandlerTests
     public async Task Handle_SkipsInstrument_WhenTradingIsDisabled()
     {
         await using var harness = new PriceSyncTestHarness();
-        harness.AddInstrument("AAPL", currencyId: "USD", figi: "FIGI123", priceSource: Larchik.Persistence.Entities.PriceSource.TBANK, isTrading: false);
+        var instrumentId = harness.AddInstrument("AAPL", currencyId: "USD", figi: "FIGI123", priceSource: Larchik.Persistence.Entities.PriceSource.TBANK, isTrading: false);
+        harness.AddOperation(instrumentId);
         await harness.Context.SaveChangesAsync();
 
         var callCount = 0;

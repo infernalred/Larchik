@@ -1431,7 +1431,7 @@ INSERT INTO stg_legacy_stocks (ticker, company_name, type_id, currency_id, secto
     ('BLI', 'Berkeley Lights', 'SHARE', 'USD', 'Healthcare', 'BBG00HJ8K617', 0.0, 1),
     ('STLA', 'Stellantis N.V.', 'SHARE', 'USD', 'Consumer', 'BBG0078ZLDG9', 0.0, 1),
     ('PACB', 'Pacific Biosciences of California', 'SHARE', 'USD', 'Healthcare', 'BBG000QKXH20', 0.0, 1),
-    ('T@US', 'AT&T', 'SHARE', 'USD', 'Telecom', 'BBG000BSJK37', 0.0, 1),
+    ('T-US', 'AT&T', 'SHARE', 'USD', 'Telecom', 'BBG000BSJK37', 0.0, 1),
     ('BOSS@DE', 'HUGO BOSS AG', 'SHARE', 'EUR', 'Consumer', 'BBG000BD0GG5', 0.0, 1),
     ('KMAZ', 'КАМАЗ', 'SHARE', 'RUB', 'Industrials', 'BBG000LNHHJ9', 0.0, 1),
     ('VSCO', 'Victorias Secret & Co.', 'SHARE', 'USD', 'Consumer', 'BBG01103B471', 0.0, 1),
@@ -11469,11 +11469,27 @@ WHERE upper(ticker) = 'TRNFP'
 -- Keep the legacy AT&T row on a disambiguated ticker so the MOEX-issued
 -- T-Technologies security can use the real SECID/TQBR ticker `T`.
 UPDATE instruments
-SET ticker = 'T@US',
+SET ticker = 'T-US',
     updated_at = now(),
     updated_by = '7e89d7d2-21e2-40ce-bef2-58c3b9408abb'::uuid
-WHERE upper(coalesce(isin, '')) = 'US00206R1023'
-  AND upper(ticker) = 'T';
+WHERE upper(coalesce(figi, '')) = 'BBG000BSJK37'
+  AND upper(coalesce(isin, '')) <> 'RU000A107UL4'
+  AND upper(ticker) IN ('T', 'T@US', 'T-US');
+
+INSERT INTO instrument_aliases (id, instrument_id, alias_code, normalized_alias_code)
+SELECT
+    '7eb97178-d209-42e6-942e-0c2fd7dbfc28'::uuid,
+    i.id,
+    'T@US',
+    'T@US'
+FROM instruments i
+WHERE upper(coalesce(i.figi, '')) = 'BBG000BSJK37'
+  AND upper(coalesce(i.isin, '')) <> 'RU000A107UL4'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM instrument_aliases ia
+      WHERE ia.normalized_alias_code = 'T@US'
+  );
 
 -- The T-Technologies instrument may already exist under the legacy ticker TCSG.
 -- Promote the live MOEX ticker `T` to be canonical and preserve `TCSG`
@@ -12000,6 +12016,7 @@ WITH aliases(alias_code, normalized_alias_code, ticker, alias_id) AS (
         ('UGLD', 'UGLD', 'RU000A0JPP37', '8a1fbf0e-4244-4bbf-8121-0d0fdcb69e31'::uuid),
         ('DOMRF', 'DOMRF', 'RU000A0ZZFU5', '0c1d44c5-83c0-4f3b-9108-d442e2d9345f'::uuid),
         ('TGLD', 'TGLD', 'RU000A101X50', 'cc7ccefb-b028-4cbc-bf0c-46f6bd67aaf2'::uuid),
+        ('TGLD@', 'TGLD@', 'RU000A101X50', '1e89441c-6b5b-4a47-bbe8-8fd6bdb4d833'::uuid),
         ('TMOS', 'TMOS', 'TMOS', 'c6ae7659-f7b6-451f-8f07-86f0d4c59f21'::uuid),
         ('SU29015RMFS3', 'SU29015RMFS3', 'RU000A1025A7', '55ce87b7-4587-4687-8588-e22db494f757'::uuid),
         ('SU26246RMFS7', 'SU26246RMFS7', 'RU000A108EE1', '7a2e10a4-a8a8-4d34-bb83-bb62db63b4cb'::uuid),
