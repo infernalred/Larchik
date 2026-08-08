@@ -174,7 +174,8 @@ public sealed class AccountControllerTests
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddScoped<IAntiforgery, StubAntiforgery>();
             services.AddScoped<IEmailSender>(_ => emailSender);
-            services.AddDbContext<LarchikContext>(options => options.UseSqlite(database.Connection));
+            services.AddDbContext<LarchikContext>(options =>
+                options.UseSqlite(database.Connection).UseSnakeCaseNamingConvention());
             services
                 .AddIdentityCore<AppUser>(options =>
                 {

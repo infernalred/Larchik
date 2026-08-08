@@ -53,7 +53,8 @@ public sealed class InfrastructureBehaviorTests
 
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDbContext<LarchikContext>(options => options.UseSqlite(database.Connection));
+        services.AddDbContext<LarchikContext>(options =>
+            options.UseSqlite(database.Connection).UseSnakeCaseNamingConvention());
         services.AddSingleton<IBackgroundJobHandler>(new LockStealingJobHandler(database.Connection, runId));
         services.AddSingleton<IOptionsMonitor<BackgroundJobsOptions>>(
             new StaticOptionsMonitor<BackgroundJobsOptions>(new BackgroundJobsOptions()));
@@ -189,6 +190,7 @@ public sealed class InfrastructureBehaviorTests
         {
             var options = new DbContextOptionsBuilder<LarchikContext>()
                 .UseSqlite(connection)
+                .UseSnakeCaseNamingConvention()
                 .Options;
             await using var context = new LarchikContext(options);
 

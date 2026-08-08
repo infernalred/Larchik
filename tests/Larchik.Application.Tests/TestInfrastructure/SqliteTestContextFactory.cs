@@ -13,6 +13,7 @@ internal static class SqliteTestContextFactory
 
         var options = new DbContextOptionsBuilder<LarchikContext>()
             .UseSqlite(connection)
+            .UseSnakeCaseNamingConvention()
             .Options;
 
         var context = new LarchikContext(options);
