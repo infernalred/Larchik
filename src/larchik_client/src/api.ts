@@ -16,6 +16,7 @@ import {
   PagedResult,
   Portfolio,
   PortfolioPerformance,
+  DailyPnlAttribution,
   PortfoliosSummary,
   PortfolioSummary,
   ReferenceItem,
@@ -295,6 +296,19 @@ export const api = {
     if (method) params.append('method', method);
     if (currency) params.append('currency', currency);
     return request<PortfolioSummary>(`/portfolios/aggregate/summary${params.toString() ? `?${params}` : ''}`);
+  },
+
+  async getPortfolioDailyAttribution(id: string, date?: string): Promise<DailyPnlAttribution> {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    return request<DailyPnlAttribution>(`/portfolios/${id}/daily-attribution${params.toString() ? `?${params}` : ''}`);
+  },
+
+  async getAggregateDailyAttribution(currency?: string, date?: string): Promise<DailyPnlAttribution> {
+    const params = new URLSearchParams();
+    if (currency) params.append('currency', currency);
+    if (date) params.append('date', date);
+    return request<DailyPnlAttribution>(`/portfolios/aggregate/daily-attribution${params.toString() ? `?${params}` : ''}`);
   },
 
   async getPerformance(id: string, method?: string): Promise<PortfolioPerformance[]> {

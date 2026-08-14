@@ -47,6 +47,8 @@ public class TbankPricesDailyJobOptions
     public string Provider { get; set; } = "TBANK";
     public string BaseUrl { get; set; } =
         "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.MarketDataService/GetCandles";
+    public string AccruedInterestsBaseUrl { get; set; } =
+        "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.InstrumentsService/GetAccruedInterests";
     public string? Token { get; set; }
     public bool AllowInvalidTls { get; set; }
     public int MaxHistoryLookbackDays { get; set; } = 7;

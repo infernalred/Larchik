@@ -7,9 +7,11 @@ using Larchik.Application.Portfolios.CreatePortfolio;
 using Larchik.Application.Portfolios.DeletePortfolio;
 using Larchik.Application.Portfolios.EditPortfolio;
 using Larchik.Application.Portfolios.GetAggregatePortfolioPerformance;
+using Larchik.Application.Portfolios.GetAggregatePortfolioDailyAttribution;
 using Larchik.Application.Portfolios.GetAggregatePortfolioSummary;
 using Larchik.Application.Portfolios.GetPortfolio;
 using Larchik.Application.Portfolios.GetPortfolioPerformance;
+using Larchik.Application.Portfolios.GetPortfolioDailyAttribution;
 using Larchik.Application.Portfolios.GetPortfolios;
 using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Application.Portfolios.GetPortfolioSummary;
@@ -33,6 +35,8 @@ public class PortfoliosController(
     GetPortfolioSummaryQueryHandler getPortfolioSummary,
     GetPortfoliosSummaryQueryHandler getPortfoliosSummary,
     GetAggregatePortfolioSummaryQueryHandler getAggregatePortfolioSummary,
+    GetPortfolioDailyAttributionQueryHandler getPortfolioDailyAttribution,
+    GetAggregatePortfolioDailyAttributionQueryHandler getAggregatePortfolioDailyAttribution,
     GetPortfolioPerformanceQueryHandler getPortfolioPerformance,
     GetAggregatePortfolioPerformanceQueryHandler getAggregatePortfolioPerformance,
     GetPortfolioReconciliationHistoryQueryHandler getReconciliationHistory,
@@ -135,6 +139,37 @@ public class PortfoliosController(
         [FromQuery] string? currency)
     {
         return HandleResult(await getAggregatePortfolioSummary.Handle(new GetAggregatePortfolioSummaryQuery(method, currency), HttpContext.RequestAborted));
+    }
+
+    /// <summary>
+    /// Returns close-to-close daily P&amp;L with security-price, FX, income, fee, and trading attribution.
+    /// The calculation is independent of the tax-lot valuation method.
+    /// </summary>
+    [HttpGet("{id:guid}/daily-attribution")]
+    [ProducesResponseType(typeof(DailyPnlAttributionDto), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<ActionResult<DailyPnlAttributionDto>> GetDailyAttribution(
+        Guid id,
+        [FromQuery] DateTime? date = null)
+    {
+        return HandleResult(await getPortfolioDailyAttribution.Handle(
+            new GetPortfolioDailyAttributionQuery(id, date),
+            HttpContext.RequestAborted));
+    }
+
+    /// <summary>
+    /// Returns combined close-to-close daily P&amp;L attribution across all user portfolios.
+    /// </summary>
+    [HttpGet("aggregate/daily-attribution")]
+    [ProducesResponseType(typeof(DailyPnlAttributionDto), (int)HttpStatusCode.OK)]
+    [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+    public async Task<ActionResult<DailyPnlAttributionDto>> GetAggregateDailyAttribution(
+        [FromQuery] DateTime? date = null,
+        [FromQuery] string? currency = null)
+    {
+        return HandleResult(await getAggregatePortfolioDailyAttribution.Handle(
+            new GetAggregatePortfolioDailyAttributionQuery(date, currency),
+            HttpContext.RequestAborted));
     }
 
     /// <summary>

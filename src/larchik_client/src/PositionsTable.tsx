@@ -22,6 +22,8 @@ import { PositionHolding } from './types';
 
 interface Props {
   positions: PositionHolding[];
+  reportingCurrencyId?: string;
+  dailyPnlBase?: number;
 }
 
 const fmt = (v: number | null | undefined) =>
@@ -112,6 +114,38 @@ function PurchaseMoveBadge({ move, dense = false }: { move: PurchaseMove; dense?
   );
 }
 
+function DailyMoveBadge({ position, reportingCurrencyId, dense = false }: { position: PositionHolding; reportingCurrencyId?: string; dense?: boolean }) {
+  const move = position.dailyMove;
+  if (!move) {
+    return <Typography variant={dense ? 'caption' : 'body2'} color="text.secondary">—</Typography>;
+  }
+
+  const color = move.pnlBase > 0 ? 'success.main' : move.pnlBase < 0 ? 'error.main' : 'text.secondary';
+  const background = move.pnlBase > 0 ? 'rgba(34, 197, 94, 0.12)' : move.pnlBase < 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(148, 163, 184, 0.1)';
+  const borderColor = move.pnlBase > 0 ? 'rgba(34, 197, 94, 0.34)' : move.pnlBase < 0 ? 'rgba(239, 68, 68, 0.34)' : 'rgba(148, 163, 184, 0.24)';
+  const details = position.isCash
+    ? `валюта ${fmtSigned(move.fxEffectBase)}`
+    : `бумага ${fmtSigned(move.priceEffectBase)} · FX ${fmtSigned(move.fxEffectBase + move.crossEffectBase)}`;
+
+  return (
+    <Stack spacing={0.35} sx={{ alignItems: { xs: 'flex-start', sm: 'flex-end' } }}>
+      <Chip
+        size="small"
+        label={move.returnPct == null ? fmtSigned(move.pnlBase) : fmtSignedPct(move.returnPct * 100)}
+        sx={{ color, bgcolor: background, border: '1px solid', borderColor, fontWeight: 800 }}
+      />
+      <Typography variant="caption" color={color} sx={{ fontWeight: 700, lineHeight: 1.15 }}>
+        {fmtSigned(move.pnlBase)} {reportingCurrencyId ?? ''}
+      </Typography>
+      {!dense && (
+        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.15 }}>
+          {details}
+        </Typography>
+      )}
+    </Stack>
+  );
+}
+
 function buildCurrencyTotals(positions: PositionHolding[]) {
   const totals = new Map<string, number>();
 
@@ -131,7 +165,7 @@ function buildCurrencyTotals(positions: PositionHolding[]) {
   }));
 }
 
-export function PositionsTable({ positions }: Props) {
+export function PositionsTable({ positions, reportingCurrencyId, dailyPnlBase }: Props) {
   const theme = useTheme();
   const useCardLayout = useMediaQuery(theme.breakpoints.down('xl'));
   const totalBase = positions.reduce((sum, p) => sum + p.marketValueBase, 0);
@@ -171,7 +205,10 @@ export function PositionsTable({ positions }: Props) {
                       </Typography>
                     </Box>
                     <Box sx={{ flexShrink: 0 }}>
-                      <PurchaseMoveBadge move={purchaseMove} dense />
+                      <Stack spacing={0.75} sx={{ alignItems: 'flex-end' }}>
+                        <DailyMoveBadge position={p} reportingCurrencyId={reportingCurrencyId} dense />
+                        <PurchaseMoveBadge move={purchaseMove} dense />
+                      </Stack>
                     </Box>
                   </Stack>
 
@@ -230,6 +267,14 @@ export function PositionsTable({ positions }: Props) {
                   <Typography sx={{ fontWeight: 700 }}>Итого</Typography>
                   <Typography sx={{ fontWeight: 700 }}>{fmt(totalBase)}</Typography>
                 </Stack>
+                {dailyPnlBase != null && (
+                  <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="text.secondary">За день</Typography>
+                    <Typography sx={{ fontWeight: 700, color: dailyPnlBase > 0 ? 'success.main' : dailyPnlBase < 0 ? 'error.main' : 'text.secondary' }}>
+                      {fmtSigned(dailyPnlBase)} {reportingCurrencyId ?? ''}
+                    </Typography>
+                  </Stack>
+                )}
                 {!!totalByCurrency.length && (
                   <Stack spacing={0.25}>
                     <Typography variant="caption" color="text.secondary">
@@ -268,6 +313,7 @@ export function PositionsTable({ positions }: Props) {
             <TableCell align="right">Сумма</TableCell>
             <TableCell align="right">Доля, %</TableCell>
             <TableCell align="right">Средняя</TableCell>
+            <TableCell align="right">За день</TableCell>
             <TableCell align="right">От покупки</TableCell>
             <TableCell align="right">Стоимость (base)</TableCell>
           </TableRow>
@@ -296,6 +342,9 @@ export function PositionsTable({ positions }: Props) {
                 <TableCell align="right">{fmtPct(sharePct)}</TableCell>
                 <TableCell align="right">{averageLabel}</TableCell>
                 <TableCell align="right">
+                  <DailyMoveBadge position={p} reportingCurrencyId={reportingCurrencyId} />
+                </TableCell>
+                <TableCell align="right">
                   <PurchaseMoveBadge move={purchaseMove} />
                 </TableCell>
                 <TableCell align="right">{fmt(p.marketValueBase)}</TableCell>
@@ -312,6 +361,11 @@ export function PositionsTable({ positions }: Props) {
               <TableCell align="right">—</TableCell>
               <TableCell align="right">{fmtPct(totalBase > 0 ? 100 : null)}</TableCell>
               <TableCell align="right">—</TableCell>
+              <TableCell align="right">
+                <Typography sx={{ fontWeight: 700, color: dailyPnlBase == null ? 'text.secondary' : dailyPnlBase > 0 ? 'success.main' : dailyPnlBase < 0 ? 'error.main' : 'text.secondary' }}>
+                  {dailyPnlBase == null ? '—' : `${fmtSigned(dailyPnlBase)} ${reportingCurrencyId ?? ''}`}
+                </Typography>
+              </TableCell>
               <TableCell align="right">—</TableCell>
               <TableCell align="right">
                 <Typography sx={{ fontWeight: 700 }}>{fmt(totalBase)}</Typography>
@@ -320,7 +374,7 @@ export function PositionsTable({ positions }: Props) {
           )}
           {!positions.length && (
             <TableRow>
-              <TableCell colSpan={8} align="center">
+              <TableCell colSpan={9} align="center">
                 <Typography color="text.secondary">Нет позиций</Typography>
               </TableCell>
             </TableRow>

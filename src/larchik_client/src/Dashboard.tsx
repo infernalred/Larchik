@@ -24,6 +24,7 @@ import {
   Broker,
   ClearPortfolioDataResult,
   Currency,
+  DailyPnlAttribution,
   ImportResult,
   InstrumentLookup,
   Operation,
@@ -36,7 +37,9 @@ import {
   User,
 } from './types';
 import { SummaryCards } from './SummaryCards';
+import { DailyAttributionSummary } from './DailyAttributionSummary';
 import { PositionsTable } from './PositionsTable';
+import { attachDailyMoves } from './daily-attribution-domain';
 import { PerformanceAnalytics } from './PerformanceAnalytics';
 import { PortfolioSidebar } from './PortfolioSidebar';
 import { QuickDeposit } from './QuickDeposit';
@@ -125,12 +128,16 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   const [viewMode, setViewMode] = useState<'portfolio' | 'all'>('portfolio');
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [aggregateSummary, setAggregateSummary] = useState<PortfolioSummary | null>(null);
+  const [dailyAttribution, setDailyAttribution] = useState<DailyPnlAttribution | null>(null);
+  const [aggregateDailyAttribution, setAggregateDailyAttribution] = useState<DailyPnlAttribution | null>(null);
   const [performance, setPerformance] = useState<PortfolioPerformance[]>([]);
   const [aggregatePerformance, setAggregatePerformance] = useState<PortfolioPerformance[]>([]);
   const [valuationMethod, setValuationMethod] = useState('adjustingAvg');
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingPerformance, setLoadingPerformance] = useState(false);
   const [loadingAggregateSummary, setLoadingAggregateSummary] = useState(false);
+  const [loadingDailyAttribution, setLoadingDailyAttribution] = useState(false);
+  const [loadingAggregateDailyAttribution, setLoadingAggregateDailyAttribution] = useState(false);
   const [loadingAggregatePerformance, setLoadingAggregatePerformance] = useState(false);
   const [aggregateError, setAggregateError] = useState('');
   const [operations, setOperations] = useState<Operation[]>([]);
@@ -147,11 +154,13 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   const summaryRequestRef = useRef(0);
   const performanceRequestRef = useRef(0);
   const aggregateSummaryRequestRef = useRef(0);
+  const dailyAttributionRequestRef = useRef(0);
+  const aggregateDailyAttributionRequestRef = useRef(0);
   const aggregatePerformanceRequestRef = useRef(0);
   const operationsRequestRef = useRef(0);
   const portfolioPage = route;
   const activePortfolio = portfolios.find((x) => x.id === selectedPortfolio) ?? null;
-  const displayPositions = summary ? buildDisplayPositions(summary) : [];
+  const displayPositions = summary ? attachDailyMoves(buildDisplayPositions(summary), dailyAttribution) : [];
   const currentSummary = viewMode === 'all' ? aggregateSummary : summary;
   const annualizedReturnLabel = viewMode === 'all'
     ? loadingAggregateSummary
@@ -176,6 +185,8 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
     setSelectedPortfolio(null);
     setSummary(null);
     setAggregateSummary(null);
+    setDailyAttribution(null);
+    setAggregateDailyAttribution(null);
     setPerformance([]);
     setAggregatePerformance([]);
     setOperations([]);
@@ -234,6 +245,24 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
     }
   }, [activePortfolio?.reportingCurrencyId]);
 
+  const loadAggregateDailyAttribution = useCallback(async () => {
+    const requestId = ++aggregateDailyAttributionRequestRef.current;
+    setLoadingAggregateDailyAttribution(true);
+    try {
+      const data = await api.getAggregateDailyAttribution(activePortfolio?.reportingCurrencyId);
+      if (aggregateDailyAttributionRequestRef.current !== requestId) return;
+      setAggregateDailyAttribution(data);
+    } catch (error) {
+      if (aggregateDailyAttributionRequestRef.current !== requestId) return;
+      console.error(error);
+      setAggregateDailyAttribution(null);
+    } finally {
+      if (aggregateDailyAttributionRequestRef.current === requestId) {
+        setLoadingAggregateDailyAttribution(false);
+      }
+    }
+  }, [activePortfolio?.reportingCurrencyId]);
+
   const loadOperations = useCallback(async (id: string, page: number, pageSize: number) => {
     const requestId = ++operationsRequestRef.current;
     setLoadingOps(true);
@@ -267,6 +296,11 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   }, [viewMode, valuationMethod, portfolioPage, loadAggregateSummary]);
 
   useEffect(() => {
+    if (viewMode !== 'all' || portfolioPage !== 'overview') return;
+    loadAggregateDailyAttribution();
+  }, [viewMode, portfolioPage, loadAggregateDailyAttribution]);
+
+  useEffect(() => {
     if (viewMode !== 'all' || portfolioPage !== 'analytics') return;
     loadAggregatePerformance(valuationMethod);
   }, [viewMode, valuationMethod, portfolioPage, loadAggregatePerformance]);
@@ -277,6 +311,11 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
 
     loadSummary(selectedPortfolio, valuationMethod);
   }, [selectedPortfolio, valuationMethod, viewMode, portfolioPage]);
+
+  useEffect(() => {
+    if (viewMode !== 'portfolio' || portfolioPage !== 'overview' || !selectedPortfolio) return;
+    loadDailyAttribution(selectedPortfolio);
+  }, [selectedPortfolio, viewMode, portfolioPage]);
 
   useEffect(() => {
     if (viewMode !== 'portfolio' || portfolioPage !== 'analytics') return;
@@ -324,6 +363,24 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
     } finally {
       if (performanceRequestRef.current === requestId) {
         setLoadingPerformance(false);
+      }
+    }
+  }
+
+  async function loadDailyAttribution(id: string) {
+    const requestId = ++dailyAttributionRequestRef.current;
+    setLoadingDailyAttribution(true);
+    try {
+      const data = await api.getPortfolioDailyAttribution(id);
+      if (dailyAttributionRequestRef.current !== requestId) return;
+      setDailyAttribution(data);
+    } catch (error) {
+      if (dailyAttributionRequestRef.current !== requestId) return;
+      console.error(error);
+      setDailyAttribution(null);
+    } finally {
+      if (dailyAttributionRequestRef.current === requestId) {
+        setLoadingDailyAttribution(false);
       }
     }
   }
@@ -379,7 +436,7 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
       settlementDate: undefined,
       note,
     });
-    await loadSummary(selectedPortfolio, valuationMethod);
+    await Promise.all([loadSummary(selectedPortfolio, valuationMethod), loadDailyAttribution(selectedPortfolio)]);
   }
 
   async function handleCreateOperation(model: OperationModel) {
@@ -477,11 +534,13 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
 
   function handleSelectPortfolio(id: string) {
     summaryRequestRef.current++;
+    dailyAttributionRequestRef.current++;
     performanceRequestRef.current++;
     operationsRequestRef.current++;
     setViewMode('portfolio');
     setSelectedPortfolio(id);
     setSummary(null);
+    setDailyAttribution(null);
     setPerformance([]);
     setOperations([]);
     setOperationsTotalCount(0);
@@ -548,8 +607,9 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
   const isLoadingCurrent =
     viewMode === 'all'
       ? loadingAggregateSummary || (portfolioPage === 'analytics' && loadingAggregatePerformance)
+        || (portfolioPage === 'overview' && loadingAggregateDailyAttribution)
       : portfolioPage === 'overview'
-        ? loadingSummary
+        ? loadingSummary || loadingDailyAttribution
         : portfolioPage === 'analytics'
           ? loadingSummary || loadingPerformance
           : false;
@@ -819,6 +879,7 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
           {viewMode === 'portfolio' && portfolioPage === 'overview' && !loadingSummary && summary && (
             <Stack spacing={{ xs: 2, md: 3 }}>
               <SummaryCards summary={summary} />
+              {dailyAttribution && <DailyAttributionSummary attribution={dailyAttribution} />}
 
               <Grid container spacing={{ xs: 2, md: 3 }}>
                 <Grid size={{ xs: 12, md: 8 }}>
@@ -826,7 +887,11 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>
                       Позиции
                     </Typography>
-                    <PositionsTable positions={displayPositions} />
+                    <PositionsTable
+                      positions={displayPositions}
+                      reportingCurrencyId={summary.reportingCurrencyId}
+                      dailyPnlBase={dailyAttribution?.pnlBase}
+                    />
                   </Stack>
                 </Grid>
                 <Grid size={{ xs: 12, md: 4 }}>
@@ -893,12 +958,17 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
           {viewMode === 'all' && portfolioPage === 'overview' && !loadingAggregateSummary && aggregateSummary && (
             <Stack spacing={{ xs: 2, md: 3 }}>
               <SummaryCards summary={aggregateSummary} />
+              {aggregateDailyAttribution && <DailyAttributionSummary attribution={aggregateDailyAttribution} />}
 
               <Stack spacing={1}>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
                   Активы по всем счетам ({portfolios.length})
                 </Typography>
-                <PositionsTable positions={buildDisplayPositions(aggregateSummary)} />
+                <PositionsTable
+                  positions={attachDailyMoves(buildDisplayPositions(aggregateSummary), aggregateDailyAttribution)}
+                  reportingCurrencyId={aggregateSummary.reportingCurrencyId}
+                  dailyPnlBase={aggregateDailyAttribution?.pnlBase}
+                />
               </Stack>
 
               <Stack spacing={1}>

@@ -46,7 +46,8 @@ public class TbankPricesDailyJobHandler(
                 options.AllowInvalidTls,
                 options.CountryExclusions,
                 options.MaxHistoryLookbackDays,
-                options.MaxParallelism),
+                options.MaxParallelism,
+                options.AccruedInterestsBaseUrl),
             cancellationToken);
 
         if (result.IsSuccess)

@@ -202,4 +202,62 @@ public sealed class PortfolioAnalyticsQueryHandlersTests
             "Portfolios use different reporting currencies. Specify the 'currency' query parameter.",
             result.Error);
     }
+
+    [Fact]
+    public async Task DailyAttribution_UsesLastTwoMarketDates_AndSplitsForeignMove()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var portfolioId = harness.AddPortfolio("Main", "RUB");
+        var instrumentId = harness.AddInstrument("USD-BOND", "USD");
+        var start = new DateTime(2026, 8, 10, 0, 0, 0, DateTimeKind.Utc);
+        var end = start.AddDays(1);
+
+        harness.AddOperation(
+            portfolioId,
+            Larchik.Persistence.Entities.OperationType.TransferIn,
+            "USD",
+            start.AddDays(-9),
+            instrumentId,
+            quantity: 10m);
+        harness.AddPrice(instrumentId, "USD", start, 100m);
+        harness.AddPrice(instrumentId, "USD", end, 90m);
+        harness.AddFxRate("USD", "RUB", start, 90m);
+        harness.AddFxRate("USD", "RUB", end, 95m);
+        await harness.SaveChangesAsync();
+
+        var result = await harness.GetPortfolioDailyAttributionAsync(portfolioId, end.AddDays(1));
+        var row = Assert.Single(result.Positions);
+
+        Assert.Equal(start, result.ComparisonDate);
+        Assert.Equal(end, result.ValuationDate);
+        Assert.Equal(-9_000m, row.PriceEffectBase);
+        Assert.Equal(5_000m, row.FxEffectBase);
+        Assert.Equal(-500m, row.CrossEffectBase);
+        Assert.Equal(-4_500m, result.PnlBase);
+    }
+
+    [Fact]
+    public async Task AggregateDailyAttribution_SumsPortfolioContributions()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var firstPortfolioId = harness.AddPortfolio("First", "RUB");
+        var secondPortfolioId = harness.AddPortfolio("Second", "RUB");
+        var instrumentId = harness.AddInstrument("SBER", "RUB");
+        var start = new DateTime(2026, 8, 10, 0, 0, 0, DateTimeKind.Utc);
+        var end = start.AddDays(1);
+
+        harness.AddOperation(firstPortfolioId, Larchik.Persistence.Entities.OperationType.TransferIn, "RUB", start.AddDays(-2), instrumentId, quantity: 10m);
+        harness.AddOperation(secondPortfolioId, Larchik.Persistence.Entities.OperationType.TransferIn, "RUB", start.AddDays(-2), instrumentId, quantity: 5m);
+        harness.AddPrice(instrumentId, "RUB", start, 100m);
+        harness.AddPrice(instrumentId, "RUB", end, 110m);
+        await harness.SaveChangesAsync();
+
+        var aggregate = await harness.GetAggregateDailyAttributionAsync(end);
+        var row = Assert.Single(aggregate.Positions);
+
+        Assert.Equal(150m, aggregate.PnlBase);
+        Assert.Equal(150m, row.PriceEffectBase);
+        Assert.Equal(15m, row.EndQuantity);
+        Assert.Null(aggregate.PortfolioId);
+    }
 }

@@ -112,7 +112,7 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
             while (positionOpIndex < operations.Count && operations[positionOpIndex].TradeDate.Date <= date)
             {
                 var op = operations[positionOpIndex++];
-                TrackFlows(op, baseCurrency, op.TradeDate, data, netFlowByDate);
+                TrackFlows(op, instruments, baseCurrency, op.TradeDate, data, netFlowByDate);
             }
 
             while (cashOpIndex < cashOperations.Count && BrokerCashLedgerHelper.GetCashEffectiveDate(cashOperations[cashOpIndex]) <= date)
@@ -326,29 +326,25 @@ public class PortfolioRecalcService(LarchikContext context, ILogger<PortfolioRec
         }
     }
 
-    private static void TrackFlows(Operation op, string baseCurrency, DateTime date, HistoricalDataLookup data,
+    private static void TrackFlows(
+        Operation op,
+        IReadOnlyDictionary<Guid, Instrument> instruments,
+        string baseCurrency,
+        DateTime date,
+        HistoricalDataLookup data,
         IDictionary<DateTime, decimal> flows)
     {
-        var amount = op.Price != 0 ? op.Price : op.Quantity;
-        decimal? flowBase = op.Type switch
-        {
-            OperationType.Deposit => data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate),
-            OperationType.Withdraw => -data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate),
-            OperationType.TransferIn when op.InstrumentId == null => data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate),
-            OperationType.TransferOut when op.InstrumentId == null => -data.Convert(amount, op.CurrencyId, baseCurrency, op.TradeDate),
-            _ => null
-        };
-
-        if (flowBase is null) return;
+        var flowBase = PortfolioExternalFlowCalculator.Calculate(op, instruments, data, baseCurrency);
+        if (flowBase == 0m) return;
 
         var key = date.Date;
         if (flows.TryGetValue(key, out var existing))
         {
-            flows[key] = existing + flowBase.Value;
+            flows[key] = existing + flowBase;
         }
         else
         {
-            flows[key] = flowBase.Value;
+            flows[key] = flowBase;
         }
     }
 

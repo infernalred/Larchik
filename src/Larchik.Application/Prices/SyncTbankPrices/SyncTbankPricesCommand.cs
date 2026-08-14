@@ -8,4 +8,5 @@ public record SyncTbankPricesCommand(
     bool? AllowInvalidTls = null,
     IReadOnlyCollection<string>? CountryExclusions = null,
     int? MaxHistoryLookbackDays = null,
-    int? MaxParallelism = null);
+    int? MaxParallelism = null,
+    string? AccruedInterestsBaseUrl = null);

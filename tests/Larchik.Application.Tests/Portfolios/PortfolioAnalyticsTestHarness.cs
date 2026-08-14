@@ -2,7 +2,9 @@ using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
 using Larchik.Application.Portfolios.GetAggregatePortfolioPerformance;
+using Larchik.Application.Portfolios.GetAggregatePortfolioDailyAttribution;
 using Larchik.Application.Portfolios.GetAggregatePortfolioSummary;
+using Larchik.Application.Portfolios.GetPortfolioDailyAttribution;
 using Larchik.Application.Portfolios.GetPortfolioPerformance;
 using Larchik.Application.Portfolios.GetPortfolioSummary;
 using Larchik.Application.Portfolios.GetPortfoliosSummary;
@@ -30,6 +32,8 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
     private readonly GetAggregatePortfolioSummaryQueryHandler aggregateSummaryHandler;
     private readonly GetPortfolioPerformanceQueryHandler portfolioPerformanceHandler;
     private readonly GetAggregatePortfolioPerformanceQueryHandler aggregatePerformanceHandler;
+    private readonly GetPortfolioDailyAttributionQueryHandler portfolioDailyAttributionHandler;
+    private readonly GetAggregatePortfolioDailyAttributionQueryHandler aggregateDailyAttributionHandler;
 
     public PortfolioAnalyticsTestHarness()
     {
@@ -45,6 +49,8 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
         aggregateSummaryHandler = new GetAggregatePortfolioSummaryQueryHandler(context, userAccessor, memoryCache);
         portfolioPerformanceHandler = new GetPortfolioPerformanceQueryHandler(context, userAccessor);
         aggregatePerformanceHandler = new GetAggregatePortfolioPerformanceQueryHandler(context, userAccessor);
+        portfolioDailyAttributionHandler = new GetPortfolioDailyAttributionQueryHandler(context, userAccessor, memoryCache);
+        aggregateDailyAttributionHandler = new GetAggregatePortfolioDailyAttributionQueryHandler(context, userAccessor, memoryCache);
     }
 
     public Guid AddPortfolio(string name, string reportingCurrencyId, Guid? userId = null)
@@ -204,6 +210,27 @@ internal sealed class PortfolioAnalyticsTestHarness : IAsyncDisposable
     public Task<Result<IReadOnlyCollection<PortfolioPerformanceDto>>> HandleAggregatePerformanceAsync(
         GetAggregatePortfolioPerformanceQuery query) =>
         aggregatePerformanceHandler.Handle(query, CancellationToken.None);
+
+    public async Task<DailyPnlAttributionDto> GetPortfolioDailyAttributionAsync(Guid portfolioId, DateTime? date = null)
+    {
+        var result = await portfolioDailyAttributionHandler.Handle(
+            new GetPortfolioDailyAttributionQuery(portfolioId, date),
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result!.IsSuccess, result.Error);
+        return result.Value!;
+    }
+
+    public async Task<DailyPnlAttributionDto> GetAggregateDailyAttributionAsync(DateTime? date = null, string? currency = null)
+    {
+        var result = await aggregateDailyAttributionHandler.Handle(
+            new GetAggregatePortfolioDailyAttributionQuery(date, currency),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        return result.Value!;
+    }
 
     public async Task<IReadOnlyCollection<PortfolioPerformanceDto>> GetAggregatePerformanceAsync(
         string? method = null,

@@ -249,4 +249,63 @@ public sealed class SyncTbankPricesCommandHandlerTests
         Assert.Equal(0, callCount);
         Assert.Empty(await harness.Context.Prices.ToListAsync());
     }
+
+    [Fact]
+    public async Task Handle_NormalizesBondPointsToDirtyMoneyPrice()
+    {
+        await using var harness = new PriceSyncTestHarness();
+        var instrumentId = harness.AddInstrument(
+            "BOND",
+            currencyId: "USD",
+            figi: "BOND_FIGI",
+            type: Larchik.Persistence.Entities.InstrumentType.Bond,
+            priceSource: Larchik.Persistence.Entities.PriceSource.TBANK);
+        harness.AddOperation(instrumentId, currencyId: "USD");
+        await harness.Context.SaveChangesAsync();
+
+        var factory = new FakeHttpClientFactory((request, _) =>
+        {
+            var url = request.RequestUri!.ToString();
+            var json = url.Contains("GetAccruedInterests", StringComparison.Ordinal)
+                ? """
+                  {
+                    "accruedInterests": [
+                      {
+                        "date": "2026-04-20T00:00:00Z",
+                        "value": { "units": "5", "nano": "500000000" },
+                        "nominal": { "units": "1000", "nano": "0" }
+                      }
+                    ]
+                  }
+                  """
+                : """
+                  {
+                    "candles": [
+                      { "time": "2026-04-20T20:00:00Z", "close": { "units": "98", "nano": "250000000" } }
+                    ]
+                  }
+                  """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        });
+        var handler = new SyncTbankPricesCommandHandler(
+            harness.Context,
+            factory,
+            NullLogger<SyncTbankPricesCommandHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SyncTbankPricesCommand(
+                new DateOnly(2026, 4, 20),
+                Token: "secret",
+                BaseUrl: "https://tbank.test/GetCandles",
+                AccruedInterestsBaseUrl: "https://tbank.test/GetAccruedInterests"),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess, result.Error);
+        var price = await harness.Context.Prices.SingleAsync();
+        Assert.Equal(988m, price.Value);
+        Assert.Equal("USD", price.CurrencyId);
+    }
 }

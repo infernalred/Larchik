@@ -69,23 +69,61 @@ public class HistoricalDataLookup
 
     public decimal? GetRate(string fromCurrency, string toCurrency, DateTime asOfDate)
     {
+        return GetRateQuote(fromCurrency, toCurrency, asOfDate)?.Rate;
+    }
+
+    public HistoricalFxQuote? GetRateQuote(string fromCurrency, string toCurrency, DateTime asOfDate)
+    {
         var from = fromCurrency.ToUpperInvariant();
         var to = toCurrency.ToUpperInvariant();
         if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
         {
-            return 1m;
+            return new HistoricalFxQuote(1m, asOfDate.Date);
         }
 
-        var direct = FindDirectOrInverseRate(from, to, asOfDate);
+        var direct = FindDirectOrInverseRateQuote(from, to, asOfDate);
         if (direct is not null)
         {
             return direct;
         }
 
-        return TryGetCrossRate(from, to, asOfDate);
+        return TryGetCrossRateQuote(from, to, asOfDate);
+    }
+
+    public IReadOnlyCollection<DateTime> GetMarketDataDates(
+        IEnumerable<Guid> instrumentIds,
+        IEnumerable<string> currencies,
+        string baseCurrency,
+        DateTime onOrBefore)
+    {
+        var ids = instrumentIds.ToHashSet();
+        var normalizedCurrencies = currencies
+            .Append(baseCurrency)
+            .Select(x => x.ToUpperInvariant())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var cutoff = onOrBefore.Date;
+
+        return _pricesByInstrument
+            .Where(x => ids.Contains(x.Key))
+            .SelectMany(x => x.Value)
+            .Where(x => x.Date.Date <= cutoff)
+            .Select(x => x.Date.Date)
+            .Concat(_fxByPair
+                .Where(x => normalizedCurrencies.Contains(x.Key.Base) || normalizedCurrencies.Contains(x.Key.Quote))
+                .SelectMany(x => x.Value)
+                .Where(x => x.Date.Date <= cutoff)
+                .Select(x => x.Date.Date))
+            .Distinct()
+            .OrderBy(x => x)
+            .ToArray();
     }
 
     private decimal? TryGetCrossRate(string from, string to, DateTime asOfDate)
+    {
+        return TryGetCrossRateQuote(from, to, asOfDate)?.Rate;
+    }
+
+    private HistoricalFxQuote? TryGetCrossRateQuote(string from, string to, DateTime asOfDate)
     {
         var candidateSet = _fxByPair.Keys
             .SelectMany(x => new[] { x.Base, x.Quote })
@@ -100,19 +138,21 @@ public class HistoricalDataLookup
 
         foreach (var mid in candidates)
         {
-            var firstLeg = FindDirectOrInverseRate(from, mid, asOfDate);
-            if (firstLeg is null or <= 0)
+            var firstLeg = FindDirectOrInverseRateQuote(from, mid, asOfDate);
+            if (firstLeg is null || firstLeg.Rate <= 0)
             {
                 continue;
             }
 
-            var secondLeg = FindDirectOrInverseRate(mid, to, asOfDate);
-            if (secondLeg is null or <= 0)
+            var secondLeg = FindDirectOrInverseRateQuote(mid, to, asOfDate);
+            if (secondLeg is null || secondLeg.Rate <= 0)
             {
                 continue;
             }
 
-            return firstLeg.Value * secondLeg.Value;
+            return new HistoricalFxQuote(
+                firstLeg.Rate * secondLeg.Rate,
+                firstLeg.Date <= secondLeg.Date ? firstLeg.Date : secondLeg.Date);
         }
 
         return null;
@@ -120,14 +160,21 @@ public class HistoricalDataLookup
 
     private decimal? FindDirectOrInverseRate(string from, string to, DateTime asOfDate)
     {
-        if (TryFindDirectRate(from, to, asOfDate, out var directRate))
+        return FindDirectOrInverseRateQuote(from, to, asOfDate)?.Rate;
+    }
+
+    private HistoricalFxQuote? FindDirectOrInverseRateQuote(string from, string to, DateTime asOfDate)
+    {
+        if (TryFindDirectRateQuote(from, to, asOfDate, out var directRate))
         {
             return directRate;
         }
 
-        if (TryFindDirectRate(to, from, asOfDate, out var inverseDirectRate))
+        if (TryFindDirectRateQuote(to, from, asOfDate, out var inverseDirectRate))
         {
-            return inverseDirectRate == 0m ? null : 1 / inverseDirectRate;
+            return inverseDirectRate.Rate == 0m
+                ? null
+                : new HistoricalFxQuote(1 / inverseDirectRate.Rate, inverseDirectRate.Date);
         }
 
         return null;
@@ -135,27 +182,44 @@ public class HistoricalDataLookup
 
     private bool TryFindDirectRate(string from, string to, DateTime asOfDate, out decimal rate)
     {
+        if (TryFindDirectRateQuote(from, to, asOfDate, out var quote))
+        {
+            rate = quote.Rate;
+            return true;
+        }
+
         rate = 0m;
+        return false;
+    }
+
+    private bool TryFindDirectRateQuote(string from, string to, DateTime asOfDate, out HistoricalFxQuote quote)
+    {
+        quote = default!;
         var key = (from, to);
         if (!_fxByPair.TryGetValue(key, out var list))
         {
             return false;
         }
 
-        var resolved = FindRate(list, asOfDate);
+        var resolved = FindRateQuote(list, asOfDate);
         if (resolved is null)
         {
             return false;
         }
 
-        rate = resolved.Value;
+        quote = resolved;
         return true;
     }
 
     private static decimal? FindRate(IReadOnlyList<FxRate> list, DateTime asOfDate)
     {
+        return FindRateQuote(list, asOfDate)?.Rate;
+    }
+
+    private static HistoricalFxQuote? FindRateQuote(IReadOnlyList<FxRate> list, DateTime asOfDate)
+    {
         var idx = FindFirstIndexDateLeq(list, asOfDate, static r => r.Date);
-        return idx < 0 ? null : list[idx].Rate;
+        return idx < 0 ? null : new HistoricalFxQuote(list[idx].Rate, list[idx].Date.Date);
     }
 
     /// <summary>
@@ -205,3 +269,5 @@ public class HistoricalDataLookup
         };
     }
 }
+
+public sealed record HistoricalFxQuote(decimal Rate, DateTime Date);
