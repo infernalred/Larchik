@@ -90,17 +90,11 @@ public class HistoricalDataLookup
         return TryGetCrossRateQuote(from, to, asOfDate);
     }
 
-    public IReadOnlyCollection<DateTime> GetMarketDataDates(
+    public IReadOnlyCollection<DateTime> GetPriceDates(
         IEnumerable<Guid> instrumentIds,
-        IEnumerable<string> currencies,
-        string baseCurrency,
         DateTime onOrBefore)
     {
         var ids = instrumentIds.ToHashSet();
-        var normalizedCurrencies = currencies
-            .Append(baseCurrency)
-            .Select(x => x.ToUpperInvariant())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var cutoff = onOrBefore.Date;
 
         return _pricesByInstrument
@@ -108,11 +102,27 @@ public class HistoricalDataLookup
             .SelectMany(x => x.Value)
             .Where(x => x.Date.Date <= cutoff)
             .Select(x => x.Date.Date)
-            .Concat(_fxByPair
-                .Where(x => normalizedCurrencies.Contains(x.Key.Base) || normalizedCurrencies.Contains(x.Key.Quote))
-                .SelectMany(x => x.Value)
-                .Where(x => x.Date.Date <= cutoff)
-                .Select(x => x.Date.Date))
+            .Distinct()
+            .OrderBy(x => x)
+            .ToArray();
+    }
+
+    public IReadOnlyCollection<DateTime> GetFxRateDates(
+        IEnumerable<string> currencies,
+        string baseCurrency,
+        DateTime onOrBefore)
+    {
+        var normalizedCurrencies = currencies
+            .Append(baseCurrency)
+            .Select(x => x.ToUpperInvariant())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var cutoff = onOrBefore.Date;
+
+        return _fxByPair
+            .Where(x => normalizedCurrencies.Contains(x.Key.Base) || normalizedCurrencies.Contains(x.Key.Quote))
+            .SelectMany(x => x.Value)
+            .Where(x => x.Date.Date <= cutoff)
+            .Select(x => x.Date.Date)
             .Distinct()
             .OrderBy(x => x)
             .ToArray();

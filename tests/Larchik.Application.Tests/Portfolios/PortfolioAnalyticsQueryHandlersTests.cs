@@ -237,6 +237,63 @@ public sealed class PortfolioAnalyticsQueryHandlersTests
     }
 
     [Fact]
+    public async Task DailyAttribution_DoesNotAdvanceValuationDateOnFxOnlyUpdate()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var portfolioId = harness.AddPortfolio("Main", "RUB");
+        var instrumentId = harness.AddInstrument("MSFT", "USD");
+        var firstClose = new DateTime(2026, 8, 12, 0, 0, 0, DateTimeKind.Utc);
+        var latestSecurityClose = firstClose.AddDays(1);
+        var fxOnlyDate = latestSecurityClose.AddDays(1);
+
+        harness.AddOperation(
+            portfolioId,
+            Larchik.Persistence.Entities.OperationType.TransferIn,
+            "USD",
+            firstClose.AddDays(-1),
+            instrumentId,
+            quantity: 10m);
+        harness.AddPrice(instrumentId, "USD", firstClose, 100m, "TBANK");
+        harness.AddPrice(instrumentId, "USD", latestSecurityClose, 101m, "TBANK");
+        harness.AddFxRate("USD", "RUB", firstClose, 90m);
+        harness.AddFxRate("USD", "RUB", latestSecurityClose, 91m);
+        harness.AddFxRate("USD", "RUB", fxOnlyDate, 92m);
+        await harness.SaveChangesAsync();
+
+        var result = await harness.GetPortfolioDailyAttributionAsync(portfolioId, fxOnlyDate);
+
+        Assert.Equal(firstClose, result.ComparisonDate);
+        Assert.Equal(latestSecurityClose, result.ValuationDate);
+        Assert.True(result.IsComplete);
+        Assert.Empty(result.Warnings);
+    }
+
+    [Fact]
+    public async Task DailyAttribution_CashOnlyPortfolioUsesLatestFxDates()
+    {
+        await using var harness = new PortfolioAnalyticsTestHarness();
+        var portfolioId = harness.AddPortfolio("Cash", "RUB");
+        var firstFxDate = new DateTime(2026, 8, 13, 0, 0, 0, DateTimeKind.Utc);
+        var latestFxDate = firstFxDate.AddDays(1);
+
+        harness.AddOperation(
+            portfolioId,
+            Larchik.Persistence.Entities.OperationType.Deposit,
+            "USD",
+            firstFxDate.AddDays(-2),
+            price: 1_000m);
+        harness.AddFxRate("USD", "RUB", firstFxDate, 90m);
+        harness.AddFxRate("USD", "RUB", latestFxDate, 92m);
+        await harness.SaveChangesAsync();
+
+        var result = await harness.GetPortfolioDailyAttributionAsync(portfolioId, latestFxDate);
+
+        Assert.Equal(firstFxDate, result.ComparisonDate);
+        Assert.Equal(latestFxDate, result.ValuationDate);
+        Assert.Equal(2_000m, result.CashFxEffectBase);
+    }
+
+    [Fact]
     public async Task AggregateDailyAttribution_SumsPortfolioContributions()
     {
         await using var harness = new PortfolioAnalyticsTestHarness();

@@ -1,6 +1,7 @@
 import { Alert, Box, Chip, Grid, Paper, Stack, Tooltip, Typography } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { DailyPnlAttribution } from './types';
+import { summarizeDailyAttributionWarnings } from './daily-attribution-domain';
 
 interface Props {
   attribution: DailyPnlAttribution;
@@ -40,6 +41,7 @@ export function DailyAttributionSummary({ attribution }: Props) {
   const currency = attribution.reportingCurrencyId;
   const totalColor = attribution.pnlBase > 0 ? 'success.main' : attribution.pnlBase < 0 ? 'error.main' : 'text.primary';
   const fxEffect = attribution.securityFxEffectBase + attribution.cashFxEffectBase;
+  const warningMessages = summarizeDailyAttributionWarnings(attribution);
 
   return (
     <Paper
@@ -53,7 +55,7 @@ export function DailyAttributionSummary({ attribution }: Props) {
       <Stack spacing={1.5}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}>
           <Box>
-            <Typography variant="overline" color="text.secondary">Результат за торговый день</Typography>
+            <Typography variant="overline" color="text.secondary">Изменение портфеля за день</Typography>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
               <Typography variant="h5" sx={{ color: totalColor, fontWeight: 900 }}>
                 {fmtSigned(attribution.pnlBase)} {currency}
@@ -61,14 +63,16 @@ export function DailyAttributionSummary({ attribution }: Props) {
               <Typography sx={{ color: totalColor, fontWeight: 800 }}>{fmtPct(attribution.returnPct)}</Typography>
             </Stack>
             <Typography variant="caption" color="text.secondary">
-              Закрытие {fmtDate(attribution.comparisonDate)} → {fmtDate(attribution.valuationDate)} · внешние потоки исключены
+              {fmtDate(attribution.comparisonDate)} → {fmtDate(attribution.valuationDate)} · по последним доступным закрытиям · вводы и выводы исключены
             </Typography>
           </Box>
           <Chip
             size="small"
             color={attribution.isComplete ? 'success' : 'warning'}
             variant="outlined"
-            label={attribution.isComplete ? 'Данные полные' : 'Есть неполные данные'}
+            label={attribution.isComplete
+              ? `Закрытие ${fmtDate(attribution.valuationDate)}`
+              : 'Данные требуют проверки'}
           />
         </Stack>
 
@@ -95,10 +99,9 @@ export function DailyAttributionSummary({ attribution }: Props) {
           </Stack>
         )}
 
-        {!attribution.isComplete && attribution.warnings.length > 0 && (
+        {!attribution.isComplete && warningMessages.length > 0 && (
           <Alert severity="warning" variant="outlined">
-            {attribution.warnings.slice(0, 3).join(' · ')}
-            {attribution.warnings.length > 3 ? ` · ещё ${attribution.warnings.length - 3}` : ''}
+            {warningMessages.join(' ')}
           </Alert>
         )}
       </Stack>

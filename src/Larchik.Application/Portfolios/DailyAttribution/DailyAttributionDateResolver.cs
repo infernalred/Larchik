@@ -14,12 +14,14 @@ public static class DailyAttributionDateResolver
         DateTime requestedDate)
     {
         var cutoff = requestedDate.Date;
-        var dates = data.GetMarketDataDates(instrumentIds, currencies, baseCurrency, cutoff)
+        var priceDates = data.GetPriceDates(instrumentIds, cutoff);
+        var fallbackDates = data.GetFxRateDates(currencies, baseCurrency, cutoff)
             .Concat(operations.SelectMany(x => new[]
             {
                 x.TradeDate.Date,
                 BrokerCashLedgerHelper.GetCashEffectiveDate(x)
-            }))
+            }));
+        var dates = (priceDates.Count > 0 ? priceDates : fallbackDates)
             .Where(x => x <= cutoff)
             .Distinct()
             .OrderBy(x => x)

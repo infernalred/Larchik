@@ -70,10 +70,17 @@ public sealed class GetPortfolioDailyAttributionQueryHandler(
             .Concat(analytics.Operations.Select(x => x.CurrencyId))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        var heldInstrumentIds = DailyAttributionInstrumentSelector.SelectHeldMarketInstruments(
+            portfolio,
+            analytics.Operations,
+            analytics.Instruments,
+            analytics.Data,
+            portfolio.ReportingCurrencyId,
+            requestedDate);
         var period = DailyAttributionDateResolver.Resolve(
             analytics.Data,
             analytics.Operations,
-            analytics.Instruments.Keys.ToArray(),
+            heldInstrumentIds,
             currencies,
             portfolio.ReportingCurrencyId,
             requestedDate);

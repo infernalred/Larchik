@@ -89,10 +89,20 @@ public sealed class GetAggregatePortfolioDailyAttributionQueryHandler(
             .Concat(allMerged.Select(x => x.CurrencyId))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        var heldInstrumentIds = portfolios
+            .SelectMany(portfolio => DailyAttributionInstrumentSelector.SelectHeldMarketInstruments(
+                portfolio,
+                mergedByPortfolio[portfolio.Id],
+                pools.Instruments,
+                pools.Data,
+                baseCurrency,
+                requestedDate))
+            .Distinct()
+            .ToArray();
         var period = DailyAttributionDateResolver.Resolve(
             pools.Data,
             allMerged,
-            pools.Instruments.Keys.ToArray(),
+            heldInstrumentIds,
             currencies,
             baseCurrency,
             requestedDate);

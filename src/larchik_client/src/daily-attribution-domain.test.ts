@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attachDailyMoves } from './daily-attribution-domain';
+import { attachDailyMoves, summarizeDailyAttributionWarnings } from './daily-attribution-domain';
 import { DailyPnlAttribution, PositionHolding } from './types';
 
 const positions: PositionHolding[] = [
@@ -100,5 +100,39 @@ describe('attachDailyMoves', () => {
 
     expect(result[0].dailyMove).toMatchObject({ pnlBase: -4_500, priceEffectBase: -9_000, fxEffectBase: 5_000 });
     expect(result[1].dailyMove).toMatchObject({ pnlBase: 500, priceEffectBase: 0, fxEffectBase: 500 });
+  });
+
+  it('summarizes repeated stale-price warnings instead of listing every instrument', () => {
+    const staleAttribution: DailyPnlAttribution = {
+      ...attribution,
+      isComplete: false,
+      valuationDate: '2026-08-14T00:00:00Z',
+      warnings: [
+        'Bond: конечная цена устарела: 2026-08-13',
+        'Share: конечная цена устарела: 2026-08-13',
+      ],
+      positions: [
+        {
+          ...attribution.positions[0],
+          endPriceDate: '2026-08-13T00:00:00Z',
+          endFxRateDate: '2026-08-14T00:00:00Z',
+          dataQuality: 'stale',
+          warnings: ['конечная цена устарела: 2026-08-13'],
+        },
+        {
+          ...attribution.positions[0],
+          instrumentId: 'share-id',
+          instrumentName: 'Share',
+          endPriceDate: '2026-08-13T00:00:00Z',
+          endFxRateDate: '2026-08-14T00:00:00Z',
+          dataQuality: 'stale',
+          warnings: ['конечная цена устарела: 2026-08-13'],
+        },
+      ],
+    };
+
+    expect(summarizeDailyAttributionWarnings(staleAttribution)).toEqual([
+      'Цена старше даты отчёта у 2 бумаг.',
+    ]);
   });
 });
