@@ -37,7 +37,6 @@ import {
   User,
 } from './types';
 import { SummaryCards } from './SummaryCards';
-import { DailyAttributionSummary } from './DailyAttributionSummary';
 import { PositionsTable } from './PositionsTable';
 import { attachDailyMoves } from './daily-attribution-domain';
 import { PerformanceAnalytics } from './PerformanceAnalytics';
@@ -879,7 +878,6 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
           {viewMode === 'portfolio' && portfolioPage === 'overview' && !loadingSummary && summary && (
             <Stack spacing={{ xs: 2, md: 3 }}>
               <SummaryCards summary={summary} />
-              {dailyAttribution && <DailyAttributionSummary attribution={dailyAttribution} />}
 
               <Grid container spacing={{ xs: 2, md: 3 }}>
                 <Grid size={{ xs: 12, md: 8 }}>
@@ -958,7 +956,6 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
           {viewMode === 'all' && portfolioPage === 'overview' && !loadingAggregateSummary && aggregateSummary && (
             <Stack spacing={{ xs: 2, md: 3 }}>
               <SummaryCards summary={aggregateSummary} />
-              {aggregateDailyAttribution && <DailyAttributionSummary attribution={aggregateDailyAttribution} />}
 
               <Stack spacing={1}>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>

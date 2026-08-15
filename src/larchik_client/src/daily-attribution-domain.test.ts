@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { attachDailyMoves, summarizeDailyAttributionWarnings } from './daily-attribution-domain';
-import { DailyPnlAttribution, PositionHolding } from './types';
+import {
+  attachDailyMoves,
+  getDailyMoveUnavailableReason,
+  isDailyMoveDisplayable,
+  summarizeDailyAttributionWarnings,
+} from './daily-attribution-domain';
+import { DailyPnlAttribution, PositionDailyMove, PositionHolding } from './types';
 
 const positions: PositionHolding[] = [
   {
@@ -134,5 +139,24 @@ describe('attachDailyMoves', () => {
     expect(summarizeDailyAttributionWarnings(staleAttribution)).toEqual([
       'Цена старше даты отчёта у 2 бумаг.',
     ]);
+  });
+
+  it('distinguishes a confirmed zero move from incomplete market data', () => {
+    const completeZero: PositionDailyMove = {
+      pnlBase: 0,
+      returnPct: 0,
+      priceEffectBase: 0,
+      fxEffectBase: 0,
+      crossEffectBase: 0,
+      tradingEffectBase: 0,
+      incomeEffectBase: 0,
+      feeEffectBase: 0,
+      otherEffectBase: 0,
+      dataQuality: 'complete',
+    };
+
+    expect(isDailyMoveDisplayable(completeZero)).toBe(true);
+    expect(isDailyMoveDisplayable({ ...completeZero, dataQuality: 'stale' })).toBe(false);
+    expect(getDailyMoveUnavailableReason('stale')).toBe('Цена или курс старше даты отчёта');
   });
 });

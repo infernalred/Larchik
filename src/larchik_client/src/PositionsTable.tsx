@@ -10,6 +10,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -17,6 +18,8 @@ import {
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
+import { getDailyMoveUnavailableReason, isDailyMoveDisplayable } from './daily-attribution-domain';
 import { getPurchaseMove, PurchaseMove } from './position-return-domain';
 import { PositionHolding } from './types';
 
@@ -118,6 +121,17 @@ function DailyMoveBadge({ position, reportingCurrencyId, dense = false }: { posi
   const move = position.dailyMove;
   if (!move) {
     return <Typography variant={dense ? 'caption' : 'body2'} color="text.secondary">—</Typography>;
+  }
+
+  if (!isDailyMoveDisplayable(move)) {
+    return (
+      <Tooltip title={getDailyMoveUnavailableReason(move.dataQuality)} arrow>
+        <Stack direction="row" spacing={0.5} sx={{ justifyContent: { xs: 'flex-start', sm: 'flex-end' }, alignItems: 'center' }}>
+          <Typography variant={dense ? 'caption' : 'body2'} color="text.secondary">—</Typography>
+          <WarningAmberRoundedIcon sx={{ color: 'warning.main', fontSize: 16 }} />
+        </Stack>
+      </Tooltip>
+    );
   }
 
   const color = move.pnlBase > 0 ? 'success.main' : move.pnlBase < 0 ? 'error.main' : 'text.secondary';
