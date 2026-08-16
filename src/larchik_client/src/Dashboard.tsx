@@ -6,7 +6,6 @@ import {
   CircularProgress,
   Container,
   Drawer,
-  Grid,
   MenuItem,
   Paper,
   Select,
@@ -782,31 +781,26 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
             <Stack spacing={{ xs: 2, md: 3 }}>
               <SummaryCards summary={summary} />
 
-              <Grid container spacing={{ xs: 2, md: 3 }}>
-                <Grid size={{ xs: 12, md: 8 }}>
-                  <Stack spacing={1}>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                      Позиции
-                    </Typography>
-                    <PositionsTable
-                      positions={displayPositions}
-                      reportingCurrencyId={summary.reportingCurrencyId}
-                      dailyPnlBase={summary.dailyMove?.dataQuality === 'complete' ? summary.dailyMove.pnlBase : undefined}
-                    />
-                  </Stack>
-                </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, height: '100%', backgroundImage: 'none' }}>
-                    <QuickDeposit
-                      key={selectedPortfolio ?? 'no-portfolio'}
-                      onSubmit={handleQuickDeposit}
-                      currencies={currencies}
-                      defaultCurrencyId={activePortfolio?.reportingCurrencyId}
-                      disabled={!selectedPortfolio}
-                    />
-                  </Paper>
-                </Grid>
-              </Grid>
+              <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, backgroundImage: 'none' }}>
+                <QuickDeposit
+                  key={selectedPortfolio ?? 'no-portfolio'}
+                  onSubmit={handleQuickDeposit}
+                  currencies={currencies}
+                  defaultCurrencyId={activePortfolio?.reportingCurrencyId}
+                  disabled={!selectedPortfolio}
+                />
+              </Paper>
+
+              <Stack spacing={1}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Позиции
+                </Typography>
+                <PositionsTable
+                  positions={displayPositions}
+                  reportingCurrencyId={summary.reportingCurrencyId}
+                  dailyPnlBase={summary.dailyMove?.dataQuality === 'complete' ? summary.dailyMove.pnlBase : undefined}
+                />
+              </Stack>
 
               <Stack spacing={1}>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>

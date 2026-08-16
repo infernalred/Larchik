@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, MenuItem, Stack, TextField, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Alert, Box, Button, Grid, MenuItem, TextField, Typography } from '@mui/material';
 import {
   createQuickDepositInitialState,
   normalizeQuickDepositState,
@@ -15,8 +15,6 @@ interface Props {
 }
 
 export function QuickDeposit({ onSubmit, currencies, defaultCurrencyId, disabled }: Props) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const initialState = createQuickDepositInitialState(defaultCurrencyId, currencies);
   const currencyOptions = currencies.length ? currencies : [{ id: initialState.currency, name: initialState.currency }];
   const [amount, setAmount] = useState(initialState.amount);
@@ -45,37 +43,66 @@ export function QuickDeposit({ onSubmit, currencies, defaultCurrencyId, disabled
   };
 
   return (
-    <Stack spacing={1.5}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-        Быстрый ввод средств
-      </Typography>
-      <TextField
-        size="small"
-        label="Сумма"
-        type="number"
-        value={amount}
-        onChange={(e) => setAmount(Number(e.target.value))}
-        slotProps={{ htmlInput: { min: 0, inputMode: 'decimal' } }}
-        helperText="Сумма пополнения счета"
-      />
-      <TextField
-        select
-        size="small"
-        label="Валюта"
-        value={currency}
-        onChange={(e) => setCurrency(e.target.value)}
-      >
-        {currencyOptions.map((item) => (
-          <MenuItem key={item.id} value={item.id}>
-            {item.id}
-          </MenuItem>
-        ))}
-      </TextField>
-      <TextField size="small" label="Комментарий" value={note} onChange={(e) => setNote(e.target.value)} />
-      {error && <Alert severity="error">{error}</Alert>}
-      <Button variant="contained" onClick={handleSubmit} disabled={disabled || loading} fullWidth={isMobile}>
-        {loading ? 'Сохраняем…' : 'Добавить депозит'}
-      </Button>
-    </Stack>
+    <Box
+      component="form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void handleSubmit();
+      }}
+    >
+      <Grid container spacing={1.5} sx={{ alignItems: 'center' }}>
+        <Grid size={{ xs: 12, lg: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            Пополнение счета
+          </Typography>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 2.5 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Сумма"
+            type="number"
+            value={amount}
+            onChange={(event) => setAmount(Number(event.target.value))}
+            slotProps={{ htmlInput: { min: 0, inputMode: 'decimal' } }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 2 }}>
+          <TextField
+            fullWidth
+            select
+            size="small"
+            label="Валюта"
+            value={currency}
+            onChange={(event) => setCurrency(event.target.value)}
+          >
+            {currencyOptions.map((item) => (
+              <MenuItem key={item.id} value={item.id}>
+                {item.id}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 8, lg: 3 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Комментарий"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4, lg: 2.5 }}>
+          <Button type="submit" variant="contained" disabled={disabled || loading} fullWidth>
+            {loading ? 'Сохраняем…' : 'Добавить депозит'}
+          </Button>
+        </Grid>
+        {error && (
+          <Grid size={12}>
+            <Alert severity="error">{error}</Alert>
+          </Grid>
+        )}
+      </Grid>
+    </Box>
   );
 }

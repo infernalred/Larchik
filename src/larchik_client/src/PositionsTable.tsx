@@ -199,7 +199,7 @@ export function PositionsTable({ positions, reportingCurrencyId, dailyPnlBase }:
           const tone = getMoveTone(purchaseMove);
 
           return (
-            <Grid key={p.instrumentId} size={{ xs: 12, md: 6, lg: 12 }}>
+            <Grid key={p.instrumentId} size={{ xs: 12, lg: 6 }}>
               <Paper
                 variant="outlined"
                 sx={{
@@ -266,7 +266,9 @@ export function PositionsTable({ positions, reportingCurrencyId, dailyPnlBase }:
                     <Typography variant="caption" color="text.secondary">
                       Стоимость
                     </Typography>
-                    <Typography sx={{ fontWeight: 800 }}>{fmt(p.marketValueBase)}</Typography>
+                    <Typography sx={{ fontWeight: 800 }}>
+                      {fmt(p.marketValueBase)} {reportingCurrencyId ?? ''}
+                    </Typography>
                   </Box>
                 </Stack>
               </Paper>
@@ -279,7 +281,9 @@ export function PositionsTable({ positions, reportingCurrencyId, dailyPnlBase }:
               <Stack spacing={1}>
                 <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography sx={{ fontWeight: 700 }}>Итого</Typography>
-                  <Typography sx={{ fontWeight: 700 }}>{fmt(totalBase)}</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>
+                    {fmt(totalBase)} {reportingCurrencyId ?? ''}
+                  </Typography>
                 </Stack>
                 {dailyPnlBase != null && (
                   <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
@@ -318,18 +322,25 @@ export function PositionsTable({ positions, reportingCurrencyId, dailyPnlBase }:
 
   return (
     <TableContainer component={Paper} variant="outlined" sx={{ backgroundImage: 'none', borderRadius: 2 }}>
-      <Table size="small" stickyHeader>
+      <Table size="small" stickyHeader sx={{ tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: '25%' }} />
+          <col style={{ width: '9%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '16%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '14%' }} />
+          <col style={{ width: '14%' }} />
+        </colgroup>
         <TableHead>
           <TableRow>
             <TableCell>Инструмент</TableCell>
             <TableCell align="right">Кол-во</TableCell>
             <TableCell align="right">Цена</TableCell>
-            <TableCell align="right">Сумма</TableCell>
-            <TableCell align="right">Доля, %</TableCell>
+            <TableCell align="right">Стоимость</TableCell>
             <TableCell align="right">Средняя</TableCell>
             <TableCell align="right">За день</TableCell>
             <TableCell align="right">От покупки</TableCell>
-            <TableCell align="right">Стоимость (base)</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -352,8 +363,21 @@ export function PositionsTable({ positions, reportingCurrencyId, dailyPnlBase }:
                 </TableCell>
                 <TableCell align="right">{fmt(p.quantity)}</TableCell>
                 <TableCell align="right">{priceLabel}</TableCell>
-                <TableCell align="right">{localAmount != null ? `${fmt(localAmount)} ${priceCurrency}` : '—'}</TableCell>
-                <TableCell align="right">{fmtPct(sharePct)}</TableCell>
+                <TableCell align="right">
+                  <Stack spacing={0.25} sx={{ alignItems: 'flex-end' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      {fmt(p.marketValueBase)} {reportingCurrencyId ?? ''}
+                    </Typography>
+                    {localAmount != null && priceCurrency !== reportingCurrencyId && (
+                      <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.15 }}>
+                        {fmt(localAmount)} {priceCurrency}
+                      </Typography>
+                    )}
+                    <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.15 }}>
+                      {fmtPct(sharePct)} портфеля
+                    </Typography>
+                  </Stack>
+                </TableCell>
                 <TableCell align="right">{averageLabel}</TableCell>
                 <TableCell align="right">
                   <DailyMoveBadge position={p} reportingCurrencyId={reportingCurrencyId} />
@@ -361,7 +385,6 @@ export function PositionsTable({ positions, reportingCurrencyId, dailyPnlBase }:
                 <TableCell align="right">
                   <PurchaseMoveBadge move={purchaseMove} />
                 </TableCell>
-                <TableCell align="right">{fmt(p.marketValueBase)}</TableCell>
               </TableRow>
             );
           })}
@@ -372,8 +395,16 @@ export function PositionsTable({ positions, reportingCurrencyId, dailyPnlBase }:
               </TableCell>
               <TableCell align="right">—</TableCell>
               <TableCell align="right">—</TableCell>
-              <TableCell align="right">—</TableCell>
-              <TableCell align="right">{fmtPct(totalBase > 0 ? 100 : null)}</TableCell>
+              <TableCell align="right">
+                <Stack spacing={0.25} sx={{ alignItems: 'flex-end' }}>
+                  <Typography sx={{ fontWeight: 700 }}>
+                    {fmt(totalBase)} {reportingCurrencyId ?? ''}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {fmtPct(totalBase > 0 ? 100 : null)} портфеля
+                  </Typography>
+                </Stack>
+              </TableCell>
               <TableCell align="right">—</TableCell>
               <TableCell align="right">
                 <Typography sx={{ fontWeight: 700, color: dailyPnlBase == null ? 'text.secondary' : dailyPnlBase > 0 ? 'success.main' : dailyPnlBase < 0 ? 'error.main' : 'text.secondary' }}>
@@ -381,14 +412,11 @@ export function PositionsTable({ positions, reportingCurrencyId, dailyPnlBase }:
                 </Typography>
               </TableCell>
               <TableCell align="right">—</TableCell>
-              <TableCell align="right">
-                <Typography sx={{ fontWeight: 700 }}>{fmt(totalBase)}</Typography>
-              </TableCell>
             </TableRow>
           )}
           {!positions.length && (
             <TableRow>
-              <TableCell colSpan={9} align="center">
+              <TableCell colSpan={7} align="center">
                 <Typography color="text.secondary">Нет позиций</Typography>
               </TableCell>
             </TableRow>
