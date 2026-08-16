@@ -118,6 +118,7 @@ export interface PortfolioSummary {
   annualizedReturnPct?: number | null;
   navBase: number;
   valuationMethod: string;
+  dailyMove: PortfolioDailyMove | null;
   cash: CashBalance[];
   positions: PositionHolding[];
   realizedByInstrument: RealizedPnl[];
@@ -142,6 +143,7 @@ export interface CashBalance {
   currencyId: string;
   amount: number;
   amountInBase: number;
+  dailyMove?: PositionDailyMove | null;
 }
 
 export interface PositionHolding {
@@ -162,6 +164,7 @@ export interface PositionHolding {
 }
 
 export interface PositionDailyMove {
+  startValueBase: number;
   pnlBase: number;
   returnPct: number | null;
   priceEffectBase: number;
@@ -174,65 +177,9 @@ export interface PositionDailyMove {
   dataQuality: string;
 }
 
-export interface PositionDailyPnlAttribution extends PositionDailyMove {
-  instrumentId: string;
-  instrumentName: string;
-  instrumentType?: InstrumentType;
-  categoryName?: string;
-  currencyId: string;
-  startQuantity: number;
-  endQuantity: number;
-  startPrice: number | null;
-  endPrice: number | null;
-  startPriceDate: string | null;
-  endPriceDate: string | null;
-  startFxRate: number | null;
-  endFxRate: number | null;
-  startFxRateDate: string | null;
-  endFxRateDate: string | null;
-  startMarketValueBase: number;
-  endMarketValueBase: number;
-  priceReturnPct: number | null;
-  fxReturnPct: number | null;
-  totalMarketReturnPct: number | null;
-  warnings: string[];
-}
-
-export interface CashDailyPnlAttribution {
-  currencyId: string;
-  startAmount: number;
-  endAmount: number;
-  startFxRate: number | null;
-  endFxRate: number | null;
-  fxEffectBase: number;
-  dataQuality: string;
-}
-
-export interface DailyPnlAttribution {
-  portfolioId: string | null;
-  name: string;
-  reportingCurrencyId: string;
+export interface PortfolioDailyMove extends PositionDailyMove {
   comparisonDate: string;
   valuationDate: string;
-  startNavBase: number;
-  endNavBase: number;
-  externalFlowBase: number;
-  pnlBase: number;
-  returnPct: number | null;
-  priceEffectBase: number;
-  securityFxEffectBase: number;
-  crossEffectBase: number;
-  tradingEffectBase: number;
-  cashFxEffectBase: number;
-  fxEffectBase: number;
-  incomeEffectBase: number;
-  feeEffectBase: number;
-  otherEffectBase: number;
-  reconciliationResidualBase: number;
-  isComplete: boolean;
-  warnings: string[];
-  positions: PositionDailyPnlAttribution[];
-  cash: CashDailyPnlAttribution[];
 }
 
 export interface RealizedPnl {

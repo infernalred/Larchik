@@ -13,4 +13,5 @@ public class PositionHoldingDto
     public decimal? LastPrice { get; set; }
     public decimal MarketValueBase { get; set; }
     public decimal AverageCost { get; set; }
+    public DailyMoveDto? DailyMove { get; set; }
 }

@@ -7,11 +7,9 @@ using Larchik.Application.Portfolios.CreatePortfolio;
 using Larchik.Application.Portfolios.DeletePortfolio;
 using Larchik.Application.Portfolios.EditPortfolio;
 using Larchik.Application.Portfolios.GetAggregatePortfolioPerformance;
-using Larchik.Application.Portfolios.GetAggregatePortfolioDailyAttribution;
 using Larchik.Application.Portfolios.GetAggregatePortfolioSummary;
 using Larchik.Application.Portfolios.GetPortfolio;
 using Larchik.Application.Portfolios.GetPortfolioPerformance;
-using Larchik.Application.Portfolios.GetPortfolioDailyAttribution;
 using Larchik.Application.Portfolios.GetPortfolios;
 using Larchik.Application.Portfolios.GetPortfoliosSummary;
 using Larchik.Application.Portfolios.GetPortfolioSummary;
@@ -35,8 +33,6 @@ public class PortfoliosController(
     GetPortfolioSummaryQueryHandler getPortfolioSummary,
     GetPortfoliosSummaryQueryHandler getPortfoliosSummary,
     GetAggregatePortfolioSummaryQueryHandler getAggregatePortfolioSummary,
-    GetPortfolioDailyAttributionQueryHandler getPortfolioDailyAttribution,
-    GetAggregatePortfolioDailyAttributionQueryHandler getAggregatePortfolioDailyAttribution,
     GetPortfolioPerformanceQueryHandler getPortfolioPerformance,
     GetAggregatePortfolioPerformanceQueryHandler getAggregatePortfolioPerformance,
     GetPortfolioReconciliationHistoryQueryHandler getReconciliationHistory,
@@ -99,7 +95,8 @@ public class PortfoliosController(
     }
 
     /// <summary>
-    /// Returns portfolio summary with selected valuation method: adjustingAvg (default), staticAvg, fifo, lifo.
+    /// Returns portfolio valuation and close-to-close daily move for the portfolio, positions, and cash.
+    /// Valuation method: adjustingAvg (default), staticAvg, fifo, lifo. Daily move is method-independent.
     /// Security transfers (TransferIn/TransferOut with instrumentId) are quantity-only and do not create realized P&amp;L directly.
     /// TransferIn adds zero-cost quantity. TransferOut reduces quantity without reducing total remaining position cost.
     /// </summary>
@@ -127,7 +124,8 @@ public class PortfoliosController(
     }
 
     /// <summary>
-    /// Returns a single combined snapshot across all portfolios with selected valuation method: adjustingAvg (default), staticAvg, fifo, lifo.
+    /// Returns a combined valuation and close-to-close daily move across all portfolios.
+    /// Valuation method: adjustingAvg (default), staticAvg, fifo, lifo. Daily move is method-independent.
     /// Security transfers (TransferIn/TransferOut with instrumentId) are quantity-only and do not create realized P&amp;L directly.
     /// TransferIn adds zero-cost quantity. TransferOut reduces quantity without reducing total remaining position cost.
     /// </summary>
@@ -139,37 +137,6 @@ public class PortfoliosController(
         [FromQuery] string? currency)
     {
         return HandleResult(await getAggregatePortfolioSummary.Handle(new GetAggregatePortfolioSummaryQuery(method, currency), HttpContext.RequestAborted));
-    }
-
-    /// <summary>
-    /// Returns close-to-close daily P&amp;L with security-price, FX, income, fee, and trading attribution.
-    /// The calculation is independent of the tax-lot valuation method.
-    /// </summary>
-    [HttpGet("{id:guid}/daily-attribution")]
-    [ProducesResponseType(typeof(DailyPnlAttributionDto), (int)HttpStatusCode.OK)]
-    [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<ActionResult<DailyPnlAttributionDto>> GetDailyAttribution(
-        Guid id,
-        [FromQuery] DateTime? date = null)
-    {
-        return HandleResult(await getPortfolioDailyAttribution.Handle(
-            new GetPortfolioDailyAttributionQuery(id, date),
-            HttpContext.RequestAborted));
-    }
-
-    /// <summary>
-    /// Returns combined close-to-close daily P&amp;L attribution across all user portfolios.
-    /// </summary>
-    [HttpGet("aggregate/daily-attribution")]
-    [ProducesResponseType(typeof(DailyPnlAttributionDto), (int)HttpStatusCode.OK)]
-    [ProducesResponseType((int)HttpStatusCode.BadRequest)]
-    public async Task<ActionResult<DailyPnlAttributionDto>> GetAggregateDailyAttribution(
-        [FromQuery] DateTime? date = null,
-        [FromQuery] string? currency = null)
-    {
-        return HandleResult(await getAggregatePortfolioDailyAttribution.Handle(
-            new GetAggregatePortfolioDailyAttributionQuery(date, currency),
-            HttpContext.RequestAborted));
     }
 
     /// <summary>

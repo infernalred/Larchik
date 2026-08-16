@@ -1,6 +1,7 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
+using Larchik.Application.Portfolios.DailyAttribution;
 using Larchik.Persistence.Context;
 using Larchik.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -78,19 +79,46 @@ public class GetAggregatePortfolioSummaryQueryHandler(
             asOfDateTime,
             additionalCurrencies: null,
             cancellationToken,
-            useNarrowPriceHistory: true);
+            useNarrowPriceHistory: false);
+
+        var mergedByPortfolio = portfolios.ToDictionary(
+            x => x.Id,
+            x => InstrumentCorporateActionOperationMerger.Merge(
+                    operations.Where(o => o.PortfolioId == x.Id).ToList(),
+                    pools.CorporateActions,
+                    pools.Instruments)
+                .ToList());
+        var allMerged = mergedByPortfolio.Values.SelectMany(x => x).ToList();
+        var currencies = pools.Instruments.Values
+            .Select(x => x.CurrencyId)
+            .Concat(allMerged.Select(x => x.CurrencyId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var heldInstrumentIds = portfolios
+            .SelectMany(portfolio => DailyAttributionInstrumentSelector.SelectHeldMarketInstruments(
+                portfolio,
+                mergedByPortfolio[portfolio.Id],
+                pools.Instruments,
+                pools.Data,
+                baseCurrency,
+                asOfDateTime))
+            .Distinct()
+            .ToArray();
+        var dailyPeriod = DailyAttributionDateResolver.Resolve(
+            pools.Data,
+            allMerged,
+            heldInstrumentIds,
+            currencies,
+            baseCurrency,
+            asOfDateTime);
+        var dailyCalculator = new DailyPnlAttributionCalculator();
 
         var summaries = new List<PortfolioSummaryDto>(portfolios.Count);
         var allMergedForMwr = new List<Operation>();
 
         foreach (var portfolio in portfolios)
         {
-            var raw = operations
-                .Where(o => o.PortfolioId == portfolio.Id)
-                .OrderBy(o => o.TradeDate)
-                .ThenBy(o => o.CreatedAt)
-                .ToList();
-            var merged = InstrumentCorporateActionOperationMerger.Merge(raw, pools.CorporateActions, pools.Instruments).ToList();
+            var merged = mergedByPortfolio[portfolio.Id];
             allMergedForMwr.AddRange(merged);
 
             var fromSnapshot = await PortfolioSnapshotSummaryBuilder.TryBuildAsync(
@@ -105,16 +133,25 @@ public class GetAggregatePortfolioSummaryQueryHandler(
                 includeAnnualizedReturn: false,
                 cancellationToken);
 
-            summaries.Add(
-                fromSnapshot ?? calculator.CalculateSummary(
-                    portfolio,
-                    merged,
-                    pools.Instruments,
-                    pools.Data,
-                    method,
-                    baseCurrency,
-                    asOfDateTime,
-                    includeAnnualizedReturn: false));
+            var summary = fromSnapshot ?? calculator.CalculateSummary(
+                portfolio,
+                merged,
+                pools.Instruments,
+                pools.Data,
+                method,
+                baseCurrency,
+                asOfDateTime,
+                includeAnnualizedReturn: false);
+            var attribution = dailyCalculator.Calculate(
+                portfolio,
+                merged,
+                pools.Instruments,
+                pools.Data,
+                baseCurrency,
+                dailyPeriod.ComparisonDate,
+                dailyPeriod.ValuationDate);
+            DailyAttributionSummaryMapper.Attach(summary, attribution);
+            summaries.Add(summary);
         }
 
         allMergedForMwr.Sort(static (a, b) =>
@@ -130,7 +167,8 @@ public class GetAggregatePortfolioSummaryQueryHandler(
             {
                 CurrencyId = x.Key.ToUpperInvariant(),
                 Amount = x.Sum(y => y.Amount),
-                AmountInBase = x.Sum(y => y.AmountInBase)
+                AmountInBase = x.Sum(y => y.AmountInBase),
+                DailyMove = DailyAttributionSummaryMapper.Aggregate(x.Select(y => y.DailyMove))
             })
             .OrderByDescending(x => x.AmountInBase)
             .ToList();
@@ -158,7 +196,8 @@ public class GetAggregatePortfolioSummaryQueryHandler(
                     Quantity = totalQuantity,
                     LastPrice = group.Select(x => x.LastPrice).FirstOrDefault(x => x.HasValue),
                     MarketValueBase = group.Sum(x => x.MarketValueBase),
-                    AverageCost = weightedCost
+                    AverageCost = weightedCost,
+                    DailyMove = DailyAttributionSummaryMapper.Aggregate(group.Select(x => x.DailyMove))
                 };
             })
             .ToList();
@@ -206,6 +245,7 @@ public class GetAggregatePortfolioSummaryQueryHandler(
             AnnualizedReturnPct = annualizedReturnPct,
             NavBase = navBase,
             ValuationMethod = method,
+            DailyMove = DailyAttributionSummaryMapper.AggregatePortfolios(summaries.Select(x => x.DailyMove)),
             Cash = cash,
             Positions = positions,
             RealizedByInstrument = realized

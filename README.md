@@ -101,7 +101,8 @@ Default Vite URL `http://localhost:5173` is included in development CORS config.
 - `POST /api/portfolios/{id}/imports/tbank` - import broker report
 - `POST /api/prices/sync` - sync prices (admin)
 - `POST /api/fxrates/sync/cbr?date=YYYY-MM-DD` - sync CBR FX rates (admin)
-- `GET /api/portfolios/{id}/summary?method=adjustingAvg|staticAvg|fifo|lifo`
+- `GET /api/portfolios/{id}/summary?method=adjustingAvg|staticAvg|fifo|lifo` - current valuation plus daily move for the portfolio, positions, and cash
+- `GET /api/portfolios/aggregate/summary?method=adjustingAvg|staticAvg|fifo|lifo` - the same combined read model across all accounts
 
 Scheduled jobs in `Larchik.Jobs`:
 - `fx_cbr_daily` (`fx.cbr.daily`) - daily FX import from CBR

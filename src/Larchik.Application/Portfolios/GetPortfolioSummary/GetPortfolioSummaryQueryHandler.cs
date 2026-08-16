@@ -1,6 +1,7 @@
 using Larchik.Application.Contracts;
 using Larchik.Application.Helpers;
 using Larchik.Application.Models;
+using Larchik.Application.Portfolios.DailyAttribution;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -63,7 +64,7 @@ public class GetPortfolioSummaryQueryHandler(
             asOfDateTime,
             additionalCurrencies: null,
             cancellationToken,
-            useNarrowPriceHistory: true);
+            useNarrowPriceHistory: false);
 
         var fromSnapshot = await PortfolioSnapshotSummaryBuilder.TryBuildAsync(
             context,
@@ -86,6 +87,35 @@ public class GetPortfolioSummaryQueryHandler(
             portfolio.ReportingCurrencyId,
             asOfDateTime,
             includeAnnualizedReturn: true);
+
+        var currencies = analytics.Instruments.Values
+            .Select(x => x.CurrencyId)
+            .Concat(analytics.Operations.Select(x => x.CurrencyId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var heldInstrumentIds = DailyAttributionInstrumentSelector.SelectHeldMarketInstruments(
+            portfolio,
+            analytics.Operations,
+            analytics.Instruments,
+            analytics.Data,
+            portfolio.ReportingCurrencyId,
+            asOfDateTime);
+        var period = DailyAttributionDateResolver.Resolve(
+            analytics.Data,
+            analytics.Operations,
+            heldInstrumentIds,
+            currencies,
+            portfolio.ReportingCurrencyId,
+            asOfDateTime);
+        var attribution = new DailyPnlAttributionCalculator().Calculate(
+            portfolio,
+            analytics.Operations,
+            analytics.Instruments,
+            analytics.Data,
+            portfolio.ReportingCurrencyId,
+            period.ComparisonDate,
+            period.ValuationDate);
+        DailyAttributionSummaryMapper.Attach(summary, attribution);
 
         memoryCache.Set(cacheKey, summary, PortfolioSummaryCacheKeys.DefaultTtl);
         return Result<PortfolioSummaryDto>.Success(summary);

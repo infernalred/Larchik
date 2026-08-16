@@ -204,7 +204,7 @@ public sealed class PortfolioAnalyticsQueryHandlersTests
     }
 
     [Fact]
-    public async Task DailyAttribution_UsesLastTwoMarketDates_AndSplitsForeignMove()
+    public async Task PortfolioSummary_IncludesDailyMoveUsingLastTwoMarketDates()
     {
         await using var harness = new PortfolioAnalyticsTestHarness();
         var portfolioId = harness.AddPortfolio("Main", "RUB");
@@ -225,19 +225,20 @@ public sealed class PortfolioAnalyticsQueryHandlersTests
         harness.AddFxRate("USD", "RUB", end, 95m);
         await harness.SaveChangesAsync();
 
-        var result = await harness.GetPortfolioDailyAttributionAsync(portfolioId, end.AddDays(1));
-        var row = Assert.Single(result.Positions);
+        var summary = await harness.GetPortfolioSummaryAsync(portfolioId);
+        var dailyMove = Assert.IsType<Larchik.Application.Models.PortfolioDailyMoveDto>(summary.DailyMove);
+        var rowMove = Assert.IsType<Larchik.Application.Models.DailyMoveDto>(Assert.Single(summary.Positions).DailyMove);
 
-        Assert.Equal(start, result.ComparisonDate);
-        Assert.Equal(end, result.ValuationDate);
-        Assert.Equal(-9_000m, row.PriceEffectBase);
-        Assert.Equal(5_000m, row.FxEffectBase);
-        Assert.Equal(-500m, row.CrossEffectBase);
-        Assert.Equal(-4_500m, result.PnlBase);
+        Assert.Equal(start, dailyMove.ComparisonDate);
+        Assert.Equal(end, dailyMove.ValuationDate);
+        Assert.Equal(-9_000m, rowMove.PriceEffectBase);
+        Assert.Equal(5_000m, rowMove.FxEffectBase);
+        Assert.Equal(-500m, rowMove.CrossEffectBase);
+        Assert.Equal(-4_500m, dailyMove.PnlBase);
     }
 
     [Fact]
-    public async Task DailyAttribution_DoesNotAdvanceValuationDateOnFxOnlyUpdate()
+    public async Task PortfolioSummary_DailyMoveDoesNotAdvanceValuationDateOnFxOnlyUpdate()
     {
         await using var harness = new PortfolioAnalyticsTestHarness();
         var portfolioId = harness.AddPortfolio("Main", "RUB");
@@ -260,16 +261,16 @@ public sealed class PortfolioAnalyticsQueryHandlersTests
         harness.AddFxRate("USD", "RUB", fxOnlyDate, 92m);
         await harness.SaveChangesAsync();
 
-        var result = await harness.GetPortfolioDailyAttributionAsync(portfolioId, fxOnlyDate);
+        var summary = await harness.GetPortfolioSummaryAsync(portfolioId);
+        var dailyMove = Assert.IsType<Larchik.Application.Models.PortfolioDailyMoveDto>(summary.DailyMove);
 
-        Assert.Equal(firstClose, result.ComparisonDate);
-        Assert.Equal(latestSecurityClose, result.ValuationDate);
-        Assert.True(result.IsComplete);
-        Assert.Empty(result.Warnings);
+        Assert.Equal(firstClose, dailyMove.ComparisonDate);
+        Assert.Equal(latestSecurityClose, dailyMove.ValuationDate);
+        Assert.Equal("complete", dailyMove.DataQuality);
     }
 
     [Fact]
-    public async Task DailyAttribution_CashOnlyPortfolioUsesLatestFxDates()
+    public async Task PortfolioSummary_CashDailyMoveUsesLatestFxDates()
     {
         await using var harness = new PortfolioAnalyticsTestHarness();
         var portfolioId = harness.AddPortfolio("Cash", "RUB");
@@ -286,15 +287,17 @@ public sealed class PortfolioAnalyticsQueryHandlersTests
         harness.AddFxRate("USD", "RUB", latestFxDate, 92m);
         await harness.SaveChangesAsync();
 
-        var result = await harness.GetPortfolioDailyAttributionAsync(portfolioId, latestFxDate);
+        var summary = await harness.GetPortfolioSummaryAsync(portfolioId);
+        var dailyMove = Assert.IsType<Larchik.Application.Models.PortfolioDailyMoveDto>(summary.DailyMove);
+        var cashMove = Assert.IsType<Larchik.Application.Models.DailyMoveDto>(Assert.Single(summary.Cash).DailyMove);
 
-        Assert.Equal(firstFxDate, result.ComparisonDate);
-        Assert.Equal(latestFxDate, result.ValuationDate);
-        Assert.Equal(2_000m, result.CashFxEffectBase);
+        Assert.Equal(firstFxDate, dailyMove.ComparisonDate);
+        Assert.Equal(latestFxDate, dailyMove.ValuationDate);
+        Assert.Equal(2_000m, cashMove.FxEffectBase);
     }
 
     [Fact]
-    public async Task AggregateDailyAttribution_SumsPortfolioContributions()
+    public async Task AggregateSummary_IncludesAggregatedDailyMoves()
     {
         await using var harness = new PortfolioAnalyticsTestHarness();
         var firstPortfolioId = harness.AddPortfolio("First", "RUB");
@@ -309,12 +312,12 @@ public sealed class PortfolioAnalyticsQueryHandlersTests
         harness.AddPrice(instrumentId, "RUB", end, 110m);
         await harness.SaveChangesAsync();
 
-        var aggregate = await harness.GetAggregateDailyAttributionAsync(end);
-        var row = Assert.Single(aggregate.Positions);
+        var aggregate = await harness.GetAggregatePortfolioSummaryAsync();
+        var dailyMove = Assert.IsType<Larchik.Application.Models.PortfolioDailyMoveDto>(aggregate.DailyMove);
+        var rowMove = Assert.IsType<Larchik.Application.Models.DailyMoveDto>(Assert.Single(aggregate.Positions).DailyMove);
 
-        Assert.Equal(150m, aggregate.PnlBase);
-        Assert.Equal(150m, row.PriceEffectBase);
-        Assert.Equal(15m, row.EndQuantity);
-        Assert.Null(aggregate.PortfolioId);
+        Assert.Equal(150m, dailyMove.PnlBase);
+        Assert.Equal(150m, rowMove.PriceEffectBase);
+        Assert.Equal(15m, Assert.Single(aggregate.Positions).Quantity);
     }
 }
