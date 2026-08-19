@@ -113,6 +113,8 @@ jobs:
             ADMIN_EMAIL='${{ secrets.LARCHIK_ADMIN_EMAIL }}'
             ADMIN_PASSWORD='${{ secrets.LARCHIK_ADMIN_PASSWORD }}'
             TBANK_TOKEN='${{ secrets.LARCHIK_TBANK_TOKEN }}'
+            RABBITMQ_USER='${{ secrets.LARCHIK_RABBITMQ_USER }}'
+            RABBITMQ_PASSWORD='${{ secrets.LARCHIK_RABBITMQ_PASSWORD }}'
 
             GRAFANA_ADMIN_USER=admin
             GRAFANA_ADMIN_PASSWORD='${{ secrets.LARCHIK_GRAFANA_ADMIN_PASSWORD }}'

@@ -3,13 +3,16 @@ using Larchik.Application.Prices.SyncMoexPrices;
 using Larchik.Application.Prices.SyncTbankPrices;
 using Larchik.Application.Stocks.SyncTbankInstrumentInfo;
 using Larchik.Application.Contracts;
+using Larchik.Application.MarketDataImports.Processing;
 using Larchik.Infrastructure.Jobs;
+using Larchik.Infrastructure.MarketDataImports;
 using Larchik.Infrastructure.Recalculation;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Larchik.Application.Tests.Jobs;
@@ -51,6 +54,11 @@ public sealed class JobsHostCompositionTests
         Assert.Contains(services, x => x.ServiceType == typeof(DbContextOptions<LarchikContext>));
         Assert.Contains(services, x => x.ServiceType == typeof(IBackgroundJobHandler));
         Assert.Contains(services, x => x.ServiceType == typeof(IJobRunPlanner));
+        Assert.Contains(services, x => x.ServiceType == typeof(ProcessMarketDataImportCommandHandler));
+        Assert.Contains(services, x => x.ServiceType == typeof(IMarketDataImportSource) && x.ImplementationType == typeof(MoexMarketDataImportSource));
+        Assert.Contains(services, x => x.ServiceType == typeof(IMarketDataImportSource) && x.ImplementationType == typeof(TbankMarketDataImportSource));
+        Assert.Contains(services, x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(MarketDataImportOutboxPublisherService));
+        Assert.Contains(services, x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(MarketDataImportConsumerService));
     }
 
     [Fact]

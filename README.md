@@ -27,6 +27,7 @@ Larchik is an ASP.NET Core (`net10.0`) portfolio accounting API with CQRS, EF Co
 
 - .NET SDK 10
 - PostgreSQL 14+
+- RabbitMQ 4.x (required by `Larchik.Jobs` for on-demand market-data imports)
 - trusted local HTTPS dev certificate (for secure auth/antiforgery cookies)
 
 Trust dev cert if needed:
@@ -49,6 +50,7 @@ Required keys:
 - `Frontend:BaseUrl` - used in email confirmation/reset links
 - `Admin:Email`, `Admin:Password` - optional admin seeding on startup
 - `BackgroundJobs:*` - jobs scheduler/executor settings in `Larchik.Jobs`
+- `RabbitMq:*` and `MarketDataImportSources:*` - RabbitMQ and MOEX/T-Bank import settings in `Larchik.Jobs`
 
 `TokenKey`/`DaysTokenLife` are currently not used in the codebase.
 
@@ -100,6 +102,8 @@ Default Vite URL `http://localhost:5173` is included in development CORS config.
 - `POST /api/account/login`
 - `POST /api/portfolios/{id}/imports/tbank` - import broker report
 - `POST /api/prices/sync` - sync prices (admin)
+- `POST /api/market-data/imports` - queue instrument and historical-price import by source, ISIN, and start date (admin)
+- `GET /api/market-data/imports/{id}` - read import status (admin)
 - `POST /api/fxrates/sync/cbr?date=YYYY-MM-DD` - sync CBR FX rates (admin)
 - `GET /api/portfolios/{id}/summary?method=adjustingAvg|staticAvg|fifo|lifo` - current valuation plus daily move for the portfolio, positions, and cash
 - `GET /api/portfolios/aggregate/summary?method=adjustingAvg|staticAvg|fifo|lifo` - the same combined read model across all accounts

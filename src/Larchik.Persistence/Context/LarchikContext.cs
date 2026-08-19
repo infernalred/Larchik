@@ -27,6 +27,8 @@ public class LarchikContext(DbContextOptions<LarchikContext> options)
     public DbSet<PositionSnapshot> PositionSnapshots { get; set; } = null!;
     public DbSet<PortfolioSnapshot> PortfolioSnapshots { get; set; } = null!;
     public DbSet<PortfolioReconciliationResult> PortfolioReconciliationResults { get; set; } = null!;
+    public DbSet<MarketDataImportRequest> MarketDataImportRequests { get; set; } = null!;
+    public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

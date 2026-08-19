@@ -61,6 +61,23 @@ services:
       timeout: 3s
       retries: 20
 
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    container_name: ${APP_NAME}-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   api:
     image: ghcr.io/${GHCR_REPO}/larchik-api:latest
     container_name: ${APP_NAME}-api
@@ -104,6 +121,11 @@ services:
       BackgroundJobs__Enabled: true
       BackgroundJobs__TbankPricesDaily__Token: ${TBANK_TOKEN}
       BackgroundJobs__TbankInstrumentInfoDaily__Token: ${TBANK_TOKEN}
+      MarketDataImportSources__Tbank__Token: ${TBANK_TOKEN}
+      RabbitMq__Enabled: true
+      RabbitMq__HostName: ${APP_NAME}-rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
       Serilog__WriteTo__1__Args__uri: ${LOKI_URL:-http://${APP_NAME}-loki:3100}
     networks:
       - backend
@@ -111,6 +133,8 @@ services:
     restart: unless-stopped
     depends_on:
       db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       loki:
         condition: service_healthy
@@ -148,3 +172,5 @@ volumes:
     name: loki-data-${APP_NAME}
   api-data-protection-keys:
     name: api-keys-${APP_NAME}
+  rabbitmq-data:
+    name: rabbitmq-data-${APP_NAME}

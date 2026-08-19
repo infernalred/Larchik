@@ -3,6 +3,8 @@ using Larchik.Application.Prices.SyncMoexPrices;
 using Larchik.Application.Prices.SyncTbankPrices;
 using Larchik.Application.Stocks.SyncTbankInstrumentInfo;
 using Larchik.Application.Contracts;
+using Larchik.Application.MarketDataImports.Processing;
+using Larchik.Infrastructure.MarketDataImports;
 using Larchik.Infrastructure.Recalculation;
 using Larchik.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
@@ -34,9 +36,18 @@ public static class JobsHostComposition
         services.AddScoped<SyncMoexPricesCommandHandler>();
         services.AddScoped<SyncTbankPricesCommandHandler>();
         services.AddScoped<SyncTbankInstrumentInfoCommandHandler>();
+        services.AddScoped<ProcessMarketDataImportCommandHandler>();
+        services.AddScoped<IMarketDataImportSource, MoexMarketDataImportSource>();
+        services.AddScoped<IMarketDataImportSource, TbankMarketDataImportSource>();
         services.AddScoped<PortfolioReconciliationReportService>();
         services.AddScoped<IPortfolioReconciliationReportService, PortfolioReconciliationReportService>();
         services.AddScoped<IPortfolioRecalcService, PortfolioRecalcService>();
+
+        services.Configure<MarketDataImportOptions>(configuration.GetSection(MarketDataImportOptions.SectionName));
+        services.Configure<MarketDataImportSourceOptions>(configuration.GetSection(MarketDataImportSourceOptions.SectionName));
+        services.Configure<RabbitMqOptions>(configuration.GetSection(RabbitMqOptions.SectionName));
+        services.AddHostedService<MarketDataImportOutboxPublisherService>();
+        services.AddHostedService<MarketDataImportConsumerService>();
 
         services.AddBackgroundJobs(configuration);
     }

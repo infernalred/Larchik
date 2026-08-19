@@ -6,7 +6,6 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <LangVersion>14.0</LangVersion>
         <UserSecretsId>7d9e104c-122d-49af-9e93-232fe554ee44</UserSecretsId>
-        <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;bin\\**;bin\Debug\**;bin\\Debug\\**</DefaultItemExcludes>
     </PropertyGroup>
 
     <ItemGroup>

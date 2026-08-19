@@ -44,6 +44,7 @@ public sealed class ScriptConsistencyTests
     [InlineData("RU000A10FMY2")]
     [InlineData("RU000A10FGH9")]
     [InlineData("RU000A10CS75")]
+    [InlineData("RU000A10FTR1")]
     public void ImportReferenceData_IncludesLatestMoexBonds(string isin)
     {
         var script = File.ReadAllText(Path.Combine(RepoRoot, "scripts", "import_reference_data.sql"));

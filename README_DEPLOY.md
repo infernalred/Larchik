@@ -5,6 +5,7 @@
 - `larchik-web` (Caddy + статический frontend)
 - `larchik-jobs` (отдельный background jobs host)
 - `larchik-db` (PostgreSQL, внешний порт `5434`)
+- `larchik-rabbitmq` (RabbitMQ для очереди импорта инструментов и цен)
 - `${APP_NAME}-loki` и `${APP_NAME}-grafana` (observability-стек проекта)
 
 ## Где лежат конфиги
@@ -39,6 +40,8 @@
 - `LARCHIK_ADMIN_EMAIL`
 - `LARCHIK_ADMIN_PASSWORD`
 - `LARCHIK_TBANK_TOKEN`
+- `LARCHIK_RABBITMQ_USER`
+- `LARCHIK_RABBITMQ_PASSWORD`
 
 ## Какие runtime переменные попадут в `.env` на сервере
 
@@ -56,6 +59,8 @@ Workflow генерирует `.env` c этими значениями:
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 - `TBANK_TOKEN`
+- `RABBITMQ_USER`
+- `RABBITMQ_PASSWORD`
 - `GRAFANA_ADMIN_USER=admin`
 - `GRAFANA_ADMIN_PASSWORD`
 
@@ -68,6 +73,8 @@ Workflow генерирует `.env` c этими значениями:
 - `BackgroundJobs__Enabled=true`
 - `BackgroundJobs__TbankPricesDaily__Token`
 - `BackgroundJobs__TbankInstrumentInfoDaily__Token`
+- `MarketDataImportSources__Tbank__Token`
+- `RabbitMq__HostName`, `RabbitMq__UserName`, `RabbitMq__Password`
 - `Serilog__WriteTo__1__Args__uri=http://larchik-loki:3100`
 
 ## Что делает workflow
@@ -120,6 +127,7 @@ docker logs --tail 200 larchik-grafana
 ## Замечания
 - Production логирование сейчас уходит в файл и Loki, без console sink.
 - Если `LARCHIK_TBANK_TOKEN` пустой, T-Bank jobs будут стартовать, но запросы к T-Bank API не пройдут.
+- Для RabbitMQ используй отдельного пользователя и длинный пароль; значения должны быть заданы до первого deploy.
 - Если внешний доступ к PostgreSQL не нужен, можно убрать публикацию порта `5434` из compose.
 - `GF_SECURITY_ADMIN_PASSWORD` в Grafana применяется надежно на первом старте с новым volume. На уже существующем `grafana-data-larchik` пароль автоматически не пересинхронизируется.
 - Если нужно сменить пароль на уже развернутой Grafana, делай это отдельно: либо вручную через `grafana cli`, когда контейнер остановлен, либо через UI/API, либо пересозданием Grafana volume.
