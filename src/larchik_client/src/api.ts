@@ -11,6 +11,8 @@ import {
   InstrumentCorporateActionModel,
   InstrumentLookup,
   InstrumentModel,
+  MarketDataImportModel,
+  MarketDataImportRequest,
   Operation,
   OperationModel,
   PagedResult,
@@ -257,6 +259,18 @@ export const api = {
     return request<void>(`/instruments/${instrumentId}/corporate-actions/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  async queueMarketDataImport(model: MarketDataImportModel, idempotencyKey: string): Promise<MarketDataImportRequest> {
+    return request<MarketDataImportRequest>('/market-data/imports', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey },
+      body: JSON.stringify(model),
+    });
+  },
+
+  async getMarketDataImport(id: string): Promise<MarketDataImportRequest> {
+    return request<MarketDataImportRequest>(`/market-data/imports/${encodeURIComponent(id)}`);
   },
 
   async createPortfolio(payload: { name: string; reportingCurrencyId: string; brokerId: string }) {

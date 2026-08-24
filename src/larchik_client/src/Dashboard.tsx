@@ -43,10 +43,10 @@ import { OperationsPanel } from './OperationsPanel';
 import { CreatePortfolioDialog } from './CreatePortfolioDialog';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 
-type PortfolioRoute = 'overview' | 'operations' | 'analytics' | 'instruments' | 'currencies';
+type PortfolioRoute = 'overview' | 'operations' | 'analytics' | 'instruments' | 'currencies' | 'marketDataImports';
 
 function isAdminReferencePage(route: PortfolioRoute): boolean {
-  return route === 'instruments' || route === 'currencies';
+  return route === 'instruments' || route === 'currencies' || route === 'marketDataImports';
 }
 
 const VALUATION_METHODS = [
@@ -70,6 +70,10 @@ const AdminInstrumentsPage = lazy(async () => {
 const AdminCurrenciesPage = lazy(async () => {
   const module = await import('./AdminCurrenciesPage');
   return { default: module.AdminCurrenciesPage };
+});
+const AdminMarketDataImportsPage = lazy(async () => {
+  const module = await import('./AdminMarketDataImportsPage');
+  return { default: module.AdminMarketDataImportsPage };
 });
 
 function formatPercent(value: number): string {
@@ -496,6 +500,12 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
     setSidebarOpen(false);
   }
 
+  function handleShowAdminMarketDataImports() {
+    if (!user.isAdmin) return;
+    onRouteChange('marketDataImports');
+    setSidebarOpen(false);
+  }
+
   const activeBroker = brokers.find((x) => x.id === activePortfolio?.brokerId) ?? null;
   const canImportOperations = Boolean(activeBroker?.supportsImport && activeBroker.code);
   const performanceCurrency = performance[0]?.reportingCurrencyId;
@@ -529,8 +539,10 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
             isAdmin={user.isAdmin}
             adminInstrumentsSelected={portfolioPage === 'instruments'}
             adminCurrenciesSelected={portfolioPage === 'currencies'}
+            adminMarketDataImportsSelected={portfolioPage === 'marketDataImports'}
             onShowAdminInstruments={handleShowAdminInstruments}
             onShowAdminCurrencies={handleShowAdminCurrencies}
+            onShowAdminMarketDataImports={handleShowAdminMarketDataImports}
             onChangePassword={handleOpenChangePassword}
             onLogout={onLogout}
           />
@@ -560,8 +572,10 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
           isAdmin={user.isAdmin}
           adminInstrumentsSelected={portfolioPage === 'instruments'}
           adminCurrenciesSelected={portfolioPage === 'currencies'}
+          adminMarketDataImportsSelected={portfolioPage === 'marketDataImports'}
           onShowAdminInstruments={handleShowAdminInstruments}
           onShowAdminCurrencies={handleShowAdminCurrencies}
+          onShowAdminMarketDataImports={handleShowAdminMarketDataImports}
           onChangePassword={handleOpenChangePassword}
           onLogout={onLogout}
           mobile
@@ -620,14 +634,18 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
                     ? 'Справочник инструментов'
                     : portfolioPage === 'currencies'
                       ? 'Справочник валют'
-                    : viewMode === 'all'
-                      ? 'Все счета'
-                      : activePortfolio?.name ?? 'Выберите портфель'}
+                      : portfolioPage === 'marketDataImports'
+                        ? 'Импорт инструментов и цен'
+                        : viewMode === 'all'
+                          ? 'Все счета'
+                          : activePortfolio?.name ?? 'Выберите портфель'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {isAdminReferencePage(portfolioPage)
-                    ? 'Создание и редактирование доступно только администраторам.'
-                    : `Валюта отчета: ${currency}`}
+                  {portfolioPage === 'marketDataImports'
+                    ? 'Заявки выполняются асинхронно через RabbitMQ в отдельном процессе фоновых задач.'
+                    : isAdminReferencePage(portfolioPage)
+                      ? 'Создание и редактирование доступно только администраторам.'
+                      : `Валюта отчета: ${currency}`}
                 </Typography>
                 {!isAdminReferencePage(portfolioPage) && (
                   <Typography variant="body2" color="text.secondary">
@@ -774,6 +792,18 @@ export function Dashboard({ onLogout, route, onRouteChange, user }: Props) {
               }
             >
               <AdminCurrenciesPage />
+            </Suspense>
+          )}
+
+          {portfolioPage === 'marketDataImports' && user.isAdmin && (
+            <Suspense
+              fallback={
+                <Stack sx={{ py: 4, alignItems: 'center' }}>
+                  <CircularProgress />
+                </Stack>
+              }
+            >
+              <AdminMarketDataImportsPage />
             </Suspense>
           )}
 

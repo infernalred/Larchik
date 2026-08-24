@@ -2,6 +2,7 @@ import { Button, Divider, IconButton, List, ListItem, ListItemButton, ListItemTe
 import AddCircleOutlinedIcon from '@mui/icons-material/AddCircleOutlined';
 import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { Portfolio } from './types';
@@ -16,8 +17,10 @@ interface Props {
   isAdmin?: boolean;
   adminInstrumentsSelected?: boolean;
   adminCurrenciesSelected?: boolean;
+  adminMarketDataImportsSelected?: boolean;
   onShowAdminInstruments?: () => void;
   onShowAdminCurrencies?: () => void;
+  onShowAdminMarketDataImports?: () => void;
   onChangePassword: () => void;
   onLogout: () => void;
   mobile?: boolean;
@@ -33,8 +36,10 @@ export function PortfolioSidebar({
   isAdmin = false,
   adminInstrumentsSelected = false,
   adminCurrenciesSelected = false,
+  adminMarketDataImportsSelected = false,
   onShowAdminInstruments,
   onShowAdminCurrencies,
+  onShowAdminMarketDataImports,
   onChangePassword,
   onLogout,
   mobile = false,
@@ -111,7 +116,7 @@ export function PortfolioSidebar({
         Показать инфу по всем счетам
       </Button>
 
-      {isAdmin && (onShowAdminInstruments || onShowAdminCurrencies) && (
+      {isAdmin && (onShowAdminInstruments || onShowAdminCurrencies || onShowAdminMarketDataImports) && (
         <>
           <Divider flexItem />
           <Typography variant="overline" color="text.secondary">
@@ -137,6 +142,17 @@ export function PortfolioSidebar({
               fullWidth
             >
               Валюты
+            </Button>
+          )}
+          {onShowAdminMarketDataImports && (
+            <Button
+              variant={adminMarketDataImportsSelected ? 'contained' : 'outlined'}
+              startIcon={<CloudDownloadOutlinedIcon />}
+              onClick={onShowAdminMarketDataImports}
+              sx={{ textTransform: 'none' }}
+              fullWidth
+            >
+              Импорт бумаг
             </Button>
           )}
         </>

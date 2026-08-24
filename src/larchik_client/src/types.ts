@@ -1,6 +1,13 @@
 export type InstrumentType = 'Equity' | 'Bond' | 'Etf' | 'Currency' | 'Commodity' | 'Crypto';
 export type PriceSource = 'MOEX' | 'TBANK';
 export type CorporateActionType = 'Split' | 'ReverseSplit';
+export type MarketDataImportStatus =
+  | 'Queued'
+  | 'ResolvingInstrument'
+  | 'LoadingPrices'
+  | 'Succeeded'
+  | 'SkippedExisting'
+  | 'Failed';
 
 export type OperationType =
   | 'Buy'
@@ -89,6 +96,27 @@ export interface InstrumentModel {
 export interface Instrument extends InstrumentModel {
   id: string;
   isTrading: boolean;
+}
+
+export interface MarketDataImportModel {
+  source: PriceSource;
+  isin: string;
+  fromDate: string;
+}
+
+export interface MarketDataImportRequest extends MarketDataImportModel {
+  id: string;
+  toDate: string;
+  nextDate: string;
+  status: MarketDataImportStatus;
+  instrumentId?: string | null;
+  insertedPrices: number;
+  updatedPrices: number;
+  attempt: number;
+  lastError?: string | null;
+  createdAt: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface InstrumentCorporateActionModel {

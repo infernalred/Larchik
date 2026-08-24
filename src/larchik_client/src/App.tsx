@@ -6,7 +6,7 @@ import { AuthForm } from './AuthForm';
 import { Dashboard } from './Dashboard';
 import { User } from './types';
 
-type DashboardRoute = 'overview' | 'operations' | 'analytics' | 'instruments' | 'currencies';
+type DashboardRoute = 'overview' | 'operations' | 'analytics' | 'instruments' | 'currencies' | 'marketDataImports';
 const SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 const resolveRoute = (pathname: string): DashboardRoute => {
@@ -16,6 +16,10 @@ const resolveRoute = (pathname: string): DashboardRoute => {
 
   if (pathname === '/admin/currencies' || pathname.startsWith('/admin/currencies/')) {
     return 'currencies';
+  }
+
+  if (pathname === '/admin/market-data-imports' || pathname.startsWith('/admin/market-data-imports/')) {
+    return 'marketDataImports';
   }
 
   if (pathname === '/operations' || pathname.startsWith('/operations/')) {
@@ -159,7 +163,7 @@ export function App() {
   }, [applyRouteFromLocation]);
 
   useEffect(() => {
-    if (!user?.isAdmin && (route === 'instruments' || route === 'currencies')) {
+    if (!user?.isAdmin && (route === 'instruments' || route === 'currencies' || route === 'marketDataImports')) {
       window.history.replaceState({}, '', '/');
       setRoute('overview');
     }
@@ -198,7 +202,9 @@ export function App() {
             ? '/admin/instruments'
             : nextRoute === 'currencies'
               ? '/admin/currencies'
-              : '/';
+              : nextRoute === 'marketDataImports'
+                ? '/admin/market-data-imports'
+                : '/';
     if (window.location.pathname !== nextPath) {
       window.history.pushState({}, '', nextPath);
     }
